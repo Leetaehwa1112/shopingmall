@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import useAuthStore from '@/store/authStore'
+import { registerUser } from '@/api/userApi'
 import Button from '@/components/common/Button'
 import Pokeball from '@/components/common/Pokeball'
 
@@ -11,12 +12,34 @@ export default function RegisterPage() {
     name: '', email: '', password: '', phone: '',
     agreeTerms: false, agreePrivacy: false, agreeMarketing: false,
   })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault()
     if (!form.agreeTerms || !form.agreePrivacy) return alert('필수 약관에 동의해주세요')
-    register({ name: form.name, email: form.email, role: 'collector' })
-    navigate('/')
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      const { data } = await registerUser({
+        name: form.name,
+        email: form.email,
+        password: form.password,
+        phone: form.phone,
+        user_type: 'customer', // 일반 유저로 고정
+      })
+
+      // 회원가입 성공 → zustand에 유저+토큰 저장 후 홈으로 이동
+      register({ ...data.data, role: data.data.user_type }, data.token)
+      navigate('/')
+    } catch (err) {
+      const msg = err.response?.data?.message
+      setError(Array.isArray(msg) ? msg.join(', ') : msg || '회원가입에 실패했습니다.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -36,6 +59,13 @@ export default function RegisterPage() {
             <p className="text-xs text-mute mt-2">경매 참여를 위해서는 가입 후 본인 인증이 필요합니다.</p>
           </div>
 
+          {/* 에러 메시지 */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-xs font-bold px-4 py-3 rounded-lg">
+              {error}
+            </div>
+          )}
+
           <Input label="이름" value={form.name} onChange={(v) => setForm({...form, name: v})} required />
           <Input label="이메일" type="email" value={form.email} onChange={(v) => setForm({...form, email: v})} required />
           <Input label="비밀번호" type="password" value={form.password} onChange={(v) => setForm({...form, password: v})} required />
@@ -47,7 +77,9 @@ export default function RegisterPage() {
             <Check v={form.agreeMarketing} onChange={(x) => setForm({...form, agreeMarketing: x})} label="마케팅 정보 수신 (선택)" />
           </div>
 
-          <Button variant="accent" size="lg" className="w-full" type="submit">가입하기</Button>
+          <Button variant="accent" size="lg" className="w-full" type="submit" disabled={loading}>
+            {loading ? '처리 중...' : '가입하기'}
+          </Button>
 
           <div className="text-center text-xs text-mute">
             이미 회원이신가요? <Link to="/login" className="text-dex font-bold">로그인 →</Link>

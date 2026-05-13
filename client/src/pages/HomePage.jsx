@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import { AUCTION_CARDS, BUYNOW_CARDS, PACKS, formatKRW } from '@/api/cards'
 import PokeCard from '@/components/common/PokeCard'
 import CardTile from '@/components/common/CardTile'
@@ -8,6 +9,8 @@ import GradeBadge from '@/components/common/GradeBadge'
 import Button from '@/components/common/Button'
 import Pokeball from '@/components/common/Pokeball'
 import Icon from '@/components/common/Icon'
+import useAuthStore from '@/store/authStore'
+import { getMe } from '@/api/userApi'
 
 export default function HomePage() {
   const topLot = AUCTION_CARDS[0]
@@ -15,8 +18,40 @@ export default function HomePage() {
   const buyNow = BUYNOW_CARDS.slice(0, 4)
   const entryNum = '001'
 
+  const { token } = useAuthStore()
+  const [greeting, setGreeting] = useState(null)
+
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    if (!token) return
+    getMe()
+      .then(({ data }) => {
+        const name = data.data?.name
+        if (!name) return
+        setGreeting(name)
+        setVisible(true)
+        setTimeout(() => setVisible(false), 3000)
+      })
+      .catch(() => {})
+  }, [token])
+
   return (
     <div>
+      {/* === 로그인 인사 배너 (3초 후 사라짐) === */}
+      <div className={`max-w-7xl mx-auto px-6 pt-5 flex justify-end transition-all duration-500 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
+        {greeting && (
+          <div className="inline-flex items-center gap-2 px-4 py-2 surface-soft elev-1 rounded-full">
+            <div className="w-6 h-6 rounded-full bg-ink text-paper flex items-center justify-center text-[11px] font-bold">
+              {greeting[0].toUpperCase()}
+            </div>
+            <span className="text-sm font-bold text-ink">
+              {greeting}<span className="text-dex">님</span> 반갑습니다 👋
+            </span>
+          </div>
+        )}
+      </div>
+
       {/* === HERO — TOP LOT in Pokédex casing === */}
       <section className="py-12 px-6">
         <div className="max-w-7xl mx-auto">

@@ -5,20 +5,22 @@ const useAuthStore = create(
   persist(
     (set) => ({
       user: null,
+      token: null,
       isAuthenticated: false,
       isAdmin: false,
       verified: false,
-      login: (user) => set({
+      login: (user, token) => set({
         user,
+        token,
         isAuthenticated: true,
-        isAdmin: user?.role === 'admin',
+        isAdmin: user?.user_type === 'admin' || user?.role === 'admin',
         verified: true,
       }),
-      register: (user) => set({
-        user, isAuthenticated: true, isAdmin: false, verified: false,
+      register: (user, token) => set({
+        user, token, isAuthenticated: true, isAdmin: false, verified: false,
       }),
       verify: () => set({ verified: true }),
-      logout: () => set({ user: null, isAuthenticated: false, isAdmin: false, verified: false }),
+      logout: () => set({ user: null, token: null, isAuthenticated: false, isAdmin: false, verified: false }),
     }),
     { name: 'vault-auth' }
   )

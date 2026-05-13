@@ -394,8 +394,8 @@ export const PACKS = [
     price: 1850000,
     accent: '#22c55e',
     gradient: ['#a7f3d0', '#15803d'],
-    setLogo: 'https://images.pokemontcg.io/jungle/logo.png',
-    heroArt: 'https://images.pokemontcg.io/jungle/14_hires.png', // Snorlax
+    setLogo: 'https://images.pokemontcg.io/base2/logo.png',
+    heroArt: 'https://images.pokemontcg.io/base2/14_hires.png', // Snorlax
     description: '정글 세트 1st Edition. Snorlax, Wigglytuff, Pikachu 등.',
     stock: 5,
   },
@@ -411,8 +411,8 @@ export const PACKS = [
     price: 1650000,
     accent: '#0ea5e9',
     gradient: ['#bae6fd', '#0369a1'],
-    setLogo: 'https://images.pokemontcg.io/fossil/logo.png',
-    heroArt: 'https://images.pokemontcg.io/fossil/1_hires.png', // Aerodactyl
+    setLogo: 'https://images.pokemontcg.io/base3/logo.png',
+    heroArt: 'https://images.pokemontcg.io/base3/1_hires.png', // Aerodactyl
     description: 'Aerodactyl, Dragonite 등 화석 포켓몬 등장.',
     stock: 6,
   },
@@ -463,7 +463,7 @@ export const PACKS = [
     accent: '#f97316',
     gradient: ['#fed7aa', '#c2410c'],
     setLogo: 'https://images.pokemontcg.io/swsh45/logo.png',
-    heroArt: 'https://images.pokemontcg.io/swsh45/SV107_hires.png', // Shiny Charizard VMAX
+    heroArt: 'https://images.pokemontcg.io/swsh45sv/SV107_hires.png', // Shiny Charizard VMAX
     description: 'Charizard VMAX 등 샤이니 카드. 10팩 + 슬리브 + 카운터.',
     stock: 12,
   },

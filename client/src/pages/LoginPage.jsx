@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import useAuthStore from '@/store/authStore'
+import { loginUser } from '@/api/userApi'
 import Button from '@/components/common/Button'
 import Pokeball from '@/components/common/Pokeball'
 
@@ -8,16 +9,32 @@ export default function LoginPage() {
   const login = useAuthStore((s) => s.login)
   const navigate = useNavigate()
   const [form, setForm] = useState({ email: '', password: '' })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault()
-    const isAdmin = form.email.toLowerCase().includes('admin')
-    login({
-      name: isAdmin ? 'Admin' : (form.email.split('@')[0] || 'Trainer'),
-      email: form.email,
-      role: isAdmin ? 'admin' : 'collector',
-    })
-    navigate(isAdmin ? '/admin' : '/')
+    setLoading(true)
+    setError(null)
+
+    try {
+      const { data } = await loginUser({
+        email: form.email,
+        password: form.password,
+      })
+
+      const user = data.data
+      const token = data.token
+      login({ ...user, role: user.user_type }, token)
+      
+      const isAdmin = user.user_type === 'admin'
+      navigate(isAdmin ? '/admin' : '/')
+    } catch (err) {
+      const msg = err.response?.data?.message
+      setError(msg || '로그인에 실패했습니다.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -37,6 +54,13 @@ export default function LoginPage() {
             <p className="text-xs text-mute mt-2">이메일에 <span className="text-dex font-bold">admin</span> 포함 시 관리자 모드</p>
           </div>
 
+          {/* 에러 메시지 */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-xs font-bold px-4 py-3 rounded-lg">
+              {error}
+            </div>
+          )}
+
           <Input label="이메일" type="email" value={form.email} onChange={(v) => setForm({...form, email: v})} placeholder="trainer@pokevault.kr" />
           <Input label="비밀번호" type="password" value={form.password} onChange={(v) => setForm({...form, password: v})} />
 
@@ -47,7 +71,9 @@ export default function LoginPage() {
             <Link to="#" className="text-ink font-bold hover:text-dex">비밀번호 찾기</Link>
           </div>
 
-          <Button variant="primary" size="lg" className="w-full" type="submit">로그인</Button>
+          <Button variant="primary" size="lg" className="w-full" type="submit" disabled={loading}>
+            {loading ? '처리 중...' : '로그인'}
+          </Button>
 
           <div className="text-center text-xs text-mute pt-2 border-t border-line">
             아직 회원이 아니신가요? <Link to="/register" className="text-dex font-bold">회원가입 →</Link>
