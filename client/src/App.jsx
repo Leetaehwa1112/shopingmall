@@ -13,6 +13,7 @@ import CheckoutPage from '@/pages/CheckoutPage'
 import OrderCompletePage from '@/pages/OrderCompletePage'
 import LoginPage from '@/pages/LoginPage'
 import RegisterPage from '@/pages/RegisterPage'
+import AdminLoginPage from '@/pages/AdminLoginPage'
 import MyPage from '@/pages/MyPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 import PacksPage from '@/pages/PacksPage'
@@ -21,7 +22,9 @@ import SellPage from '@/pages/SellPage'
 
 import AdminDashboard from '@/pages/admin/AdminDashboard'
 import AdminProducts from '@/pages/admin/AdminProducts'
+import AdminPacks from '@/pages/admin/AdminPacks'
 import AdminOrders from '@/pages/admin/AdminOrders'
+import AdminUsers from '@/pages/admin/AdminUsers'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 1000 * 60 * 5, retry: 1 } },
@@ -48,12 +51,15 @@ export default function App() {
             <Route path="login" element={<LoginPage />} />
             <Route path="register" element={<RegisterPage />} />
             <Route path="mypage" element={<MyPage />} />
+          <Route path="admin/login" element={<AdminLoginPage />} />
           </Route>
 
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
             <Route path="products" element={<AdminProducts />} />
+            <Route path="packs" element={<AdminPacks />} />
             <Route path="orders" element={<AdminOrders />} />
+            <Route path="users" element={<AdminUsers />} />
           </Route>
 
           <Route path="*" element={<NotFoundPage />} />

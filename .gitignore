@@ -44,3 +44,4 @@ coverage/
 .claude/launch.json
 .claude/sessions/
 client/.claude/
+.claude/
