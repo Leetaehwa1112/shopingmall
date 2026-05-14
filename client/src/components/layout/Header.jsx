@@ -87,7 +87,10 @@ export default function Header() {
                 <div className="w-7 h-7 rounded-full bg-ink text-paper flex items-center justify-center text-xs font-bold">
                   {user?.name?.[0]?.toUpperCase() || 'T'}
                 </div>
-                <span className="text-sm font-bold text-ink">{user?.name}</span>
+                <div className="leading-none">
+                  <div className="text-[10px] text-mute font-medium">환영합니다</div>
+                  <div className="text-sm font-bold text-ink">{user?.name}님</div>
+                </div>
               </Link>
               <button onClick={() => { logout(); navigate('/') }}
                 className="text-xs font-bold text-mute hover:text-dex">

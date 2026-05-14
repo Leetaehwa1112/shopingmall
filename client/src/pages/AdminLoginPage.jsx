@@ -5,7 +5,7 @@ import { loginUser } from '@/api/userApi'
 import Button from '@/components/common/Button'
 import Pokeball from '@/components/common/Pokeball'
 
-export default function LoginPage() {
+export default function AdminLoginPage() {
   const login = useAuthStore((s) => s.login)
   const { token, isAdmin } = useAuthStore()
   const navigate = useNavigate()
@@ -14,7 +14,7 @@ export default function LoginPage() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (token) navigate(isAdmin ? '/admin' : '/', { replace: true })
+    if (token && isAdmin) navigate('/admin', { replace: true })
   }, [])
 
   const submit = async (e) => {
@@ -26,8 +26,15 @@ export default function LoginPage() {
       const { data } = await loginUser({ email: form.email, password: form.password })
       const user = data.data
       const token = data.token
+
+      if (user.user_type !== 'admin') {
+        setError('관리자 계정이 아닙니다.')
+        setLoading(false)
+        return
+      }
+
       login({ ...user, role: user.user_type }, token)
-      navigate('/')
+      navigate('/admin')
     } catch (err) {
       const msg = err.response?.data?.message
       setError(msg || '로그인에 실패했습니다.')
@@ -48,8 +55,9 @@ export default function LoginPage() {
 
         <form onSubmit={submit} className="surface-soft p-8 elev-2 space-y-5">
           <div>
-            <div className="pixel-label text-mute mb-2">Sign In</div>
-            <h1 className="font-display text-2xl font-bold text-ink">로그인</h1>
+            <div className="pixel-label text-dex mb-2">Admin</div>
+            <h1 className="font-display text-2xl font-bold text-ink">관리자 로그인</h1>
+            <p className="text-xs text-mute mt-2">관리자 전용 페이지입니다.</p>
           </div>
 
           {error && (
@@ -58,33 +66,15 @@ export default function LoginPage() {
             </div>
           )}
 
-          <Input label="이메일" type="email" value={form.email} onChange={(v) => setForm({...form, email: v})} placeholder="trainer@pokevault.kr" />
+          <Input label="관리자 이메일" type="email" value={form.email} onChange={(v) => setForm({...form, email: v})} placeholder="admin@pokevault.kr" />
           <Input label="비밀번호" type="password" value={form.password} onChange={(v) => setForm({...form, password: v})} />
 
-          <div className="flex items-center justify-between text-xs">
-            <label className="flex items-center gap-2 text-mute font-bold cursor-pointer">
-              <input type="checkbox" className="accent-ink" /> 로그인 유지
-            </label>
-            <Link to="#" className="text-ink font-bold hover:text-dex">비밀번호 찾기</Link>
-          </div>
-
-          <Button variant="primary" size="lg" className="w-full" type="submit" disabled={loading}>
-            {loading ? '처리 중...' : '로그인'}
+          <Button variant="accent" size="lg" className="w-full" type="submit" disabled={loading}>
+            {loading ? '확인 중...' : '관리자 로그인'}
           </Button>
 
           <div className="text-center text-xs text-mute pt-2 border-t border-line">
-            아직 회원이 아니신가요? <Link to="/register" className="text-dex font-bold">회원가입 →</Link>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 pt-2">
-            <button type="button" className="bg-gold py-2.5 rounded-lg text-xs font-bold text-ink hover:opacity-90">카카오</button>
-            <button type="button" className="bg-paper border border-line py-2.5 rounded-lg text-xs font-bold text-ink hover:border-ink">Google</button>
-          </div>
-
-          <div className="text-center pt-2 border-t border-line">
-            <Link to="/admin/login" className="text-xs text-mute hover:text-ink font-medium transition-colors">
-              관리자 로그인 →
-            </Link>
+            일반 로그인으로 돌아가기 <Link to="/login" className="text-ink font-bold">← 로그인</Link>
           </div>
         </form>
       </div>

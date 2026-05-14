@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useMemo } from 'react'
 import { AUCTION_CARDS, BUYNOW_CARDS, PACKS, formatKRW } from '@/api/cards'
 import PokeCard from '@/components/common/PokeCard'
 import CardTile from '@/components/common/CardTile'
@@ -9,60 +9,29 @@ import GradeBadge from '@/components/common/GradeBadge'
 import Button from '@/components/common/Button'
 import Pokeball from '@/components/common/Pokeball'
 import Icon from '@/components/common/Icon'
-import useAuthStore from '@/store/authStore'
-import { getMe } from '@/api/userApi'
+import GreetingDropdown from '@/components/common/GreetingDropdown'
+
+// 정적 데이터 — 모듈 레벨에서 한 번만 계산
+const TOP_LOT = AUCTION_CARDS[0]
+const LIVE_CARDS = AUCTION_CARDS.slice(1)
+const BUY_NOW_CARDS = BUYNOW_CARDS.slice(0, 4)
+const FEATURED_PACKS = PACKS.slice(0, 4)
 
 export default function HomePage() {
-  const topLot = AUCTION_CARDS[0]
-  const live = AUCTION_CARDS.slice(1)
-  const buyNow = BUYNOW_CARDS.slice(0, 4)
-  const entryNum = '001'
-
-  const { token } = useAuthStore()
-  const [greeting, setGreeting] = useState(null)
-
-  const [visible, setVisible] = useState(false)
-
-  useEffect(() => {
-    if (!token) return
-    getMe()
-      .then(({ data }) => {
-        const name = data.data?.name
-        if (!name) return
-        setGreeting(name)
-        setVisible(true)
-        setTimeout(() => setVisible(false), 3000)
-      })
-      .catch(() => {})
-  }, [token])
-
   return (
     <div>
-      {/* === 로그인 인사 배너 (3초 후 사라짐) === */}
-      <div className={`max-w-7xl mx-auto px-6 pt-5 flex justify-end transition-all duration-500 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
-        {greeting && (
-          <div className="inline-flex items-center gap-2 px-4 py-2 surface-soft elev-1 rounded-full">
-            <div className="w-6 h-6 rounded-full bg-ink text-paper flex items-center justify-center text-[11px] font-bold">
-              {greeting[0].toUpperCase()}
-            </div>
-            <span className="text-sm font-bold text-ink">
-              {greeting}<span className="text-dex">님</span> 반갑습니다 👋
-            </span>
-          </div>
-        )}
-      </div>
+      <GreetingDropdown />
 
       {/* === HERO — TOP LOT in Pokédex casing === */}
       <section className="py-12 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="dex-casing p-5 sm:p-6 reveal-up">
-            {/* Top header strip with LEDs */}
             <div className="flex items-center justify-between mb-5">
               <div className="inline-flex items-center gap-2.5">
                 <span className="led led-red led-pulse" />
                 <span className="pixel-label text-paper">TODAY'S TOP LOT</span>
               </div>
-              <span className="pixel-label text-paper/70">No.<span className="text-gold">{entryNum}</span></span>
+              <span className="pixel-label text-paper/70">No.<span className="text-gold">001</span></span>
               <div className="hidden sm:flex gap-1.5">
                 <span className="led led-blue" />
                 <span className="led led-yellow" />
@@ -71,39 +40,35 @@ export default function HomePage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5">
-              {/* === LCD SPEC — mobile: 2nd / desktop: left full height === */}
+              {/* LCD SPEC */}
               <div className="lcd p-6 scan flex flex-col min-h-[520px] order-2 lg:order-none lg:col-start-1 lg:row-start-1 lg:row-span-2">
-                {/* Header */}
                 <div className="border-b border-dashed border-ink/15 pb-4 mb-4">
                   <div className="pixel-label text-ink/50 mb-2">AUCTION CATALOG · LOT #001</div>
                   <h1 className="font-display text-5xl sm:text-6xl font-bold text-ink leading-[0.95] tracking-tight">
-                    {topLot.nameKo}
+                    {TOP_LOT.nameKo}
                   </h1>
                   <div className="text-lg italic text-ink/60 mt-2 font-medium">
-                    {topLot.name} <span className="text-ink/40">·</span> #{topLot.number}
+                    {TOP_LOT.name} <span className="text-ink/40">·</span> #{TOP_LOT.number}
                   </div>
                 </div>
 
-                {/* Grade big display */}
                 <div className="flex items-start justify-between gap-4 mb-5">
-                  <GradeBadge grade={topLot.grade} size="lg" />
+                  <GradeBadge grade={TOP_LOT.grade} size="lg" />
                   <div className="text-right">
                     <div className="pixel-label text-ink/50 mb-1">CERT NO.</div>
-                    <div className="font-mono text-sm font-bold text-ink">#{topLot.grade.cert}</div>
+                    <div className="font-mono text-sm font-bold text-ink">#{TOP_LOT.grade.cert}</div>
                   </div>
                 </div>
 
-                {/* Spec sheet — auction catalog style */}
                 <div className="grid grid-cols-2 gap-x-5 gap-y-2 mb-5 text-sm font-mono">
-                  <SpecRow k="Year" v={topLot.year} />
+                  <SpecRow k="Year" v={TOP_LOT.year} />
                   <SpecRow k="Set" v="Base Set 1st Ed." />
-                  <SpecRow k="Number" v={topLot.number} />
+                  <SpecRow k="Number" v={TOP_LOT.number} />
                   <SpecRow k="Edition" v="Shadowless" />
-                  <SpecRow k="Pop. (PSA 10)" v={`${topLot.population.psa10} / ${topLot.population.total}`} />
-                  <SpecRow k="Watchers" v={`${topLot.watchers}`} />
+                  <SpecRow k="Pop. (PSA 10)" v={`${TOP_LOT.population.psa10} / ${TOP_LOT.population.total}`} />
+                  <SpecRow k="Watchers" v={`${TOP_LOT.watchers}`} />
                 </div>
 
-                {/* Authentication checklist */}
                 <div className="bg-ink/[0.04] rounded-lg p-4 mb-5 border border-ink/10">
                   <div className="pixel-label text-ink/60 mb-3 inline-flex items-center gap-1.5">
                     <Icon name="shield" size={11} strokeWidth={2.5} className="text-emerald-700" />
@@ -119,23 +84,22 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {/* HP bar */}
                 <div className="mt-auto">
                   <div className="flex justify-between items-baseline mb-2">
                     <span className="pixel-label text-ink/70">BID PROGRESS</span>
-                    <span className="pixel-label text-ink/50">{topLot.bidCount}회</span>
+                    <span className="pixel-label text-ink/50">{TOP_LOT.bidCount}회</span>
                   </div>
                   <div className="hp-bar">
                     <div className="hp-bar-fill" style={{ width: '77%' }} />
                   </div>
                   <div className="flex justify-between mt-2 text-xs font-mono text-ink/60">
-                    <span>시작가 {formatKRW(topLot.startPrice)}</span>
-                    <span className="text-ink font-bold">현재 {formatKRW(topLot.currentBid)}</span>
+                    <span>시작가 {formatKRW(TOP_LOT.startPrice)}</span>
+                    <span className="text-ink font-bold">현재 {formatKRW(TOP_LOT.currentBid)}</span>
                   </div>
                 </div>
               </div>
 
-              {/* === TURNTABLE — mobile: 1st / desktop: right top === */}
+              {/* TURNTABLE */}
               <div className="dex-casing-inset p-5 relative overflow-hidden order-1 lg:order-none lg:col-start-2 lg:row-start-1">
                 <div className="flex items-center justify-between mb-2 relative z-10">
                   <span className="inline-flex items-center gap-1.5 pixel-label text-paper/70">
@@ -144,42 +108,37 @@ export default function HomePage() {
                   </span>
                   <span className="pixel-label text-gold">360°</span>
                 </div>
-
                 <div className="relative flex justify-center items-center" style={{ height: 340, perspective: '1500px' }}>
                   <div className="spotlight" />
-                  <div className="turntable-disc"
-                    style={{ width: 280, height: 280, bottom: 10, left: '50%', marginLeft: -140 }} />
+                  <div className="turntable-disc" style={{ width: 280, height: 280, bottom: 10, left: '50%', marginLeft: -140 }} />
                   <div className="card-sway relative z-10">
-                    <Link to={`/products/${topLot.id}`} className="block">
-                      <PokeCard card={topLot} size="md" />
+                    <Link to={`/products/${TOP_LOT.id}`} className="block">
+                      <PokeCard card={TOP_LOT} size="md" />
                     </Link>
                   </div>
                 </div>
-
                 <div className="flex items-center justify-between mt-2 relative z-10">
-                  <span className="pixel-label text-paper/50">SLOT-A · {topLot.year}</span>
+                  <span className="pixel-label text-paper/50">SLOT-A · {TOP_LOT.year}</span>
                   <span className="pixel-label text-paper/50">QTY 1 / 1</span>
                 </div>
               </div>
 
-              {/* === BID PANEL — mobile: 3rd (under LCD spec) / desktop: right bottom === */}
+              {/* BID PANEL */}
               <div className="surface-soft p-5 space-y-4 elev-2 order-3 lg:order-none lg:col-start-2 lg:row-start-2">
                 <div>
                   <div className="text-[10px] font-bold tracking-[0.18em] uppercase text-mute mb-1">현재 입찰가</div>
                   <div className="font-display text-4xl font-bold text-ink leading-none tabular-nums">
-                    {formatKRW(topLot.currentBid)}
+                    {formatKRW(TOP_LOT.currentBid)}
                   </div>
-                  <div className="text-xs font-mono text-mute mt-1">입찰 {topLot.bidCount}회 · {topLot.watchers}명 관심</div>
+                  <div className="text-xs font-mono text-mute mt-1">입찰 {TOP_LOT.bidCount}회 · {TOP_LOT.watchers}명 관심</div>
                 </div>
-
                 <div className="bg-ink rounded-xl p-3.5 text-paper">
                   <div className="text-[10px] font-bold tracking-[0.18em] uppercase mb-2 inline-flex items-center gap-1.5 text-gold">
                     <Icon name="clock" size={10} strokeWidth={2.5} /> 마감까지
                   </div>
-                  <Countdown endsAt={topLot.endsAt} size="sm" label={false} />
+                  <Countdown endsAt={TOP_LOT.endsAt} size="sm" label={false} />
                 </div>
-
-                <Link to={`/products/${topLot.id}`} className="block">
+                <Link to={`/products/${TOP_LOT.id}`} className="block">
                   <Button variant="accent" size="lg" className="w-full">
                     지금 입찰하기 <Icon name="arrow" size={14} strokeWidth={2.2} />
                   </Button>
@@ -190,7 +149,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* === LIVE AUCTIONS — clean grid === */}
+      {/* === LIVE AUCTIONS === */}
       <section className="max-w-7xl mx-auto px-6 py-16">
         <SectionHead
           chip={{ label: 'Live Auctions', color: 'text-dex', dot: 'red' }}
@@ -199,7 +158,7 @@ export default function HomePage() {
           cta={{ label: '전체 경매', to: '/auctions' }}
         />
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-10">
-          {live.map((c, i) => (
+          {LIVE_CARDS.map((c, i) => (
             <div key={c.id} className="reveal-up" style={{ animationDelay: `${i * 0.06}s` }}>
               <CardTile card={c} />
             </div>
@@ -235,7 +194,7 @@ export default function HomePage() {
           cta={{ label: '전체 카탈로그', to: '/products' }}
         />
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-10">
-          {buyNow.map((c, i) => (
+          {BUY_NOW_CARDS.map((c, i) => (
             <div key={c.id} className="reveal-up" style={{ animationDelay: `${i * 0.06}s` }}>
               <CardTile card={c} />
             </div>
@@ -252,7 +211,7 @@ export default function HomePage() {
           cta={{ label: '전체 카드팩', to: '/packs' }}
         />
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-10">
-          {PACKS.slice(0, 4).map((p, i) => (
+          {FEATURED_PACKS.map((p, i) => (
             <div key={p.id} className="reveal-up" style={{ animationDelay: `${i * 0.06}s` }}>
               <PackTile pack={p} />
             </div>
@@ -260,10 +219,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* === SELL CTA — split === */}
+      {/* === SELL CTA === */}
       <section className="max-w-7xl mx-auto px-6 py-16">
         <div className="grid lg:grid-cols-2 gap-5">
-          {/* Sell on auction */}
           <div className="dex-casing p-8 relative overflow-hidden text-paper">
             <div className="flex items-center gap-2 mb-3">
               <span className="led led-red led-pulse" />
@@ -273,13 +231,11 @@ export default function HomePage() {
               내 카드를<br/>경매에 올리세요
             </h3>
             <p className="text-sm text-paper/80 leading-relaxed mb-5 max-w-sm">
-              초희귀 카드는 글로벌 컬렉터에게 노출됩니다. PSA·BGS 등급만 위탁 가능.
-              위탁수수료 10%.
+              초희귀 카드는 글로벌 컬렉터에게 노출됩니다. PSA·BGS 등급만 위탁 가능. 위탁수수료 10%.
             </p>
             <Link to="/sell"><Button variant="gold" size="lg">경매 등록하기 <Icon name="arrow" size={14} strokeWidth={2.2} /></Button></Link>
           </div>
 
-          {/* Join trainer */}
           <div className="surface-soft p-8 elev-2 relative overflow-hidden">
             <Pokeball size={140} className="absolute -bottom-4 -right-4 opacity-10" />
             <div className="relative">
@@ -292,28 +248,6 @@ export default function HomePage() {
               </p>
               <Link to="/register"><Button variant="primary" size="lg">회원가입 <Icon name="arrow" size={14} strokeWidth={2.2} /></Button></Link>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* === CTA === */}
-      <section className="max-w-6xl mx-auto px-6 py-16" style={{ display: 'none' }}>
-        <div className="relative bg-paper border border-line rounded-3xl p-10 lg:p-14 overflow-hidden elev-2">
-          <Pokeball size={200} className="absolute -top-6 -right-6 opacity-[0.06]" />
-          <Pokeball size={140} className="absolute -bottom-6 -left-6 opacity-[0.06]" />
-          <div className="relative max-w-2xl">
-            <div className="pixel-label text-dex mb-3">▸ BECOME A TRAINER</div>
-            <h2 className="font-display text-3xl lg:text-4xl font-bold text-ink mb-3 leading-tight tracking-tight">
-              지금 가입하고 희귀 카드를 잡으세요.
-            </h2>
-            <p className="text-sm text-mute leading-relaxed max-w-lg mb-7">
-              본인 인증을 마치면 경매 참여, 자동 입찰, 시세 알림 등 모든 기능을 사용할 수 있습니다.
-            </p>
-            <Link to="/register">
-              <Button variant="accent" size="lg">
-                트레이너 등록하기 <Icon name="arrow" size={14} strokeWidth={2.2} />
-              </Button>
-            </Link>
           </div>
         </div>
       </section>
@@ -338,15 +272,6 @@ function SectionHead({ chip, title, desc, cta }) {
         </Link>
       )}
     </div>
-  )
-}
-
-function Chip({ icon, text }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-paper border border-ink/15 rounded-full text-xs font-bold text-ink">
-      <Icon name={icon} size={11} strokeWidth={2} className="text-mute" />
-      {text}
-    </span>
   )
 }
 

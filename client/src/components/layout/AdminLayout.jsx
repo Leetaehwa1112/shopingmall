@@ -15,9 +15,9 @@ export default function AdminLayout() {
           <Icon name="lock" size={40} strokeWidth={1.4} className="text-dex mx-auto mb-5" />
           <h1 className="font-display text-2xl font-bold text-ink mb-3">관리자 권한 필요</h1>
           <p className="text-sm text-mute mb-6">
-            이메일에 <span className="text-dex font-bold">admin</span> 포함하여 로그인하세요.
+            관리자 계정으로 로그인해주세요.
           </p>
-          <Link to="/login"><Button variant="primary">로그인</Button></Link>
+          <Link to="/admin/login"><Button variant="primary">관리자 로그인</Button></Link>
         </div>
       </div>
     )
@@ -46,11 +46,19 @@ export default function AdminLayout() {
           <NavLink to="/admin" end className={link}>
             <Icon name="trophy" size={16} strokeWidth={1.6} /> 대시보드
           </NavLink>
+          <div className="px-4 pt-4 pb-1 text-[10px] font-bold tracking-[0.18em] text-mute uppercase">상품</div>
           <NavLink to="/admin/products" className={link}>
             <Icon name="package" size={16} strokeWidth={1.6} /> 카드 관리
           </NavLink>
+          <NavLink to="/admin/packs" className={link}>
+            <Icon name="bolt" size={16} strokeWidth={1.6} /> 카드팩 관리
+          </NavLink>
+          <div className="px-4 pt-4 pb-1 text-[10px] font-bold tracking-[0.18em] text-mute uppercase">운영</div>
           <NavLink to="/admin/orders" className={link}>
             <Icon name="cart" size={16} strokeWidth={1.6} /> 주문 관리
+          </NavLink>
+          <NavLink to="/admin/users" className={link}>
+            <Icon name="shield" size={16} strokeWidth={1.6} /> 고객 관리
           </NavLink>
         </nav>
 
