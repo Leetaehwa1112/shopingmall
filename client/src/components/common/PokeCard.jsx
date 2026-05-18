@@ -48,7 +48,7 @@ export default function PokeCard({ card, size = 'md', interactive = true, showSh
         )}
         {!err && (
           <img
-            src={card.image}
+            src={Array.isArray(card.images) ? card.images[0] : (card.images || card.image)}
             alt={card.name}
             loading="lazy"
             onLoad={() => setLoaded(true)}

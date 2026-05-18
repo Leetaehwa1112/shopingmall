@@ -1,3 +1,4 @@
+import { useRef, useState, useEffect } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import useAuthStore from '@/store/authStore'
 import useCartStore from '@/store/cartStore'
@@ -6,8 +7,19 @@ import Icon from '@/components/common/Icon'
 
 export default function Header() {
   const { isAuthenticated, isAdmin, user, logout } = useAuthStore()
-  const cartCount = useCartStore((s) => s.items.length)
+  const cartCount = useCartStore((s) => s.items.reduce((sum, i) => sum + (i.qty || 1), 0))
   const navigate = useNavigate()
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchOpen, setSearchOpen] = useState(false) // mobile overlay
+  const searchRef = useRef(null)
+
+  const submitSearch = (e) => {
+    e?.preventDefault?.()
+    const q = searchQuery.trim()
+    if (!q) return
+    navigate(`/products?q=${encodeURIComponent(q)}`)
+    setSearchOpen(false)
+  }
 
   const linkCls = ({ isActive }) =>
     `text-sm font-bold tracking-wide transition-colors ${
@@ -43,8 +55,8 @@ export default function Header() {
       </div>
 
       {/* Main bar */}
-      <div className="max-w-7xl mx-auto px-6 h-[72px] flex items-center justify-between gap-6">
-        <Link to="/" className="flex items-center gap-3 group">
+      <div className="max-w-7xl mx-auto px-6 h-[72px] flex items-center justify-between gap-4 lg:gap-6">
+        <Link to="/" className="flex items-center gap-3 group shrink-0">
           <Pokeball size={36} className="group-hover:rotate-12 transition-transform" />
           <div className="leading-none">
             <div className="font-display font-bold text-2xl tracking-tight text-ink">
@@ -54,7 +66,24 @@ export default function Header() {
           </div>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-7">
+        {/* Global Search — desktop inline */}
+        <form onSubmit={submitSearch} className="hidden md:flex flex-1 max-w-md mx-2 lg:mx-4">
+          <label className="relative w-full">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mute pointer-events-none">
+              <Icon name="search" size={16} strokeWidth={2} />
+            </span>
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="카드 이름 · 세트 · Cert# 검색"
+              aria-label="카드 검색"
+              className="w-full h-10 pl-10 pr-3 rounded-full bg-bone-2 border border-transparent text-sm font-medium text-ink placeholder:text-mute focus:bg-paper focus:border-ink/30 outline-none transition-colors"
+            />
+          </label>
+        </form>
+
+        <nav className="hidden lg:flex items-center gap-6 shrink-0">
           <NavLink to="/auctions" className={linkCls}>
             <span className="inline-flex items-center gap-1.5">
               <span className="led led-red led-pulse" style={{ width: 6, height: 6 }} />
@@ -67,7 +96,16 @@ export default function Header() {
           {isAdmin && <NavLink to="/admin" className={linkCls}>관리자</NavLink>}
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Mobile search icon */}
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
+            className="md:hidden w-10 h-10 rounded-full bg-bone-2 hover:bg-line flex items-center justify-center text-ink transition-colors"
+            aria-label="검색 열기"
+          >
+            <Icon name="search" size={18} strokeWidth={1.8} />
+          </button>
           <Link to="/sell" className="hidden sm:inline-flex btn btn-secondary btn-sm">
             <Icon name="plus" size={12} strokeWidth={2.5} /> 경매 등록
           </Link>
@@ -82,21 +120,7 @@ export default function Header() {
             )}
           </Link>
           {isAuthenticated ? (
-            <div className="flex items-center gap-2">
-              <Link to="/mypage" className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-full hover:bg-bone-2 transition-colors">
-                <div className="w-7 h-7 rounded-full bg-ink text-paper flex items-center justify-center text-xs font-bold">
-                  {user?.name?.[0]?.toUpperCase() || 'T'}
-                </div>
-                <div className="leading-none">
-                  <div className="text-[10px] text-mute font-medium">환영합니다</div>
-                  <div className="text-sm font-bold text-ink">{user?.name}님</div>
-                </div>
-              </Link>
-              <button onClick={() => { logout(); navigate('/') }}
-                className="text-xs font-bold text-mute hover:text-dex">
-                로그아웃
-              </button>
-            </div>
+            <UserDropdown user={user} logout={logout} navigate={navigate} />
           ) : (
             <div className="flex items-center gap-2">
               <Link to="/login" className="hidden sm:inline text-sm font-bold text-mute hover:text-ink">로그인</Link>
@@ -105,6 +129,89 @@ export default function Header() {
           )}
         </div>
       </div>
+
+      {/* Mobile search overlay */}
+      {searchOpen && (
+        <div className="md:hidden border-t border-line bg-paper px-4 py-3">
+          <form onSubmit={submitSearch} className="flex gap-2">
+            <label className="relative flex-1">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mute pointer-events-none">
+                <Icon name="search" size={16} strokeWidth={2} />
+              </span>
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="카드 이름 · 세트 · Cert# 검색"
+                aria-label="카드 검색"
+                autoFocus
+                className="w-full h-10 pl-10 pr-3 rounded-full bg-bone-2 border border-transparent text-sm font-medium text-ink placeholder:text-mute focus:bg-paper focus:border-ink/30 outline-none"
+              />
+            </label>
+            <button type="button" onClick={() => { setSearchOpen(false); setSearchQuery('') }}
+              className="px-3 text-sm font-bold text-mute hover:text-ink">취소</button>
+          </form>
+        </div>
+      )}
     </header>
+  )
+}
+
+// ─── User Dropdown ───────────────────────────────────────────
+function UserDropdown({ user, logout, navigate }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-full hover:bg-bone-2 transition-colors"
+      >
+        <div className="w-7 h-7 rounded-full bg-ink text-paper flex items-center justify-center text-xs font-bold">
+          {user?.name?.[0]?.toUpperCase() || 'U'}
+        </div>
+        <div className="leading-none text-left">
+          <div className="text-[10px] text-mute font-medium">환영합니다</div>
+          <div className="text-sm font-bold text-ink">{user?.name}님</div>
+        </div>
+        <Icon name="arrow" size={10} strokeWidth={2.5}
+          className={`text-mute transition-transform duration-200 ${open ? '-rotate-90' : 'rotate-90'}`} />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-48 surface-soft elev-3 rounded-xl overflow-hidden z-50 border border-line">
+          <div className="px-4 py-3 border-b border-line">
+            <div className="text-xs text-mute font-medium">로그인 중</div>
+            <div className="text-sm font-bold text-ink truncate">{user?.email}</div>
+          </div>
+          <div className="py-1">
+            <Link to="/mypage" onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-bold text-ink hover:bg-bone-2 transition-colors">
+              <Icon name="user" size={14} strokeWidth={1.8} />
+              마이페이지
+            </Link>
+            <Link to="/my-orders" onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-bold text-ink hover:bg-bone-2 transition-colors">
+              <Icon name="package" size={14} strokeWidth={1.8} />
+              내 주문 목록
+            </Link>
+            <div className="border-t border-line my-1" />
+            <button
+              onClick={() => { setOpen(false); logout(); navigate('/') }}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-bold text-rose-600 hover:bg-rose-50 transition-colors">
+              <Icon name="logout" size={14} strokeWidth={1.8} />
+              로그아웃
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }

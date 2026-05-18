@@ -5,17 +5,18 @@ import { formatKRW } from '@/api/cards'
 import useWishlistStore from '@/store/wishlistStore'
 
 export default function PackTile({ pack }) {
-  const wished = useWishlistStore((s) => s.has(pack.id))
+  const packId = pack.id || pack._id
+  const wished = useWishlistStore((s) => s.has(packId))
   const toggle = useWishlistStore((s) => s.toggle)
 
   const onWish = (e) => {
     e.preventDefault()
     e.stopPropagation()
-    toggle(pack.id)
+    toggle(packId)
   }
 
   return (
-    <Link to={`/packs/${pack.id}`} className="group block surface-card overflow-hidden">
+    <Link to={`/packs/${packId}`} className="group block surface-card overflow-hidden">
       <div className="px-4 pt-4 flex justify-between items-center">
         <span className="inline-flex items-center gap-2">
           <span className="led led-yellow" style={{ width: 7, height: 7 }} />

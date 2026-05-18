@@ -3,11 +3,14 @@ import api from '@/api/axios'
 import Button from '@/components/common/Button'
 import Icon from '@/components/common/Icon'
 
+const PAGE_SIZE = 8
+
 export default function AdminUsers() {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
   const [selected, setSelected] = useState(null)
+  const [page, setPage] = useState(1)
 
   useEffect(() => {
     api.get('/users')
@@ -17,6 +20,11 @@ export default function AdminUsers() {
   }, [])
 
   const list = filter === 'all' ? users : users.filter((u) => u.user_type === filter)
+
+  const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE))
+  const paged = list.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  const handleFilter = (v) => { setFilter(v); setPage(1) }
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -33,7 +41,7 @@ export default function AdminUsers() {
 
       <div className="flex gap-2 flex-wrap">
         {[['all', '전체'], ['customer', '일반 회원'], ['admin', '관리자']].map(([v, label]) => (
-          <button key={v} onClick={() => setFilter(v)}
+          <button key={v} onClick={() => handleFilter(v)}
             className={`px-4 py-2 text-sm font-bold rounded-full border transition-all ${
               filter === v ? 'bg-ink text-paper border-ink' : 'bg-paper border-line text-ink hover:border-ink/30'
             }`}>
@@ -59,7 +67,7 @@ export default function AdminUsers() {
               <tr><td colSpan={6} className="p-8 text-center text-mute font-bold">불러오는 중...</td></tr>
             ) : list.length === 0 ? (
               <tr><td colSpan={6} className="p-8 text-center text-mute font-bold">회원이 없습니다.</td></tr>
-            ) : list.map((u) => (
+            ) : paged.map((u) => (
               <tr key={u._id} className="border-b border-line last:border-0 hover:bg-bone-2/30">
                 <td className="p-4">
                   <div className="flex items-center gap-3">
@@ -92,7 +100,33 @@ export default function AdminUsers() {
         </table>
       </div>
 
+      {!loading && totalPages > 1 && (
+        <Pagination page={page} totalPages={totalPages} total={list.length} onPage={setPage} />
+      )}
+
       {selected && <UserModal user={selected} onClose={() => setSelected(null)} />}
+    </div>
+  )
+}
+
+function Pagination({ page, totalPages, total, onPage }) {
+  return (
+    <div className="flex items-center justify-between gap-2 pt-2">
+      <span className="text-xs text-mute font-mono">
+        {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} / {total}건
+      </span>
+      <div className="flex items-center gap-1.5">
+        <button onClick={() => onPage((p) => Math.max(1, p - 1))} disabled={page === 1}
+          className="w-8 h-8 rounded-lg border border-line bg-paper text-ink font-bold hover:bg-bone-2 disabled:opacity-30 disabled:cursor-not-allowed text-sm">‹</button>
+        {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+          <button key={n} onClick={() => onPage(n)}
+            className={`w-8 h-8 rounded-lg border text-sm font-bold transition-all ${
+              n === page ? 'bg-ink text-paper border-ink' : 'bg-paper border-line text-ink hover:bg-bone-2'
+            }`}>{n}</button>
+        ))}
+        <button onClick={() => onPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+          className="w-8 h-8 rounded-lg border border-line bg-paper text-ink font-bold hover:bg-bone-2 disabled:opacity-30 disabled:cursor-not-allowed text-sm">›</button>
+      </div>
     </div>
   )
 }

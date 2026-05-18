@@ -16,4 +16,14 @@ const protect = async (req, res, next) => {
   }
 };
 
-module.exports = { protect };
+const adminOnly = (req, res, next) => {
+  if (req.user?.user_type !== 'admin') {
+    return res.status(403).json({ success: false, message: '관리자 권한이 필요합니다.' });
+  }
+  next();
+};
+
+// 자주 쓰이는 조합 — [protect, adminOnly] 대신 admin 하나로
+const admin = [protect, adminOnly];
+
+module.exports = { protect, adminOnly, admin };

@@ -12,7 +12,7 @@ export const AUCTION_CARDS = [
     year: 1999,
     number: '4/102',
     image: 'https://images.pokemontcg.io/base1/4_hires.png',
-    grade: { company: 'PSA', score: 10, label: 'GEM MINT', cert: '52819374' },
+    grade: { company: 'PSA', score: 10, country: 'USA', cert: '52819374' },
     rarity: 'holo-rare',
     category: 'base',
     type: 'auction',
@@ -50,7 +50,7 @@ export const AUCTION_CARDS = [
     number: 'Promo',
     image: 'https://images.pokemontcg.io/base1/58_hires.png',
     imageNote: 'Pikachu Illustrator (실제 카드 이미지는 인증서 검증 후 제공)',
-    grade: { company: 'PSA', score: 7, label: 'NEAR MINT', cert: '38291047' },
+    grade: { company: 'PSA', score: 7, country: 'JPN', cert: '38291047' },
     rarity: 'promo-ultra',
     category: 'japanese',
     type: 'auction',
@@ -84,7 +84,7 @@ export const AUCTION_CARDS = [
     year: 2001,
     number: '107/105',
     image: 'https://images.pokemontcg.io/neo4/107_hires.png',
-    grade: { company: 'BGS', score: 9.5, label: 'GEM MINT', cert: 'BGS-9982341' },
+    grade: { company: 'BGS', score: 9.5, country: 'JPN', cert: 'BGS-9982341' },
     rarity: 'shining',
     category: 'neo',
     type: 'auction',
@@ -116,7 +116,7 @@ export const AUCTION_CARDS = [
     year: 2000,
     number: '9/111',
     image: 'https://images.pokemontcg.io/neo1/9_hires.png',
-    grade: { company: 'PSA', score: 10, label: 'GEM MINT', cert: '49281748' },
+    grade: { company: 'PSA', score: 10, country: 'USA', cert: '49281748' },
     rarity: 'holo-rare',
     category: 'neo',
     type: 'auction',
@@ -150,7 +150,7 @@ export const BUYNOW_CARDS = [
     year: 1999,
     number: '10/102',
     image: 'https://images.pokemontcg.io/base1/10_hires.png',
-    grade: { company: 'PSA', score: 10, label: 'GEM MINT', cert: '52917382' },
+    grade: { company: 'PSA', score: 10, country: 'USA', cert: '52917382' },
     rarity: 'holo-rare',
     category: 'base',
     type: 'buynow',
@@ -170,7 +170,7 @@ export const BUYNOW_CARDS = [
     year: 1999,
     number: '2/102',
     image: 'https://images.pokemontcg.io/base1/2_hires.png',
-    grade: { company: 'PSA', score: 9, label: 'MINT', cert: '52738201' },
+    grade: { company: 'PSA', score: 9, country: 'USA', cert: '52738201' },
     rarity: 'holo-rare',
     category: 'base',
     type: 'buynow',
@@ -190,7 +190,7 @@ export const BUYNOW_CARDS = [
     year: 1999,
     number: '15/102',
     image: 'https://images.pokemontcg.io/base1/15_hires.png',
-    grade: { company: 'PSA', score: 10, label: 'GEM MINT', cert: '52183907' },
+    grade: { company: 'PSA', score: 10, country: 'USA', cert: '52183907' },
     rarity: 'holo-rare',
     category: 'base',
     type: 'buynow',
@@ -210,7 +210,7 @@ export const BUYNOW_CARDS = [
     year: 1999,
     number: '6/102',
     image: 'https://images.pokemontcg.io/base1/6_hires.png',
-    grade: { company: 'PSA', score: 9, label: 'MINT', cert: '52938201' },
+    grade: { company: 'PSA', score: 9, country: 'USA', cert: '52938201' },
     rarity: 'holo-rare',
     category: 'base',
     type: 'buynow',
@@ -230,7 +230,7 @@ export const BUYNOW_CARDS = [
     year: 1999,
     number: '1/102',
     image: 'https://images.pokemontcg.io/base1/1_hires.png',
-    grade: { company: 'PSA', score: 9, label: 'MINT', cert: '52738451' },
+    grade: { company: 'PSA', score: 9, country: 'USA', cert: '52738451' },
     rarity: 'holo-rare',
     category: 'base',
     type: 'buynow',
@@ -250,7 +250,7 @@ export const BUYNOW_CARDS = [
     year: 1999,
     number: '8/102',
     image: 'https://images.pokemontcg.io/base1/8_hires.png',
-    grade: { company: 'PSA', score: 10, label: 'GEM MINT', cert: '52183442' },
+    grade: { company: 'PSA', score: 10, country: 'USA', cert: '52183442' },
     rarity: 'holo-rare',
     category: 'base',
     type: 'buynow',
@@ -270,7 +270,7 @@ export const BUYNOW_CARDS = [
     year: 1999,
     number: '12/102',
     image: 'https://images.pokemontcg.io/base1/12_hires.png',
-    grade: { company: 'PSA', score: 10, label: 'GEM MINT', cert: '52281347' },
+    grade: { company: 'PSA', score: 10, country: 'USA', cert: '52281347' },
     rarity: 'holo-rare',
     category: 'base',
     type: 'buynow',
@@ -290,7 +290,7 @@ export const BUYNOW_CARDS = [
     year: 1999,
     number: '14/102',
     image: 'https://images.pokemontcg.io/base1/14_hires.png',
-    grade: { company: 'PSA', score: 9, label: 'MINT', cert: '52381209' },
+    grade: { company: 'PSA', score: 9, country: 'USA', cert: '52381209' },
     rarity: 'holo-rare',
     category: 'base',
     type: 'buynow',
@@ -310,7 +310,7 @@ export const BUYNOW_CARDS = [
     year: 1999,
     number: '58/102',
     image: 'https://images.pokemontcg.io/base1/58_hires.png',
-    grade: { company: 'PSA', score: 10, label: 'GEM MINT', cert: '52938401' },
+    grade: { company: 'PSA', score: 10, country: 'USA', cert: '52938401' },
     rarity: 'common',
     category: 'base',
     type: 'buynow',
@@ -330,7 +330,7 @@ export const BUYNOW_CARDS = [
     year: 1999,
     number: '60/64',
     image: 'https://images.pokemontcg.io/jungle/60_hires.png',
-    grade: { company: 'PSA', score: 10, label: 'GEM MINT', cert: '52938502' },
+    grade: { company: 'PSA', score: 10, country: 'USA', cert: '52938502' },
     rarity: 'common',
     category: 'base',
     type: 'buynow',
@@ -568,11 +568,17 @@ export function getShippingOptionsForPrice(price, isPack = false) {
 }
 
 export const CATEGORIES = [
-  { id: 'all',      label: '전체',         en: 'All' },
-  { id: 'base',     label: 'Base Set',     en: 'Base Set' },
-  { id: 'neo',      label: 'Neo Series',   en: 'Neo' },
-  { id: 'japanese', label: '일본판',       en: 'Japanese' },
-  { id: 'promo',    label: '프로모',       en: 'Promo' },
+  { id: 'all',      label: '전체',             en: 'All' },
+  { id: 'base',     label: 'WotC 초기',        en: 'Base~TR' },
+  { id: 'neo',      label: 'Neo 시리즈',       en: 'Neo' },
+  { id: 'ex',       label: 'EX · DP · BW',    en: 'EX Era' },
+  { id: 'xy',       label: 'XY · SM',          en: 'XY Era' },
+  { id: 'swsh',     label: 'Sword & Shield',   en: 'SWSH' },
+  { id: 'sv',       label: 'Scarlet & Violet', en: 'SV' },
+  { id: 'japanese', label: '일본판',           en: 'Japanese' },
+  { id: 'promo',    label: '프로모 · 한정판',  en: 'Promo' },
+  { id: 'pack',     label: '부스터팩',         en: 'Pack' },
+  { id: 'box',      label: '박스 · 컬렉션',    en: 'Box' },
 ];
 
 export const TYPE_COLORS = {
@@ -586,23 +592,7 @@ export const TYPE_COLORS = {
   Dragon:   '#7038f8',
 };
 
-export const formatKRW = (n) => {
-  if (n >= 1e12) return `₩${(n / 1e12).toFixed(2)}조`;
-  if (n >= 1e8)  return `₩${(n / 1e8).toFixed(2)}억`;
-  if (n >= 1e4)  return `₩${(n / 1e4).toFixed(0)}만`;
-  return `₩${n.toLocaleString()}`;
-};
-
-export const formatKRWFull = (n) => `₩${n.toLocaleString()}`;
+// 포맷 유틸은 @/utils/format 으로 이전됨. 기존 import 호환을 위해 re-export 유지.
+export { formatKRW, formatKRWFull, timeUntil } from '@/utils/format'
 
 export const getCard = (id) => ALL_CARDS.find((c) => c.id === id);
-
-export const timeUntil = (ts) => {
-  const diff = ts - Date.now();
-  if (diff <= 0) return { ended: true, d: 0, h: 0, m: 0, s: 0, totalMs: 0 };
-  const d = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
-  const m = Math.floor((diff / (1000 * 60)) % 60);
-  const s = Math.floor((diff / 1000) % 60);
-  return { ended: false, d, h, m, s, totalMs: diff };
-};

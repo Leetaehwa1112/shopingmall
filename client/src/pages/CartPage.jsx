@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import useCartStore from '@/store/cartStore'
 import { formatKRWFull } from '@/api/cards'
@@ -7,8 +8,11 @@ import Button from '@/components/common/Button'
 import Icon from '@/components/common/Icon'
 
 export default function CartPage() {
-  const { items, remove, total } = useCartStore()
+  const { items, remove, updateQty, total, fetchCart, loading } = useCartStore()
   const navigate = useNavigate()
+
+  useEffect(() => { fetchCart() }, [])
+
   const shipping = items.length ? 30000 : 0
   const insurance = Math.floor(total() * 0.005)
   const grand = total() + shipping + insurance
@@ -20,7 +24,9 @@ export default function CartPage() {
         <h1 className="font-display text-4xl font-bold text-ink tracking-tight">장바구니</h1>
       </div>
 
-      {items.length === 0 ? (
+      {loading ? (
+        <div className="text-center py-24 text-mute font-bold">불러오는 중...</div>
+      ) : items.length === 0 ? (
         <div className="surface-soft p-20 text-center">
           <Icon name="cart" size={48} strokeWidth={1.2} className="text-mute mx-auto mb-5" />
           <p className="font-display text-2xl font-bold text-ink mb-2">장바구니가 비어있습니다</p>
@@ -30,30 +36,49 @@ export default function CartPage() {
       ) : (
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-4">
-            {items.map((c) => (
-              <div key={c.id} className="surface-soft p-5 flex gap-5 items-start">
-                <PokeCard card={c} size="sm" interactive={false} showShine={false} />
-                <div className="flex-1 min-w-0">
-                  <Link to={`/products/${c.id}`} className="block hover:text-dex transition-colors">
-                    <div className="font-display text-2xl font-bold text-ink">{c.nameKo}</div>
-                    <div className="text-sm text-mute italic">{c.name}</div>
-                  </Link>
-                  <div className="text-xs text-mute font-mono mt-2">
-                    {c.set} · {c.year} · #{c.number}
+            {items.map((c) => {
+              const productId = c.id || c._id
+              const price = c.priceSnapshot || c.price || c.currentBid || 0
+              return (
+                <div key={productId} className="surface-soft p-5 flex gap-5 items-start">
+                  <PokeCard card={c} size="sm" interactive={false} showShine={false} />
+                  <div className="flex-1 min-w-0">
+                    <Link to={`/products/${productId}`} className="block hover:text-dex transition-colors">
+                      <div className="font-display text-2xl font-bold text-ink">{c.nameKo || c.name}</div>
+                      <div className="text-sm text-mute italic">{c.name}</div>
+                    </Link>
+                    <div className="text-xs text-mute font-mono mt-2">
+                      {c.set || c.setShort} · {c.year} · #{c.number}
+                    </div>
+                    <div className="mt-3 flex items-center gap-4">
+                      <GradeBadge grade={c.grade} size="sm" />
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => updateQty(productId, Math.max(1, (c.qty || 1) - 1))}
+                          className="w-7 h-7 rounded-md bg-bone-2 hover:bg-line text-ink font-bold text-sm">−</button>
+                        <span className="font-mono font-bold text-sm w-6 text-center">{c.qty || 1}</span>
+                        <button onClick={() => updateQty(productId, (c.qty || 1) + 1)}
+                          className="w-7 h-7 rounded-md bg-bone-2 hover:bg-line text-ink font-bold text-sm">+</button>
+                      </div>
+                    </div>
+                    {c.shippingOption === 'quick' && (
+                      <div className="mt-2 text-[10px] text-amber-700 font-bold flex items-center gap-1">
+                        <Icon name="bolt" size={10} strokeWidth={2.5} /> 퀵 배송 +₩50,000
+                      </div>
+                    )}
                   </div>
-                  <div className="mt-3"><GradeBadge grade={c.grade} size="sm" /></div>
-                </div>
-                <div className="text-right">
-                  <div className="font-display text-2xl font-bold text-ink tabular-nums">
-                    {formatKRWFull(c.price || c.currentBid)}
+                  <div className="text-right">
+                    <div className="font-display text-2xl font-bold text-ink tabular-nums">
+                      {formatKRWFull(price * (c.qty || 1))}
+                    </div>
+                    <div className="text-xs text-mute mt-1">{formatKRWFull(price)} × {c.qty || 1}</div>
+                    <button onClick={() => remove(productId)}
+                      className="text-xs font-bold text-mute hover:text-dex mt-3 inline-flex items-center gap-1">
+                      <Icon name="close" size={12} strokeWidth={2.2} /> 제거
+                    </button>
                   </div>
-                  <button onClick={() => remove(c.id)}
-                    className="text-xs font-bold text-mute hover:text-dex mt-3 inline-flex items-center gap-1">
-                    <Icon name="close" size={12} strokeWidth={2.2} /> 제거
-                  </button>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
 
           <aside>

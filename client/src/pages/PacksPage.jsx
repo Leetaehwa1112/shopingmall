@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
-import { PACKS } from '@/api/cards'
+import { useMemo, useState, useEffect } from 'react'
+import { normalizePack } from '@/api/normalize'
+import api from '@/api/axios'
 import PackTile from '@/components/common/PackTile'
 
 const FILTERS = [
@@ -11,14 +12,22 @@ const FILTERS = [
 export default function PacksPage() {
   const [filter, setFilter] = useState('all')
   const [sort, setSort] = useState('default')
+  const [packs, setPacks] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    api.get('/packs', { params: { status: 'active', limit: 100 } })
+      .then(({ data }) => setPacks(data.data.map(normalizePack)))
+      .finally(() => setLoading(false))
+  }, [])
 
   const list = useMemo(() => {
-    let arr = filter === 'all' ? PACKS : PACKS.filter((p) => p.type === filter)
+    let arr = filter === 'all' ? packs : packs.filter((p) => p.type === filter)
     if (sort === 'price-asc')  arr = [...arr].sort((a, b) => a.price - b.price)
     if (sort === 'price-desc') arr = [...arr].sort((a, b) => b.price - a.price)
-    if (sort === 'year-old')   arr = [...arr].sort((a, b) => a.year - b.year)
+    if (sort === 'year-old')   arr = [...arr].sort((a, b) => (a.year || 0) - (b.year || 0))
     return arr
-  }, [filter, sort])
+  }, [filter, sort, packs])
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12">
@@ -42,7 +51,7 @@ export default function PacksPage() {
               }`}>
               {f.label}
               <span className="ml-1.5 opacity-60 text-xs font-mono">
-                {f.id === 'all' ? PACKS.length : PACKS.filter((p) => p.type === f.id).length}
+                {f.id === 'all' ? packs.length : packs.filter((p) => p.type === f.id).length}
               </span>
             </button>
           ))}
@@ -56,13 +65,17 @@ export default function PacksPage() {
         </select>
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {list.map((p, i) => (
-          <div key={p.id} className="reveal-up" style={{ animationDelay: `${i * 0.04}s` }}>
-            <PackTile pack={p} />
-          </div>
-        ))}
-      </div>
+      {loading ? (
+        <div className="text-center py-24 text-mute font-bold">불러오는 중...</div>
+      ) : (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {list.map((p, i) => (
+            <div key={p.id} className="reveal-up" style={{ animationDelay: `${i * 0.04}s` }}>
+              <PackTile pack={p} />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

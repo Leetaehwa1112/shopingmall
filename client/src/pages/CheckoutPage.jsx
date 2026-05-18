@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useCartStore from '@/store/cartStore'
 import { formatKRWFull } from '@/api/cards'
+import api from '@/api/axios'
 import Button from '@/components/common/Button'
 import Pokeball from '@/components/common/Pokeball'
 import Icon from '@/components/common/Icon'
@@ -22,19 +23,43 @@ export default function CheckoutPage() {
   const [agree, setAgree] = useState(false)
   const [processing, setProcessing] = useState(false)
 
+
   if (!pending.items) return <div className="p-20 text-center text-mute">진행중인 주문이 없습니다.</div>
 
-  const pay = (e) => {
+  const pay = async (e) => {
     e.preventDefault()
     if (!agree) return alert('약관에 동의해주세요')
     setProcessing(true)
-    setTimeout(() => {
-      const orderId = 'PV-' + Date.now().toString(36).toUpperCase()
-      sessionStorage.setItem('last-order', JSON.stringify({ ...pending, method, orderId }))
+    try {
+      const { form } = pending
+      const { data } = await api.post('/orders', {
+        shippingMethod:   form.shipping,
+        recipient:        form.name,
+        phone:            form.phone,
+        address: {
+          zipcode: form.zip,
+          street:  form.addr1,
+          detail:  form.addr2 || '',
+          city:    '',
+        },
+        requireSignature: form.signature,
+        insuranceEnabled: form.insurance,
+        memo:             form.memo || '',
+        paymentMethod:    method,
+      })
+      sessionStorage.setItem('last-order', JSON.stringify({
+        ...pending,
+        method,
+        orderId:   data.data.orderNumber,
+        serverOrder: data.data,
+      }))
       sessionStorage.removeItem('pending-order')
       clear()
       navigate('/order-complete')
-    }, 2400)
+    } catch (err) {
+      setProcessing(false)
+      alert(err.response?.data?.message || '결제 처리 중 오류가 발생했습니다.')
+    }
   }
 
   return (

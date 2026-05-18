@@ -22,3 +22,7 @@ export const removeFromWishlist = (userId, cardId) =>
 
 // 내 정보 조회 (토큰 필요)
 export const getMe = () => api.get('/users/me')
+
+// 이메일 중복 확인 (public)
+export const checkEmailAvailable = (email) =>
+  api.get('/users/check-email', { params: { email } })
