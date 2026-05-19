@@ -249,16 +249,11 @@ function DexHero({ stats, loading, saleOnly, onToggleSale }) {
 
             <h1
               id="dex-title"
-              className="font-display text-4xl sm:text-5xl lg:text-[56px] font-bold tracking-tight text-white leading-[1.05] mb-3"
+              className="font-display text-4xl sm:text-5xl lg:text-[56px] font-bold tracking-tight text-white leading-[1.05] mb-7"
               style={{ textShadow: '0 2px 0 rgba(0,0,0,0.35)' }}
             >
-              어른이 된 트레이너의<br />
-              <span className="text-electric">진짜 도감.</span>
+              포켓몬 도감
             </h1>
-            <p className="text-white/80 text-[15px] font-medium max-w-xl mb-7 leading-relaxed">
-              그때 손에 쥐고 싶었던 카드들, 이제 한 페이지에서 만나요.<br className="hidden sm:block" />
-              <span className="text-electric font-bold">지금 살 수 있는 매물</span>이 LED로 깜빡입니다.
-            </p>
 
             {/* ── LCD 패널: 메인 stat + CTA ───────────────── */}
             <LcdScreen className="inline-flex flex-wrap items-center gap-6 sm:gap-8 px-5 sm:px-7 py-4 sm:py-5">
