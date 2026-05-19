@@ -153,7 +153,8 @@ const ALL_CARDS = [
     accent: '#fcd34d', rarity: 'common', isHolo: false,
     grade: { company: 'PSA', score: 10, country: 'USA', cert: '52938502' },
     population: { psa10: 412 },
-    images: ['https://images.pokemontcg.io/jungle/60_hires.png'],
+    // 기존 jungle/60_hires.png는 404 → base1/58 (Base Set Pikachu)로 대체
+    images: ['https://images.pokemontcg.io/base1/58_hires.png'],
     description: 'Jungle 1st Edition Pikachu PSA 10.',
   },
 ];

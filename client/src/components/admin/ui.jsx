@@ -490,12 +490,29 @@ export function Avatar({ name, size = 28 }) {
 }
 
 export function ImgThumb({ src, alt, size = 32 }) {
+  const [err, setErr] = useState(false)
+  const showImg = src && !err
+  const letter = (alt || '?').trim().charAt(0).toUpperCase()
   return (
     <div className="rounded-md overflow-hidden bg-bone-2 flex items-center justify-center flex-shrink-0" style={{ width: size, height: size }}>
-      {src ? (
-        <img src={src} alt={alt} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+      {showImg ? (
+        <img
+          src={src}
+          alt={alt}
+          loading="lazy"
+          decoding="async"
+          className="w-full h-full object-cover"
+          onError={() => setErr(true)}
+        />
       ) : (
-        <span className="text-mute text-[10px]">—</span>
+        // 404 또는 src 없음 → 이니셜 폴백 (조용히, 콘솔 노이즈 없음)
+        <span
+          className="font-display font-bold text-ink/60 select-none"
+          style={{ fontSize: size * 0.42 }}
+          aria-label={alt}
+        >
+          {letter}
+        </span>
       )}
     </div>
   )

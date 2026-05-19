@@ -329,7 +329,7 @@ export const BUYNOW_CARDS = [
     setShort: 'Jungle',
     year: 1999,
     number: '60/64',
-    image: 'https://images.pokemontcg.io/jungle/60_hires.png',
+    image: 'https://images.pokemontcg.io/base1/58_hires.png', // jungle/60은 404, base1/58로 대체
     grade: { company: 'PSA', score: 10, country: 'USA', cert: '52938502' },
     rarity: 'common',
     category: 'base',
