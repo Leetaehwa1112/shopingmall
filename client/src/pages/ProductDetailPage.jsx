@@ -237,7 +237,7 @@ export default function ProductDetailPage() {
               </div>
 
               {/* Countdown — chunky black box with electric label */}
-              <div className="bg-ink rounded-xl p-4 text-paper border-2 border-ink">
+              <div className="bg-ink rounded-xl p-4 text-white border-2 border-ink">
                 <div className="text-[10px] font-bold tracking-[0.18em] uppercase mb-3 inline-flex items-center gap-1.5 text-electric">
                   <Icon name="clock" size={11} strokeWidth={2.5} /> 마감까지
                 </div>
@@ -460,7 +460,7 @@ export default function ProductDetailPage() {
                 {['강화 패키지 + 충격 흡수 인서트', 'FedEx Priority Insured (전액 보험)',
                   '수령인 서명 필수', '발송 후 24시간 내 트래킹 제공', '국내 1-2일 / 해외 3-5일'].map((t, i) => (
                   <li key={i} className="flex gap-3 items-start">
-                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-grass text-paper text-[10px] font-bold border-2 border-ink shrink-0 mt-0.5">✓</span>
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-grass text-white text-[10px] font-bold border-2 border-ink shrink-0 mt-0.5">✓</span>
                     {t}
                   </li>
                 ))}

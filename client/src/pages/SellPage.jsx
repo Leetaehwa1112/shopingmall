@@ -117,7 +117,7 @@ export default function SellPage() {
               <div className="flex items-center gap-2">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 border-ink ${
                   i === step ? 'bg-ink text-electric shadow-[0_3px_0_#1a1a1a] -translate-y-0.5' :
-                  i < step  ? 'bg-grass text-paper shadow-[0_2px_0_#1a1a1a]' :
+                  i < step  ? 'bg-grass text-white shadow-[0_2px_0_#1a1a1a]' :
                               'bg-paper text-mute'
                 }`}>
                   {i < step ? <Icon name="check" size={12} strokeWidth={3} /> : i + 1}

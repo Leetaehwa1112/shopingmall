@@ -31,26 +31,26 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 bg-paper/95 backdrop-blur-md border-b-2 border-ink">
       {/* ── Top fun ribbon ─────────────────────────────────── */}
-      <div className="bg-ink text-paper">
+      <div className="bg-ink text-white">
         <div className="max-w-7xl mx-auto px-6 h-8 flex items-center justify-between text-[11px] font-medium">
           <div className="flex gap-4">
             <span className="inline-flex items-center gap-1.5">
               <span className="led led-yellow led-pulse" style={{ width: 6, height: 6 }} />
               <span className="font-bold">두근두근 LIVE 경매</span>
             </span>
-            <span className="hidden sm:inline-flex items-center gap-1.5 text-paper/70">
+            <span className="hidden sm:inline-flex items-center gap-1.5 text-white/70">
               <span className="led led-blue" style={{ width: 6, height: 6 }} />
               PSA·BGS·CGC 인증
             </span>
-            <span className="hidden md:inline-flex items-center gap-1.5 text-paper/70">
+            <span className="hidden md:inline-flex items-center gap-1.5 text-white/70">
               <span className="led led-green" style={{ width: 6, height: 6 }} />
               안심 배송 + 보험
             </span>
           </div>
           <div className="hidden md:flex gap-3 items-center">
             <span className="font-mono text-electric font-bold">1588-0420</span>
-            <span className="text-paper/30">|</span>
-            <span className="text-paper/50">EN</span>
+            <span className="text-white/30">|</span>
+            <span className="text-white/50">EN</span>
             <span>KR</span>
           </div>
         </div>
@@ -118,7 +118,7 @@ export default function Header() {
             aria-label="장바구니">
             <Icon name="cart" size={18} strokeWidth={2} />
             {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] bg-dex text-paper text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-paper px-1 animate-pulse">
+              <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] bg-dex text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-paper px-1 animate-pulse">
                 {cartCount}
               </span>
             )}

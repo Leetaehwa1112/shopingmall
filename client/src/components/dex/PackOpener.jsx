@@ -102,18 +102,18 @@ export default function PackOpener({ pack, onClose }) {
     >
       <div className="bg-paper rounded-3xl border-2 border-ink shadow-[0_8px_0_#1a1a1a] max-w-4xl w-full overflow-hidden max-h-[94vh] flex flex-col">
         {/* 헤더 */}
-        <header className="bg-dex text-paper px-6 py-4 flex items-center justify-between border-b-2 border-ink">
+        <header className="bg-dex text-white px-6 py-4 flex items-center justify-between border-b-2 border-ink">
           <div className="flex items-center gap-3">
             <span className="inline-block w-3 h-3 rounded-full bg-electric ring-2 ring-paper/50 animate-pulse" />
             <div>
-              <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-paper/70">Pack Opening</div>
+              <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-white/70">Pack Opening</div>
               <div className="font-display text-xl font-bold leading-tight">{pack?.nameKo || pack?.name || 'Booster Pack'}</div>
             </div>
           </div>
           <button
             onClick={onClose}
             disabled={phase === 'tearing'}
-            className="w-9 h-9 rounded-full bg-ink/40 hover:bg-ink/70 text-paper flex items-center justify-center transition-all disabled:opacity-30"
+            className="w-9 h-9 rounded-full bg-ink/40 hover:bg-ink/70 text-white flex items-center justify-center transition-all disabled:opacity-30"
             aria-label="닫기"
           >
             ✕
@@ -150,7 +150,7 @@ export default function PackOpener({ pack, onClose }) {
             <div className="flex gap-2">
               <button
                 onClick={reset}
-                className="h-9 px-4 rounded-full border-2 border-paper/30 text-paper/90 hover:border-paper hover:text-paper text-xs font-bold uppercase tracking-wider transition-colors"
+                className="h-9 px-4 rounded-full border-2 border-paper/30 text-white/90 hover:border-paper hover:text-white text-xs font-bold uppercase tracking-wider transition-colors"
               >
                 또 열기
               </button>
@@ -174,12 +174,12 @@ function IdleStage({ pack, onOpen }) {
     <div className="text-center py-10">
       <div className="inline-block mb-6 relative">
         <div className="absolute inset-0 bg-electric/30 blur-3xl rounded-full" aria-hidden />
-        <div className="relative w-40 h-56 mx-auto rounded-2xl bg-gradient-to-br from-dex via-rose-600 to-dex/80 border-2 border-ink shadow-[0_8px_0_#1a1a1a] flex items-center justify-center text-paper">
+        <div className="relative w-40 h-56 mx-auto rounded-2xl bg-gradient-to-br from-dex via-rose-600 to-dex/80 border-2 border-ink shadow-[0_8px_0_#1a1a1a] flex items-center justify-center text-white">
           <div className="text-center px-3">
             <div className="font-display text-2xl font-bold leading-tight drop-shadow">
               {pack?.setShort || 'BOOSTER'}
             </div>
-            <div className="text-[10px] font-mono uppercase tracking-wider mt-2 text-paper/80">
+            <div className="text-[10px] font-mono uppercase tracking-wider mt-2 text-white/80">
               {pack?.cardsPerPack || 5} cards
             </div>
           </div>
@@ -247,7 +247,7 @@ function RevealStage({ cards, flipped, onFlip, onFlipAll, done }) {
         {!allFlipped && (
           <button
             onClick={onFlipAll}
-            className="h-9 px-4 rounded-full bg-ink text-paper font-bold text-xs uppercase tracking-wider hover:bg-ink/85 transition-colors"
+            className="h-9 px-4 rounded-full bg-ink text-white font-bold text-xs uppercase tracking-wider hover:bg-ink/85 transition-colors"
           >
             전부 뒤집기 →
           </button>
@@ -310,7 +310,7 @@ function RevealCard({ card, flipped, onClick, order }) {
       >
         <div className="w-full h-full bg-gradient-to-br from-sky-500 via-sky-700 to-sky-900 flex items-center justify-center relative overflow-hidden">
           <div className="absolute inset-2 rounded-xl border-2 border-paper/40" aria-hidden />
-          <div className="relative text-center text-paper">
+          <div className="relative text-center text-white">
             <div className="font-display text-2xl font-bold drop-shadow-lg">Poké</div>
             <div className="w-10 h-10 mx-auto my-1 rounded-full bg-paper border-[3px] border-ink relative overflow-hidden">
               <div className="absolute inset-x-0 top-0 h-1/2 bg-dex" />

@@ -44,7 +44,7 @@ export default function AdminLayout() {
           </div>
           <h1 className="font-display text-xl font-bold text-ink mb-2">관리자 권한이 필요해요</h1>
           <p className="text-sm text-mute mb-5 font-medium">관리자 계정으로 로그인해주세요.</p>
-          <Link to="/admin/login" className="inline-flex items-center gap-2 bg-ink text-paper font-bold text-sm px-5 py-2.5 rounded-lg hover:bg-ink/90">
+          <Link to="/admin/login" className="inline-flex items-center gap-2 bg-gray-900 text-white font-bold text-sm px-5 py-2.5 rounded-lg hover:bg-gray-800">
             관리자 로그인 <Icon name="arrow" size={12} strokeWidth={2.4} />
           </Link>
         </div>
@@ -97,7 +97,7 @@ export default function AdminLayout() {
 
         <div className="px-3 py-3 border-t border-ink/10 bg-bone-2/40">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-ink text-paper text-xs font-bold flex items-center justify-center">
+            <div className="w-7 h-7 rounded-full bg-gray-900 text-white text-xs font-bold flex items-center justify-center">
               {user?.name?.[0]?.toUpperCase() || 'A'}
             </div>
             <div className="min-w-0 flex-1">
@@ -143,7 +143,7 @@ function NavItem({ to, end, icon, label, badge, badgeTone = 'red', sub }) {
       className={({ isActive }) =>
         `flex items-center gap-2.5 px-3 py-2 rounded-md font-bold transition-colors mb-0.5 ${sub ? 'ml-4 py-1.5 text-[11px]' : ''} ${
           isActive
-            ? 'bg-ink text-paper'
+            ? 'bg-gray-900 text-white'
             : 'text-ink/70 hover:bg-bone-2 hover:text-ink'
         }`
       }

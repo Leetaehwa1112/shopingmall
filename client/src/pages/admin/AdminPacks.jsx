@@ -263,7 +263,7 @@ function ConfirmDelete({ name, onConfirm, onCancel }) {
         </p>
         <div className="flex gap-2 justify-end">
           <button onClick={onCancel} className="text-xs font-bold text-mute hover:text-ink px-3 py-1.5 rounded-md hover:bg-bone-2">취소</button>
-          <button onClick={onConfirm} className="text-xs font-bold bg-red-600 text-paper px-3 py-1.5 rounded-md hover:bg-red-700">삭제</button>
+          <button onClick={onConfirm} className="text-xs font-bold bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700">삭제</button>
         </div>
       </div>
     </div>

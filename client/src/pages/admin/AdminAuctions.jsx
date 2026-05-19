@@ -142,7 +142,7 @@ export default function AdminAuctions() {
           <>
             {kpis.pending > 0 && (
               <Link to="/admin/auctions/review"
-                className="inline-flex items-center gap-1.5 text-xs font-bold bg-red-600 text-paper px-3 py-1.5 rounded-md hover:bg-red-700 animate-pulse">
+                className="inline-flex items-center gap-1.5 text-xs font-bold bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700 animate-pulse">
                 <Icon name="bolt" size={12} strokeWidth={2.5} />
                 검수 인박스 ({kpis.pending})
               </Link>

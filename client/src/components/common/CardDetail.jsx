@@ -38,10 +38,10 @@ export default function CardDetail({ card, size = 'lg' }) {
                 backgroundRepeat: 'no-repeat',
               }}
             />
-            <div className="absolute top-1 left-1 px-1 py-0.5 bg-ink/80 text-paper text-[8px] font-mono font-bold rounded">
+            <div className="absolute top-1 left-1 px-1 py-0.5 bg-ink/80 text-white text-[8px] font-mono font-bold rounded">
               {c.label}
             </div>
-            <div className="absolute bottom-1 right-1 inline-flex items-center gap-0.5 px-1 py-0.5 bg-emerald-500/90 text-paper text-[8px] font-bold rounded">
+            <div className="absolute bottom-1 right-1 inline-flex items-center gap-0.5 px-1 py-0.5 bg-emerald-500/90 text-white text-[8px] font-bold rounded">
               ✓
             </div>
           </div>
@@ -70,7 +70,7 @@ export default function CardDetail({ card, size = 'lg' }) {
       <div className="grid grid-cols-2 gap-1.5 mt-3 text-[10px]">
         {['모서리', '엣지', '표면', '인쇄'].map((k) => (
           <div key={k} className="flex items-center gap-1.5 px-2 py-1 bg-paper rounded border border-line">
-            <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-emerald-500 text-paper text-[8px] font-bold">✓</span>
+            <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-emerald-500 text-white text-[8px] font-bold">✓</span>
             <span className="text-ink font-bold">{k}</span>
           </div>
         ))}

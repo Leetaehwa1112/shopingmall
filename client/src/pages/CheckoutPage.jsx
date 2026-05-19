@@ -181,8 +181,8 @@ function Processing() {
           <span className="led led-green led-pulse" style={{ animationDelay: '0.6s' }} />
         </div>
         <div className="text-center mb-8">
-          <div className="font-display text-2xl font-bold text-paper mb-2">결제 처리중</div>
-          <div className="text-sm text-paper/70">조금만 기다려주세요</div>
+          <div className="font-display text-2xl font-bold text-white mb-2">결제 처리중</div>
+          <div className="text-sm text-white/70">조금만 기다려주세요</div>
         </div>
         <div className="lcd-dark p-4 text-left space-y-2">
           {STEPS.map((s, i) => (

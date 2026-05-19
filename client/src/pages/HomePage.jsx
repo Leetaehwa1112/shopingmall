@@ -223,9 +223,9 @@ export default function HomePage() {
               <div className="flex items-center justify-between mb-5">
                 <div className="inline-flex items-center gap-2.5">
                   <span className="led led-red led-pulse" aria-hidden="true" />
-                  <span className="pixel-label text-paper">TODAY'S TOP LOT</span>
+                  <span className="pixel-label text-white">TODAY'S TOP LOT</span>
                 </div>
-                <span className="pixel-label text-paper/70">No.<span className="text-electric">001</span></span>
+                <span className="pixel-label text-white/70">No.<span className="text-electric">001</span></span>
                 <div className="hidden sm:flex gap-1.5" aria-hidden="true">
                   <span className="led led-blue" />
                   <span className="led led-yellow" />
@@ -298,7 +298,7 @@ export default function HomePage() {
 
                 <div className="dex-casing-inset p-5 relative overflow-hidden order-1 lg:order-none lg:col-start-2 lg:row-start-1">
                   <div className="flex items-center justify-between mb-2 relative z-10">
-                    <span className="inline-flex items-center gap-1.5 pixel-label text-paper/70">
+                    <span className="inline-flex items-center gap-1.5 pixel-label text-white/70">
                       <span className="led led-red led-pulse" style={{ width: 6, height: 6 }} aria-hidden="true" />
                       PHOTO MODULE
                     </span>
@@ -315,8 +315,8 @@ export default function HomePage() {
                     </div>
                   </div>
                   <div className="flex items-center justify-between mt-2 relative z-10">
-                    <span className="pixel-label text-paper/50">SLOT-A · {TOP_LOT.year}</span>
-                    <span className="pixel-label text-paper/50">QTY 1 / 1</span>
+                    <span className="pixel-label text-white/50">SLOT-A · {TOP_LOT.year}</span>
+                    <span className="pixel-label text-white/50">QTY 1 / 1</span>
                   </div>
                 </div>
 
@@ -335,7 +335,7 @@ export default function HomePage() {
                           입찰 {TOP_LOT.bidCount}회 · {TOP_LOT.watchers}명이 노리는 중
                         </div>
                       </div>
-                      <div className={`rounded-xl p-3.5 border-2 ${lotEnded ? 'bg-bone-2 text-mute border-line' : 'bg-ink text-paper border-ink'}`}>
+                      <div className={`rounded-xl p-3.5 border-2 ${lotEnded ? 'bg-bone-2 text-mute border-line' : 'bg-ink text-white border-ink'}`}>
                         <div className={`text-[10px] font-bold tracking-[0.18em] uppercase mb-2 inline-flex items-center gap-1.5 ${lotEnded ? 'text-mute' : 'text-electric'}`}>
                           <Icon name="clock" size={10} strokeWidth={2.5} aria-hidden="true" />
                           {lotEnded ? '경매 종료' : '마감까지'}
@@ -496,7 +496,7 @@ export default function HomePage() {
       <section aria-label="판매 · 회원가입" className="max-w-7xl mx-auto px-6 py-16">
         <div className="grid lg:grid-cols-2 gap-5">
           {/* Sell — Pokédex playful */}
-          <div className="dex-casing p-8 relative overflow-hidden text-paper holo-shine sparkle-host">
+          <div className="dex-casing p-8 relative overflow-hidden text-white holo-shine sparkle-host">
             <Sparkles always />
             <div className="flex items-center gap-2 mb-3">
               <span className="led led-red led-pulse" aria-hidden="true" />
@@ -506,7 +506,7 @@ export default function HomePage() {
               내 카드도 누군가의<br/>
               <span className="text-electric">갖고 싶은</span> 카드예요
             </h3>
-            <p className="text-[15px] text-paper/85 leading-relaxed mb-6 max-w-sm font-medium">
+            <p className="text-[15px] text-white/85 leading-relaxed mb-6 max-w-sm font-medium">
               PSA·BGS 등급 카드를 출품하면 트레이너들 사이에서 두근거림이 시작돼요. 수수료 10%.
             </p>
             <Link to="/sell" aria-label="경매 등록하기">
@@ -793,7 +793,7 @@ function SpecRow({ k, v }) {
 function Check({ label }) {
   return (
     <div className="flex items-center gap-1.5 text-ink/85">
-      <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-grass text-paper text-[9px] font-bold border border-ink" aria-hidden="true">✓</span>
+      <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-grass text-white text-[9px] font-bold border border-ink" aria-hidden="true">✓</span>
       <span className="font-bold">{label}</span>
     </div>
   )
@@ -807,11 +807,11 @@ const trustToneBg = {
   grass:    'bg-grass',
 }
 const trustToneText = {
-  fire:     'text-paper',
+  fire:     'text-white',
   electric: 'text-ink',
-  water:    'text-paper',
-  psychic:  'text-paper',
-  grass:    'text-paper',
+  water:    'text-white',
+  psychic:  'text-white',
+  grass:    'text-white',
 }
 
 function TrustPillar({ tone, icon, title, desc }) {

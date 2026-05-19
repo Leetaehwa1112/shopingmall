@@ -162,7 +162,7 @@ export default function AdminOrders() {
         breadcrumb={['Admin', '거래', '주문 관리']}
         actions={
           <>
-            <button onClick={() => setBulkTrackOpen(true)} className="inline-flex items-center gap-1.5 text-xs font-bold bg-emerald-600 text-paper px-3 py-1.5 rounded-md hover:bg-emerald-700">
+            <button onClick={() => setBulkTrackOpen(true)} className="inline-flex items-center gap-1.5 text-xs font-bold bg-emerald-600 text-white px-3 py-1.5 rounded-md hover:bg-emerald-700">
               <Icon name="package" size={12} strokeWidth={2.5} /> 송장 일괄 등록
             </button>
             <button onClick={fetchOrders} className="inline-flex items-center gap-1.5 text-xs font-bold text-mute hover:text-ink px-3 py-1.5 rounded-md border border-gray-900/15 bg-paper hover:bg-bone-2">
@@ -440,7 +440,7 @@ function BulkTrackingModal({ onClose, onDone, orders, actor }) {
               <button
                 onClick={handleRun}
                 disabled={running || validCount === 0}
-                className="text-xs font-bold bg-emerald-600 text-paper px-4 py-1.5 rounded-md hover:bg-emerald-700 disabled:opacity-50"
+                className="text-xs font-bold bg-emerald-600 text-white px-4 py-1.5 rounded-md hover:bg-emerald-700 disabled:opacity-50"
               >
                 {running ? '처리 중...' : `${validCount}건 등록`}
               </button>

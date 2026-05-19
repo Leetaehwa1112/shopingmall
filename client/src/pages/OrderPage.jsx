@@ -147,13 +147,13 @@ export default function OrderPage() {
 
       {requireBrinks && (
         <div className="surface-pop bg-rose-50 p-5 mb-6 flex items-start gap-4">
-          <div className="w-12 h-12 rounded-full bg-dex text-paper flex items-center justify-center flex-shrink-0 border-2 border-ink shadow-[0_3px_0_#1a1a1a]">
+          <div className="w-12 h-12 rounded-full bg-dex text-white flex items-center justify-center flex-shrink-0 border-2 border-ink shadow-[0_3px_0_#1a1a1a]">
             <Icon name="shield" size={24} strokeWidth={2.4} />
           </div>
           <div className="flex-1">
             <div className="font-bold text-dex inline-flex items-center gap-2">
               Brink's Armored Transport 자동 적용
-              <span className="text-[9px] font-bold bg-dex text-paper px-2 py-0.5 rounded-full tracking-wider border border-ink">MANDATORY</span>
+              <span className="text-[9px] font-bold bg-dex text-white px-2 py-0.5 rounded-full tracking-wider border border-ink">MANDATORY</span>
             </div>
             <div className="text-sm text-ink/85 mt-1.5 leading-relaxed font-medium">
               1억원 이상 거래는 <strong>Brink's Global Services</strong>의 보안 호송이 의무예요.
@@ -313,7 +313,7 @@ function ShipOpt({ opt, active, disabled, onChange }) {
         <div className="flex-1">
           <div className={`font-bold ${opt.premium ? 'text-dex' : 'text-ink'} inline-flex items-center gap-2`}>
             {opt.label}
-            {opt.premium && <span className="text-[8px] font-bold bg-dex text-paper px-1.5 py-0.5 rounded-full tracking-wider border border-ink">SECURE</span>}
+            {opt.premium && <span className="text-[8px] font-bold bg-dex text-white px-1.5 py-0.5 rounded-full tracking-wider border border-ink">SECURE</span>}
             {opt.forPacks && <span className="text-[8px] font-bold bg-electric text-ink px-1.5 py-0.5 rounded-full tracking-wider border border-ink">QUICK</span>}
           </div>
           <div className="text-xs text-mute mt-0.5 font-medium">{opt.desc}</div>

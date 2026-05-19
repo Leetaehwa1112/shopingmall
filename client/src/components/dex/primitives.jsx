@@ -87,7 +87,7 @@ const BTN_VARIANT = {
     'bg-paper text-ink border-ink ' +
     'shadow-[0_3px_0_#1a1a1a] hover:shadow-[0_1px_0_#1a1a1a] hover:translate-y-[2px]',
   device:
-    'bg-dex text-paper border-ink ' +
+    'bg-dex text-white border-ink ' +
     'shadow-[0_4px_0_#1a1a1a] hover:shadow-[0_2px_0_#1a1a1a] hover:translate-y-[2px] ' +
     'active:shadow-[0_0_0_#1a1a1a] active:translate-y-[4px]',
 }

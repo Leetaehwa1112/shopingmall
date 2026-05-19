@@ -196,7 +196,7 @@ export function FilterChips({ value, onChange, options }) {
             {o.led && <span className={`led led-${o.led}`} style={{ width: 5, height: 5, opacity: active ? 1 : 0.5 }} />}
             {o.label}
             {o.count != null && (
-              <span className={`text-[10px] font-mono tabular-nums ${active ? 'text-paper/70' : 'text-mute/70'}`}>{o.count}</span>
+              <span className={`text-[10px] font-mono tabular-nums ${active ? 'text-white/70' : 'text-mute/70'}`}>{o.count}</span>
             )}
           </button>
         )
@@ -354,7 +354,7 @@ export function BulkBar({ count, actions, onClear }) {
       <div className="text-xs font-bold flex items-center gap-3">
         <span className="led led-yellow led-pulse" style={{ width: 6, height: 6 }} />
         <span className="tabular-nums">{count}건 선택됨</span>
-        <button onClick={onClear} className="text-paper/60 hover:text-paper font-medium underline">선택 해제</button>
+        <button onClick={onClear} className="text-white/60 hover:text-white font-medium underline">선택 해제</button>
       </div>
       <div className="flex items-center gap-1.5">{actions}</div>
     </div>
@@ -363,9 +363,9 @@ export function BulkBar({ count, actions, onClear }) {
 
 export function BulkButton({ children, onClick, tone = 'default', disabled }) {
   const map = {
-    default: 'bg-paper/10 text-paper hover:bg-paper/20',
-    danger:  'bg-red-500/90 text-paper hover:bg-red-500',
-    success: 'bg-emerald-500/90 text-paper hover:bg-emerald-500',
+    default: 'bg-paper/10 text-white hover:bg-paper/20',
+    danger:  'bg-red-500/90 text-white hover:bg-red-500',
+    success: 'bg-emerald-500/90 text-white hover:bg-emerald-500',
   }
   return (
     <button

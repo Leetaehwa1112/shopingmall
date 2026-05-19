@@ -112,7 +112,7 @@ export default function MyPage() {
             </div>
           </div>
         </div>
-        <div className="dex-casing p-6 text-paper relative">
+        <div className="dex-casing p-6 text-white relative">
           <div className="flex items-center gap-2 mb-3">
             <span className="led led-green led-pulse" />
             <span className="pixel-label text-gold">총 결제 금액</span>
@@ -162,7 +162,7 @@ export default function MyPage() {
               <div key={p.id} className="surface-pop p-5 text-center relative">
                 <button
                   onClick={() => toggleCollection(p.id)}
-                  className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-psychic border-2 border-psychic text-paper flex items-center justify-center shadow-sm hover:bg-rose-500 hover:border-rose-500 transition-colors"
+                  className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-psychic border-2 border-psychic text-white flex items-center justify-center shadow-sm hover:bg-rose-500 hover:border-rose-500 transition-colors"
                   aria-label={`${p.nameKo} 도감 해제`}
                   title="도감 해제"
                 >

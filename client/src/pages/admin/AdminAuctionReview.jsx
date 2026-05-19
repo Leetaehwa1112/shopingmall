@@ -520,7 +520,7 @@ function ActionBar({ onApprove, onReject, onSkip, onReasonClick, busy, rejectRea
         <button
           onClick={onApprove}
           disabled={busy}
-          className="flex-1 inline-flex items-center justify-center gap-2 bg-emerald-600 text-paper font-bold py-2.5 rounded-md hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+          className="flex-1 inline-flex items-center justify-center gap-2 bg-emerald-600 text-white font-bold py-2.5 rounded-md hover:bg-emerald-700 disabled:opacity-50 transition-colors"
         >
           <span className="text-xs">승인</span>
           <Kbd>A</Kbd>
@@ -529,7 +529,7 @@ function ActionBar({ onApprove, onReject, onSkip, onReasonClick, busy, rejectRea
           onClick={() => onReject()}
           disabled={busy}
           className={`flex-1 inline-flex items-center justify-center gap-2 font-bold py-2.5 rounded-md transition-colors disabled:opacity-50 ${
-            rejectReady ? 'bg-red-600 text-paper hover:bg-red-700' : 'bg-paper border border-red-300 text-red-700 hover:bg-red-50'
+            rejectReady ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-paper border border-red-300 text-red-700 hover:bg-red-50'
           }`}
         >
           <span className="text-xs">{rejectReady ? '거절 (메모 사용)' : '거절 (사유 필요)'}</span>
@@ -551,7 +551,7 @@ function ActionBar({ onApprove, onReject, onSkip, onReasonClick, busy, rejectRea
 function Kbd({ children, dark }) {
   return (
     <kbd className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border ${
-      dark ? 'bg-paper/10 border-paper/20 text-paper' : 'bg-bone-2 border-gray-900/15 text-mute'
+      dark ? 'bg-paper/10 border-paper/20 text-white' : 'bg-bone-2 border-gray-900/15 text-mute'
     }`}>{children}</kbd>
   )
 }

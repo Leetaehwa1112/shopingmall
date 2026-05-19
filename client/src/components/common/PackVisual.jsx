@@ -56,7 +56,7 @@ export default function PackVisual({ pack, size = 'md' }) {
             draggable={false}
           />
         ) : (
-          <div className="font-display font-black text-paper italic tracking-wide"
+          <div className="font-display font-black text-white italic tracking-wide"
             style={{ fontSize: dims.h * 0.04, textShadow: '1px 1px 0 #000' }}>
             POKÉMON · {pack.setShort}
           </div>
@@ -92,7 +92,7 @@ export default function PackVisual({ pack, size = 'md' }) {
             />
           )}
           {heroErr && (
-            <div className="absolute inset-0 flex items-center justify-center text-paper/70 text-xs">
+            <div className="absolute inset-0 flex items-center justify-center text-white/70 text-xs">
               {pack.setShort}
             </div>
           )}
@@ -107,11 +107,11 @@ export default function PackVisual({ pack, size = 'md' }) {
 
       {/* Set name + year */}
       <div className="absolute inset-x-3 text-center" style={{ bottom: dims.h * 0.10 }}>
-        <div className="font-display font-bold text-paper leading-tight tracking-wide"
+        <div className="font-display font-bold text-white leading-tight tracking-wide"
           style={{ fontSize: dims.h * 0.04, textShadow: '1px 1px 2px rgba(0,0,0,0.6)' }}>
           {pack.setShort}
         </div>
-        <div className="font-mono text-paper/80 mt-0.5"
+        <div className="font-mono text-white/80 mt-0.5"
           style={{ fontSize: dims.h * 0.025 }}>
           {pack.year}{pack.cardsPerPack ? ` · ${pack.cardsPerPack} CARDS` : ''}
         </div>

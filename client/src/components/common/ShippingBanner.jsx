@@ -18,10 +18,10 @@ export default function ShippingBanner({ price, isPack = false }) {
 
   if (tier === SHIPPING_TIER.BRINKS_REQUIRED) {
     return (
-      <BannerShell tone="rose-50" iconBg="bg-dex" iconColor="text-paper" icon="shield">
+      <BannerShell tone="rose-50" iconBg="bg-dex" iconColor="text-white" icon="shield">
         <div className="font-bold text-dex text-sm inline-flex items-center gap-2">
           Brink's Armored Transport
-          <span className="text-[10px] font-bold bg-dex text-paper border border-ink px-2 py-0.5 rounded-full tracking-wider">MANDATORY</span>
+          <span className="text-[10px] font-bold bg-dex text-white border border-ink px-2 py-0.5 rounded-full tracking-wider">MANDATORY</span>
         </div>
         <div className="text-xs text-ink/80 mt-1 leading-relaxed font-medium">
           1억원 이상 거래는 <strong>Brink's Global Services</strong> 보안 호송이 의무예요.
@@ -44,7 +44,7 @@ export default function ShippingBanner({ price, isPack = false }) {
 
   if (tier === SHIPPING_TIER.INSURED) {
     return (
-      <BannerShell tone="water/15" iconBg="bg-water" iconColor="text-paper" icon="package">
+      <BannerShell tone="water/15" iconBg="bg-water" iconColor="text-white" icon="package">
         <div className="font-bold text-water text-sm">FedEx Priority Insured</div>
         <div className="text-xs text-ink/75 mt-0.5 leading-relaxed font-medium">
           500만원 이상 — FedEx 보험 운송 권장. Brink's Armored도 선택 가능해요.
@@ -54,7 +54,7 @@ export default function ShippingBanner({ price, isPack = false }) {
   }
 
   return (
-    <BannerShell tone="grass/15" iconBg="bg-grass" iconColor="text-paper" icon="package">
+    <BannerShell tone="grass/15" iconBg="bg-grass" iconColor="text-white" icon="package">
       <div className="font-bold text-grass text-sm">일반 배송 가능</div>
       <div className="text-xs text-ink/75 mt-0.5 leading-relaxed font-medium">
         500만원 미만 — 일반 배송 또는 FedEx 선택 가능. 보험은 선택사항이에요.

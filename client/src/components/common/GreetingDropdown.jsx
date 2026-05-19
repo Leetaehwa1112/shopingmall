@@ -28,7 +28,7 @@ export default function GreetingDropdown() {
   return (
     <div className={`max-w-7xl mx-auto px-6 pt-5 flex justify-end transition-all duration-500 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
       <div className="inline-flex items-center gap-2 px-4 py-2 surface-soft elev-1 rounded-full">
-        <div className="w-6 h-6 rounded-full bg-ink text-paper flex items-center justify-center text-[11px] font-bold">
+        <div className="w-6 h-6 rounded-full bg-ink text-white flex items-center justify-center text-[11px] font-bold">
           {name[0].toUpperCase()}
         </div>
         <span className="text-sm font-bold text-ink">

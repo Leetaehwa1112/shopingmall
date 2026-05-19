@@ -37,7 +37,7 @@ export default function ImageUpload({ value, onChange, folder = 'pokevault', lab
             <button type="button" onClick={() => inputRef.current.click()}
               className="bg-paper text-ink text-xs font-bold px-3 py-1.5 rounded-lg">변경</button>
             <button type="button" onClick={() => onChange('')}
-              className="bg-dex text-paper text-xs font-bold px-3 py-1.5 rounded-lg">삭제</button>
+              className="bg-dex text-white text-xs font-bold px-3 py-1.5 rounded-lg">삭제</button>
           </div>
         </div>
       ) : (

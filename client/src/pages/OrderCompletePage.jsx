@@ -76,7 +76,7 @@ export default function OrderCompletePage() {
           {['주문 확정', '발송 준비', '운송중', '도착'].map((s, i) => (
             <div key={s} className="text-center">
               <div className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-2 font-bold text-sm border-2 border-ink ${
-                i === 0 ? 'bg-grass text-paper shadow-[0_3px_0_#1a1a1a]' : 'bg-paper text-mute'
+                i === 0 ? 'bg-grass text-white shadow-[0_3px_0_#1a1a1a]' : 'bg-paper text-mute'
               }`}>
                 {i === 0 ? <Icon name="check" size={18} strokeWidth={3} /> : i + 1}
               </div>

@@ -235,7 +235,7 @@ function OrderCard({ order, expanded, onToggle, onCancel }) {
                 <div key={i} className="text-center">
                   <div className={`mx-auto w-8 h-8 rounded-full flex items-center justify-center mb-1.5 text-[11px] font-bold border-2 border-ink transition-all ${
                     i <= st.step
-                      ? 'bg-grass text-paper shadow-[0_2px_0_#1a1a1a]'
+                      ? 'bg-grass text-white shadow-[0_2px_0_#1a1a1a]'
                       : 'bg-paper text-mute'
                   }`}>
                     {i < st.step ? <Icon name="check" size={11} strokeWidth={3} /> : i + 1}

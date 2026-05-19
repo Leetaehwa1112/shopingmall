@@ -232,7 +232,7 @@ function DexHero({ stats, loading, saleOnly, onToggleSale }) {
             <DexLed color="green" size={9} pulse />
           </div>
           {/* 시리얼 — 신뢰 요소 */}
-          <div className="ml-auto hidden sm:block font-mono text-[10px] tracking-[0.22em] uppercase text-paper/55">
+          <div className="ml-auto hidden sm:block font-mono text-[10px] tracking-[0.22em] uppercase text-white/55">
             DEVICE Nº POKÉVAULT-{new Date().getFullYear().toString().slice(-2)}
           </div>
         </div>
@@ -249,13 +249,13 @@ function DexHero({ stats, loading, saleOnly, onToggleSale }) {
 
             <h1
               id="dex-title"
-              className="font-display text-4xl sm:text-5xl lg:text-[56px] font-bold tracking-tight text-paper leading-[1.05] mb-3"
+              className="font-display text-4xl sm:text-5xl lg:text-[56px] font-bold tracking-tight text-white leading-[1.05] mb-3"
               style={{ textShadow: '0 2px 0 rgba(0,0,0,0.35)' }}
             >
               어른이 된 트레이너의<br />
               <span className="text-electric">진짜 도감.</span>
             </h1>
-            <p className="text-paper/80 text-[15px] font-medium max-w-xl mb-7 leading-relaxed">
+            <p className="text-white/80 text-[15px] font-medium max-w-xl mb-7 leading-relaxed">
               그때 손에 쥐고 싶었던 카드들, 이제 한 페이지에서 만나요.<br className="hidden sm:block" />
               <span className="text-electric font-bold">지금 살 수 있는 매물</span>이 LED로 깜빡입니다.
             </p>
@@ -305,8 +305,8 @@ function MetaStat({ label, val, accent = false }) {
           : 'bg-ink/30 border-paper/10')
       }
     >
-      <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-paper/55">{label}</span>
-      <span className="font-mono font-bold tabular-nums text-paper text-[15px] leading-none">{val}</span>
+      <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/55">{label}</span>
+      <span className="font-mono font-bold tabular-nums text-white text-[15px] leading-none">{val}</span>
     </li>
   )
 }
@@ -406,7 +406,7 @@ function SpecimenEntry({ poke, owned, onToggleOwned, onSelect }) {
             `w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ` +
             `focus:outline-none focus-visible:ring-2 focus-visible:ring-electric ` +
             (owned
-              ? 'bg-psychic border-psychic text-paper shadow-[0_0_8px_rgba(168,85,247,0.5)]'
+              ? 'bg-psychic border-psychic text-white shadow-[0_0_8px_rgba(168,85,247,0.5)]'
               : 'bg-paper border-ink/20 text-mute/40 hover:border-psychic hover:text-psychic')
           }
         >
@@ -419,7 +419,7 @@ function SpecimenEntry({ poke, owned, onToggleOwned, onSelect }) {
         {hasSale && (
           <span
             aria-hidden="true"
-            className="absolute top-2.5 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-grass/95 text-paper text-[9px] font-bold tracking-[0.15em] uppercase shadow-sm"
+            className="absolute top-2.5 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-grass/95 text-white text-[9px] font-bold tracking-[0.15em] uppercase shadow-sm"
           >
             <span className="w-1 h-1 rounded-full bg-paper animate-pulse" /> Live
           </span>
@@ -505,7 +505,7 @@ function CatalogueModal({ poke, owned, onToggleOwned, onClose }) {
       >
         {/* ── 카탈로그 헤더 (디바이스 상단 모티프) ───────── */}
         <header
-          className="relative bg-dex text-paper px-6 sm:px-8 pt-6 pb-5 shrink-0 overflow-hidden"
+          className="relative bg-dex text-white px-6 sm:px-8 pt-6 pb-5 shrink-0 overflow-hidden"
           style={{
             backgroundImage:
               'radial-gradient(circle at 12% 30%, rgba(255,255,255,0.10) 0%, transparent 45%)',
@@ -523,7 +523,7 @@ function CatalogueModal({ poke, owned, onToggleOwned, onClose }) {
               ref={closeRef}
               onClick={onClose}
               aria-label="닫기"
-              className="ml-auto w-9 h-9 rounded-full bg-ink/50 hover:bg-ink/75 text-paper flex items-center justify-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-electric"
+              className="ml-auto w-9 h-9 rounded-full bg-ink/50 hover:bg-ink/75 text-white flex items-center justify-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-electric"
             >
               <Icon name="close" size={16} strokeWidth={2.4} />
             </button>
@@ -532,14 +532,14 @@ function CatalogueModal({ poke, owned, onToggleOwned, onClose }) {
           <div className="grid sm:grid-cols-[1fr_auto] gap-5 items-start">
             {/* 좌: 메타 */}
             <div className="min-w-0">
-              <CatalogueLabel id={poke.id} name={poke.name} className="!text-paper/70 mb-2" />
-              <h2 id="catalogue-title" className="font-display text-3xl sm:text-4xl font-bold text-paper leading-tight mb-2">
+              <CatalogueLabel id={poke.id} name={poke.name} className="!text-white/70 mb-2" />
+              <h2 id="catalogue-title" className="font-display text-3xl sm:text-4xl font-bold text-white leading-tight mb-2">
                 {poke.nameKo}
               </h2>
               <div className="flex gap-1.5 flex-wrap mb-3">
                 {poke.types.map((t) => <TypeChip key={t} type={t} />)}
               </div>
-              <p className="text-[13px] text-paper/85 font-medium leading-relaxed max-w-md italic">
+              <p className="text-[13px] text-white/85 font-medium leading-relaxed max-w-md italic">
                 "{poke.desc}"
               </p>
             </div>
@@ -550,10 +550,10 @@ function CatalogueModal({ poke, owned, onToggleOwned, onClose }) {
                 alt={`${poke.nameKo} 일러스트`}
                 className="w-24 h-24 sm:w-32 sm:h-32 object-contain drop-shadow-[0_8px_8px_rgba(0,0,0,0.35)] shrink-0"
               />
-              <dl className="font-mono text-[10px] text-paper/60 grid grid-cols-3 sm:grid-cols-1 gap-x-3 gap-y-0.5 tracking-wider uppercase">
-                <div><dt className="inline">키 </dt><dd className="inline text-paper/90 font-bold">{poke.height}m</dd></div>
-                <div><dt className="inline">무게 </dt><dd className="inline text-paper/90 font-bold">{poke.weight}kg</dd></div>
-                <div><dt className="inline">세대 </dt><dd className="inline text-paper/90 font-bold">{poke.gen}</dd></div>
+              <dl className="font-mono text-[10px] text-white/60 grid grid-cols-3 sm:grid-cols-1 gap-x-3 gap-y-0.5 tracking-wider uppercase">
+                <div><dt className="inline">키 </dt><dd className="inline text-white/90 font-bold">{poke.height}m</dd></div>
+                <div><dt className="inline">무게 </dt><dd className="inline text-white/90 font-bold">{poke.weight}kg</dd></div>
+                <div><dt className="inline">세대 </dt><dd className="inline text-white/90 font-bold">{poke.gen}</dd></div>
               </dl>
             </div>
           </div>
@@ -565,20 +565,20 @@ function CatalogueModal({ poke, owned, onToggleOwned, onClose }) {
               size="sm"
               onClick={onToggleOwned}
               aria-pressed={owned}
-              className={owned ? '' : '!bg-transparent !text-paper !border-paper/40 hover:!bg-paper/10'}
+              className={owned ? '' : '!bg-transparent !text-white !border-paper/40 hover:!bg-paper/10'}
             >
               <span aria-hidden="true">{owned ? '★' : '☆'}</span>
               {owned ? '내 컬렉션' : '컬렉션에 담기'}
             </DexButton>
-            <div className="font-mono text-[11px] font-bold uppercase tracking-wider text-paper/70">
+            <div className="font-mono text-[11px] font-bold uppercase tracking-wider text-white/70">
               {poke.onSaleCount > 0 ? (
                 <span className="inline-flex items-center gap-1.5">
                   <DexLed color="green" size={8} pulse />
                   <span className="text-grass">In Stock {String(poke.onSaleCount).padStart(2, '0')}</span>
-                  <span className="text-paper/40">/ {String(poke.cards.length).padStart(2, '0')}</span>
+                  <span className="text-white/40">/ {String(poke.cards.length).padStart(2, '0')}</span>
                 </span>
               ) : (
-                <span className="text-paper/45">Catalogued · No Stock</span>
+                <span className="text-white/45">Catalogued · No Stock</span>
               )}
             </div>
           </div>
@@ -631,8 +631,8 @@ function SpecimenCard({ card, onClose }) {
             `absolute top-2 left-2 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-full ` +
             `text-[9px] font-bold uppercase tracking-[0.15em] border-2 ` +
             (isAuction
-              ? 'bg-dex border-ink text-paper'
-              : 'bg-grass border-ink text-paper')
+              ? 'bg-dex border-ink text-white'
+              : 'bg-grass border-ink text-white')
           }
         >
           <span className={`w-1 h-1 rounded-full bg-paper ${isAuction ? 'animate-pulse' : ''}`} />

@@ -20,10 +20,10 @@ export default function Countdown({ endsAt, size = 'md', label = true }) {
   }[size]
 
   const tone = critical
-    ? { bg: 'bg-dex', text: 'text-paper', accent: 'text-dex' }
+    ? { bg: 'bg-dex', text: 'text-white', accent: 'text-dex' }
     : urgent
       ? { bg: 'bg-gold', text: 'text-ink', accent: 'text-gold' }
-      : { bg: 'bg-ink', text: 'text-paper', accent: 'text-ink' }
+      : { bg: 'bg-ink', text: 'text-white', accent: 'text-ink' }
 
   return (
     <div className="inline-flex items-center gap-1.5 font-mono font-bold tabular-nums">
