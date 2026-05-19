@@ -259,16 +259,55 @@ export default function AdminPacks() {
 }
 
 function ConfirmDelete({ name, onConfirm, onCancel }) {
+  useEffect(() => {
+    const h = (e) => { if (e.key === 'Escape') onCancel() }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [onCancel])
+
   return (
-    <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm z-50 flex items-center justify-center p-6">
-      <div className="bg-paper border border-gray-900/15 rounded-xl max-w-sm w-full p-6 shadow-2xl">
-        <h3 className="font-display text-base font-bold text-ink mb-1">삭제 확인</h3>
-        <p className="text-xs text-mute font-medium mb-5">
-          <span className="font-bold text-ink">"{name}"</span>이(가) 영구 삭제됩니다.
-        </p>
-        <div className="flex gap-2 justify-end">
-          <button onClick={onCancel} className="text-xs font-bold text-mute hover:text-ink px-3 py-1.5 rounded-md hover:bg-bone-2">취소</button>
-          <button onClick={onConfirm} className="text-xs font-bold bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700">삭제</button>
+    <div
+      className="fixed inset-0 bg-ink/65 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+      onClick={onCancel}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirm-delete-title"
+    >
+      <div
+        className="bg-paper border-2 border-ink rounded-2xl max-w-md w-full p-6 shadow-[0_6px_0_#1a1a1a]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start gap-3 mb-4">
+          <span className="shrink-0 w-10 h-10 rounded-full bg-rose-100 border-2 border-rose-500 flex items-center justify-center">
+            <Icon name="close" size={18} strokeWidth={2.8} className="text-rose-600" />
+          </span>
+          <div className="flex-1 min-w-0">
+            <h3 id="confirm-delete-title" className="font-display text-lg font-bold text-ink leading-tight">
+              정말 삭제할까요?
+            </h3>
+            <p className="text-sm text-mute font-medium mt-1 leading-relaxed">
+              <span className="font-bold text-ink break-all">"{name}"</span>이(가) 영구 삭제됩니다.
+              이 작업은 되돌릴 수 없어요.
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2.5">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 py-3 rounded-xl border-2 border-ink bg-paper text-sm font-bold text-ink hover:bg-bone-2 shadow-[0_3px_0_#1a1a1a] active:translate-y-0.5 active:shadow-[0_1px_0_#1a1a1a] transition-all"
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            autoFocus
+            className="px-4 py-3 rounded-xl border-2 border-ink bg-red-600 text-sm font-bold text-white hover:bg-red-700 shadow-[0_3px_0_#1a1a1a] active:translate-y-0.5 active:shadow-[0_1px_0_#1a1a1a] transition-all inline-flex items-center justify-center gap-1.5"
+          >
+            <Icon name="close" size={13} strokeWidth={2.8} />
+            영구 삭제
+          </button>
         </div>
       </div>
     </div>
