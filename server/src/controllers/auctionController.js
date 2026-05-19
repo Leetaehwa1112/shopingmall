@@ -1,4 +1,42 @@
 const AuctionApplication = require("../models/AuctionApplication");
+const Product = require("../models/Product");
+
+// AuctionApplication → Product 매핑.
+// price 필수: buynow면 buyNowPrice||startPrice, auction이면 startPrice.
+function buildProductFromApplication(app) {
+  const isBuyNow = app.saleType === "buynow";
+  const price = isBuyNow
+    ? (app.buyNowPrice || app.startPrice)
+    : app.startPrice;
+
+  return {
+    // SKU 자동 생성 — application _id 기반, 충돌 방지 + 추적 가능
+    sku: `APP-${app._id.toString().toUpperCase().slice(-12)}`,
+    name: app.name,
+    nameKo: app.nameKo,
+    set: app.set,
+    year: Number(app.year) || undefined,
+    number: app.number,
+    // Product.category enum 필수 — 신청서엔 카테고리 필드가 없으므로 기본 'promo'.
+    // 게시 후 어드민이 /admin/products/:id/edit에서 정확한 카테고리로 변경 가능.
+    category: "promo",
+    grade: {
+      company: app.gradeCompany,
+      score: Number(app.gradeScore),
+      country: app.cardCountry || "USA",
+      cert: app.gradeCert || "",
+    },
+    sale_type: isBuyNow ? "buynow" : "auction",
+    price,
+    startPrice: app.startPrice,
+    endsAt: app.endsAt,
+    images: app.photos || [],
+    description: app.description || "",
+    stock: 1,
+    status: "active",
+    created_by: app.user,
+  };
+}
 
 // [POST] /api/auctions - 경매 신청 (일반 유저)
 const createApplication = async (req, res) => {
@@ -93,6 +131,7 @@ const getApplicationById = async (req, res) => {
 };
 
 // [PATCH] /api/auctions/:id/status - 상태 변경 (어드민: 승인/거절/live/ended)
+//   'live' 전환 시 자동으로 Product를 생성해 사이트에 게시. 멱등 보장.
 const updateStatus = async (req, res) => {
   try {
     const { status, adminNote } = req.body;
@@ -101,18 +140,32 @@ const updateStatus = async (req, res) => {
       return res.status(400).json({ success: false, message: "유효하지 않은 상태값입니다." });
     }
 
-    const application = await AuctionApplication.findByIdAndUpdate(
-      req.params.id,
-      { status, ...(adminNote !== undefined && { adminNote }) },
-      { new: true }
-    ).populate("user", "name email");
-
+    const application = await AuctionApplication.findById(req.params.id);
     if (!application) {
       return res.status(404).json({ success: false, message: "신청 내역을 찾을 수 없습니다." });
     }
 
+    application.status = status;
+    if (adminNote !== undefined) application.adminNote = adminNote;
+
+    // 'live' 전환 시 Product 자동 게시 — 이미 publish된 경우는 skip (멱등)
+    if (status === "live" && !application.publishedProduct) {
+      const product = await Product.create(buildProductFromApplication(application));
+      application.publishedProduct = product._id;
+    }
+
+    await application.save();
+    await application.populate("user", "name email");
+
     res.status(200).json({ success: true, data: application });
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({ success: false, message: "SKU 충돌 — 이미 게시된 상품일 수 있어요." });
+    }
+    if (error.name === "ValidationError") {
+      const messages = Object.values(error.errors).map((e) => e.message);
+      return res.status(400).json({ success: false, message: messages });
+    }
     res.status(500).json({ success: false, message: error.message });
   }
 };

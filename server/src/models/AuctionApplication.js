@@ -59,6 +59,13 @@ const auctionApplicationSchema = new mongoose.Schema(
 
     // 어드민 메모
     adminNote: { type: String, trim: true, default: "" },
+
+    // 'live' 전환 시 자동 생성된 Product 참조 (멱등 보장 + 추적)
+    publishedProduct: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      default: null,
+    },
   },
   { timestamps: true }
 );
