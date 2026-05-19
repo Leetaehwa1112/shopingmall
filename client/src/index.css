@@ -57,12 +57,19 @@ html, body, #root {
   min-height: 100vh;
 }
 
+html {
+  /* 세로 스크롤바 항상 자리 잡아 콘텐츠 폭 변동 방지 → 깜빡임 제거 */
+  scrollbar-gutter: stable;
+}
+
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-image:
     radial-gradient(ellipse 60% 30% at 50% 0%, rgba(245, 184, 0, 0.06), transparent 60%);
   background-attachment: fixed;
+  /* 가로 overflow 차단 (스파클/장식 요소가 viewport 넘쳐도 가로 스크롤바 안 뜨게) */
+  overflow-x: hidden;
 }
 
 ::selection { background: var(--color-gold); color: var(--color-ink); }

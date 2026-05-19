@@ -18,8 +18,12 @@ export default function ToastContainer() {
             style={{ animation: 'toast-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
             <span className={`led led-${tone.led} led-pulse mt-1`} style={{ width: 8, height: 8 }} />
             <div className="flex-1">
-              <div className={`text-sm font-bold ${tone.accent}`}>{t.title}</div>
-              {t.message && <div className="text-xs text-ink/80 mt-0.5 font-medium">{t.message}</div>}
+              {t.title && <div className={`text-sm font-bold ${tone.accent}`}>{t.title}</div>}
+              {t.message && (
+                <div className={`${t.title ? 'text-xs text-ink/80 mt-0.5' : `text-sm ${tone.accent}`} font-medium`}>
+                  {t.message}
+                </div>
+              )}
             </div>
           </div>
         )
