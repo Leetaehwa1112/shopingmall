@@ -130,10 +130,10 @@ export default function AdminPacks() {
         breadcrumb={['Admin', '카탈로그', '카드팩 관리']}
         actions={
           <>
-            <button onClick={fetchList} className="inline-flex items-center gap-1.5 text-xs font-bold text-mute hover:text-ink px-3 py-1.5 rounded-md border border-ink/15 bg-paper hover:bg-bone-2">
+            <button onClick={fetchList} className="inline-flex items-center gap-1.5 text-xs font-bold text-mute hover:text-ink px-3 py-1.5 rounded-md border border-gray-900/15 bg-paper hover:bg-bone-2">
               <Icon name="arrow" size={12} strokeWidth={2.2} /> 새로고침
             </button>
-            <button onClick={() => navigate('/admin/packs/new')} className="inline-flex items-center gap-1.5 text-xs font-bold bg-ink text-paper px-3 py-1.5 rounded-md hover:bg-ink/90">
+            <button onClick={() => navigate('/admin/packs/new')} className="inline-flex items-center gap-1.5 text-xs font-bold bg-gray-900 text-white px-3 py-1.5 rounded-md hover:bg-gray-800">
               <Icon name="plus" size={12} strokeWidth={2.5} /> 카드팩 등록
             </button>
           </>
@@ -256,7 +256,7 @@ export default function AdminPacks() {
 function ConfirmDelete({ name, onConfirm, onCancel }) {
   return (
     <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm z-50 flex items-center justify-center p-6">
-      <div className="bg-paper border border-ink/15 rounded-xl max-w-sm w-full p-6 shadow-2xl">
+      <div className="bg-paper border border-gray-900/15 rounded-xl max-w-sm w-full p-6 shadow-2xl">
         <h3 className="font-display text-base font-bold text-ink mb-1">삭제 확인</h3>
         <p className="text-xs text-mute font-medium mb-5">
           <span className="font-bold text-ink">"{name}"</span>이(가) 영구 삭제됩니다.

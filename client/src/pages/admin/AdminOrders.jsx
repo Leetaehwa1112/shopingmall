@@ -165,7 +165,7 @@ export default function AdminOrders() {
             <button onClick={() => setBulkTrackOpen(true)} className="inline-flex items-center gap-1.5 text-xs font-bold bg-emerald-600 text-paper px-3 py-1.5 rounded-md hover:bg-emerald-700">
               <Icon name="package" size={12} strokeWidth={2.5} /> 송장 일괄 등록
             </button>
-            <button onClick={fetchOrders} className="inline-flex items-center gap-1.5 text-xs font-bold text-mute hover:text-ink px-3 py-1.5 rounded-md border border-ink/15 bg-paper hover:bg-bone-2">
+            <button onClick={fetchOrders} className="inline-flex items-center gap-1.5 text-xs font-bold text-mute hover:text-ink px-3 py-1.5 rounded-md border border-gray-900/15 bg-paper hover:bg-bone-2">
               <Icon name="arrow" size={12} strokeWidth={2.2} /> 새로고침
             </button>
           </>
@@ -359,8 +359,8 @@ function BulkTrackingModal({ onClose, onDone, orders, actor }) {
 
   return (
     <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm z-50 flex items-center justify-center p-6">
-      <div className="bg-paper border border-ink/15 rounded-xl shadow-2xl max-w-3xl w-full max-h-[85vh] flex flex-col">
-        <div className="px-5 py-4 border-b border-ink/15 flex items-start justify-between">
+      <div className="bg-paper border border-gray-900/15 rounded-xl shadow-2xl max-w-3xl w-full max-h-[85vh] flex flex-col">
+        <div className="px-5 py-4 border-b border-gray-900/15 flex items-start justify-between">
           <div>
             <h2 className="font-display text-base font-bold text-ink">송장 일괄 등록</h2>
             <p className="text-[11px] text-mute font-medium mt-0.5">
@@ -381,7 +381,7 @@ function BulkTrackingModal({ onClose, onDone, orders, actor }) {
                 onChange={(e) => setText(e.target.value)}
                 rows={8}
                 placeholder={`ORD-20250101-0001,FedEx,1234567890\nORD-20250101-0002,Brink's,9876543210\nORD-20250101-0003,7777777777`}
-                className="w-full bg-bone-2/30 border border-ink/15 rounded-md px-3 py-2 text-xs font-mono text-ink placeholder:text-mute focus:border-ink focus:bg-paper outline-none resize-none"
+                className="w-full bg-bone-2/30 border border-gray-900/15 rounded-md px-3 py-2 text-xs font-mono text-ink placeholder:text-mute focus:border-gray-900 focus:bg-paper outline-none resize-none"
               />
 
               {/* Preview */}
@@ -395,7 +395,7 @@ function BulkTrackingModal({ onClose, onDone, orders, actor }) {
                       <span className="text-red-600">실패 {parsed.length - validCount}</span>
                     </div>
                   </div>
-                  <div className="border border-ink/10 rounded-md overflow-hidden max-h-64 overflow-y-auto">
+                  <div className="border border-gray-900/10 rounded-md overflow-hidden max-h-64 overflow-y-auto">
                     <table className="w-full text-xs">
                       <thead className="bg-bone-2/60 text-[10px] font-bold text-mute uppercase tracking-wider">
                         <tr>
@@ -408,7 +408,7 @@ function BulkTrackingModal({ onClose, onDone, orders, actor }) {
                       </thead>
                       <tbody>
                         {parsed.map((row, i) => (
-                          <tr key={i} className="border-t border-ink/8">
+                          <tr key={i} className="border-t border-gray-900/8">
                             <td className="px-2 py-1.5">
                               {row.matchId && row.tracking
                                 ? <span className="text-[10px] font-bold text-emerald-600">OK</span>
@@ -433,7 +433,7 @@ function BulkTrackingModal({ onClose, onDone, orders, actor }) {
           )}
         </div>
 
-        <div className="px-5 py-3 border-t border-ink/15 bg-bone-2/30 flex items-center justify-end gap-2">
+        <div className="px-5 py-3 border-t border-gray-900/15 bg-bone-2/30 flex items-center justify-end gap-2">
           {!results ? (
             <>
               <button onClick={onClose} className="text-xs font-bold text-mute hover:text-ink px-3 py-1.5 rounded-md hover:bg-bone-2">취소</button>
@@ -446,7 +446,7 @@ function BulkTrackingModal({ onClose, onDone, orders, actor }) {
               </button>
             </>
           ) : (
-            <button onClick={onDone} className="text-xs font-bold bg-ink text-paper px-4 py-1.5 rounded-md hover:bg-ink/90">완료</button>
+            <button onClick={onDone} className="text-xs font-bold bg-gray-900 text-white px-4 py-1.5 rounded-md hover:bg-gray-800">완료</button>
           )}
         </div>
       </div>
@@ -462,7 +462,7 @@ function ResultPanel({ results }) {
           <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">성공</div>
           <div className="font-display text-2xl font-bold text-emerald-700 tabular-nums">{results.ok.length}</div>
         </div>
-        <div className={`rounded-md p-3 border ${results.fail.length ? 'bg-red-50 border-red-200' : 'bg-bone-2/40 border-ink/10'}`}>
+        <div className={`rounded-md p-3 border ${results.fail.length ? 'bg-red-50 border-red-200' : 'bg-bone-2/40 border-gray-900/10'}`}>
           <div className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${results.fail.length ? 'text-red-700' : 'text-mute'}`}>실패</div>
           <div className={`font-display text-2xl font-bold tabular-nums ${results.fail.length ? 'text-red-700' : 'text-mute'}`}>{results.fail.length}</div>
         </div>
@@ -587,7 +587,7 @@ function OrderDrawer({ order, onClose, onStatusChange, onTrackingUpdate, actor }
 
       <DSection title="상품 목록">
         {order.items?.map((it, idx) => (
-          <div key={idx} className="flex justify-between items-center bg-bone-2/40 border border-ink/8 rounded-md px-3 py-2 text-xs mb-1">
+          <div key={idx} className="flex justify-between items-center bg-bone-2/40 border border-gray-900/8 rounded-md px-3 py-2 text-xs mb-1">
             <div className="font-bold text-ink truncate">{it.product?.nameKo || it.product?.name || '-'}</div>
             <div className="font-mono text-mute ml-2 flex-shrink-0">{formatKRWFull(it.unitPrice)} × {it.qty}</div>
           </div>
@@ -597,14 +597,14 @@ function OrderDrawer({ order, onClose, onStatusChange, onTrackingUpdate, actor }
       <DSection title="송장 등록">
         <div className="flex gap-2 mb-2">
           <select value={carrier} onChange={(e) => setCarrier(e.target.value)}
-            className="bg-paper border border-ink/15 rounded-md px-2 py-1.5 text-xs text-ink font-bold focus:border-ink outline-none">
+            className="bg-paper border border-gray-900/15 rounded-md px-2 py-1.5 text-xs text-ink font-bold focus:border-gray-900 outline-none">
             <option>FedEx</option><option>Brink's</option><option>CJ대한통운</option><option>우체국</option>
           </select>
           <input value={trackingNo} onChange={(e) => setTrackingNo(e.target.value)}
             placeholder="송장번호"
-            className="flex-1 bg-paper border border-ink/15 rounded-md px-2 py-1.5 text-xs text-ink font-mono focus:border-ink outline-none" />
+            className="flex-1 bg-paper border border-gray-900/15 rounded-md px-2 py-1.5 text-xs text-ink font-mono focus:border-gray-900 outline-none" />
           <button onClick={handleTrackingSave} disabled={saving}
-            className="text-xs font-bold bg-ink text-paper px-3 py-1.5 rounded-md hover:bg-ink/90 disabled:opacity-50">
+            className="text-xs font-bold bg-gray-900 text-white px-3 py-1.5 rounded-md hover:bg-gray-800 disabled:opacity-50">
             {saving ? '저장중' : '등록'}
           </button>
         </div>

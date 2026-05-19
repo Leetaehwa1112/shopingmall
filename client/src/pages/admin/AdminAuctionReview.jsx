@@ -241,10 +241,10 @@ export default function AdminAuctionReview() {
         breadcrumb={['Admin', '거래', '경매 관리', '검수 인박스']}
         actions={
           <>
-            <Link to="/admin/auctions" className="inline-flex items-center gap-1.5 text-xs font-bold text-mute hover:text-ink px-3 py-1.5 rounded-md border border-ink/15 bg-paper hover:bg-bone-2">
+            <Link to="/admin/auctions" className="inline-flex items-center gap-1.5 text-xs font-bold text-mute hover:text-ink px-3 py-1.5 rounded-md border border-gray-900/15 bg-paper hover:bg-bone-2">
               <Icon name="arrow" size={12} strokeWidth={2.2} /> 전체 목록
             </Link>
-            <button onClick={load} className="inline-flex items-center gap-1.5 text-xs font-bold text-mute hover:text-ink px-3 py-1.5 rounded-md border border-ink/15 bg-paper hover:bg-bone-2">
+            <button onClick={load} className="inline-flex items-center gap-1.5 text-xs font-bold text-mute hover:text-ink px-3 py-1.5 rounded-md border border-gray-900/15 bg-paper hover:bg-bone-2">
               새로고침
             </button>
           </>
@@ -254,8 +254,8 @@ export default function AdminAuctionReview() {
       {/* Inbox shell: 2-column */}
       <div className="grid grid-cols-[340px_1fr] gap-4 h-[calc(100vh-220px)] min-h-[640px]">
         {/* ── Left: queue ─────────────────────────────────── */}
-        <aside className="bg-paper border border-ink/15 rounded-xl overflow-hidden flex flex-col">
-          <div className="p-2.5 border-b border-ink/10 bg-bone-2/40">
+        <aside className="bg-paper border border-gray-900/15 rounded-xl overflow-hidden flex flex-col">
+          <div className="p-2.5 border-b border-gray-900/10 bg-bone-2/40">
             <div className="relative">
               <Icon name="search" size={12} strokeWidth={2} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-mute pointer-events-none" />
               <input
@@ -263,7 +263,7 @@ export default function AdminAuctionReview() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="큐 검색 ( / )"
-                className="w-full bg-paper border border-ink/15 rounded-md pl-7 pr-2 py-1.5 text-xs text-ink placeholder:text-mute focus:border-ink outline-none"
+                className="w-full bg-paper border border-gray-900/15 rounded-md pl-7 pr-2 py-1.5 text-xs text-ink placeholder:text-mute focus:border-gray-900 outline-none"
               />
             </div>
           </div>
@@ -284,7 +284,7 @@ export default function AdminAuctionReview() {
                     key={it._id}
                     data-idx={idx}
                     onClick={() => setActiveIdx(idx)}
-                    className={`w-full text-left p-3 border-b border-ink/8 transition-colors ${
+                    className={`w-full text-left p-3 border-b border-gray-900/8 transition-colors ${
                       isActive ? 'bg-electric/15 border-l-[3px] border-l-ink' : 'hover:bg-bone-2/40'
                     }`}
                   >
@@ -315,7 +315,7 @@ export default function AdminAuctionReview() {
         </aside>
 
         {/* ── Right: detail ────────────────────────────────── */}
-        <main className="bg-paper border border-ink/15 rounded-xl overflow-hidden flex flex-col">
+        <main className="bg-paper border border-gray-900/15 rounded-xl overflow-hidden flex flex-col">
           {!active ? (
             <div className="flex-1 flex items-center justify-center p-10">
               <EmptyState
@@ -373,7 +373,7 @@ function DetailBody({ item, trust, comparables, note, onNoteChange, noteRef }) {
 
       {/* Card visual + key facts grid */}
       <div className="grid grid-cols-[200px_1fr] gap-4 mb-5">
-        <div className="bg-bone-2/40 border border-ink/10 rounded-lg overflow-hidden aspect-[3/4] flex items-center justify-center">
+        <div className="bg-bone-2/40 border border-gray-900/10 rounded-lg overflow-hidden aspect-[3/4] flex items-center justify-center">
           {item.images?.[0] ? (
             <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none' }} />
           ) : (
@@ -386,10 +386,10 @@ function DetailBody({ item, trust, comparables, note, onNoteChange, noteRef }) {
 
         <div className="space-y-3">
           {/* Submitter trust */}
-          <div className="bg-bone-2/40 border border-ink/10 rounded-lg p-3">
+          <div className="bg-bone-2/40 border border-gray-900/10 rounded-lg p-3">
             <div className="text-[10px] font-bold text-mute uppercase tracking-[0.14em] mb-2">신청자 신뢰도</div>
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-ink text-paper text-xs font-bold flex items-center justify-center">
+              <div className="w-9 h-9 rounded-full bg-gray-900 text-white text-xs font-bold flex items-center justify-center">
                 {item.user?.name?.[0]?.toUpperCase() || '?'}
               </div>
               <div className="min-w-0 flex-1">
@@ -437,7 +437,7 @@ function DetailBody({ item, trust, comparables, note, onNoteChange, noteRef }) {
       {item.description && (
         <div className="mb-5">
           <div className="text-[10px] font-bold text-mute uppercase tracking-[0.14em] mb-1.5">신청자 설명</div>
-          <p className="text-xs text-ink leading-relaxed bg-bone-2/30 border border-ink/8 rounded-md p-3">
+          <p className="text-xs text-ink leading-relaxed bg-bone-2/30 border border-gray-900/8 rounded-md p-3">
             {item.description}
           </p>
         </div>
@@ -449,7 +449,7 @@ function DetailBody({ item, trust, comparables, note, onNoteChange, noteRef }) {
           <div className="text-[10px] font-bold text-mute uppercase tracking-[0.14em] mb-2">동일/유사 카드 — 시세 참고</div>
           <div className="space-y-1.5">
             {comparables.map((c) => (
-              <div key={c._id} className="flex items-center justify-between gap-2 px-3 py-2 bg-bone-2/40 border border-ink/8 rounded-md text-xs">
+              <div key={c._id} className="flex items-center justify-between gap-2 px-3 py-2 bg-bone-2/40 border border-gray-900/8 rounded-md text-xs">
                 <div className="min-w-0 flex-1">
                   <div className="font-bold text-ink truncate">{c.nameKo || c.name}</div>
                   <div className="text-[10px] text-mute font-mono">
@@ -480,7 +480,7 @@ function DetailBody({ item, trust, comparables, note, onNoteChange, noteRef }) {
           onChange={(e) => onNoteChange(e.target.value)}
           rows={3}
           placeholder="거절 사유나 검수 메모 (자동 저장됨)"
-          className="w-full bg-bone-2/30 border border-ink/15 rounded-md px-3 py-2 text-xs text-ink placeholder:text-mute focus:border-ink focus:bg-paper outline-none transition-colors resize-none"
+          className="w-full bg-bone-2/30 border border-gray-900/15 rounded-md px-3 py-2 text-xs text-ink placeholder:text-mute focus:border-gray-900 focus:bg-paper outline-none transition-colors resize-none"
         />
       </div>
     </div>
@@ -489,7 +489,7 @@ function DetailBody({ item, trust, comparables, note, onNoteChange, noteRef }) {
 
 function Fact({ label, value, mono }) {
   return (
-    <div className="bg-bone-2/30 border border-ink/8 rounded-md px-3 py-2">
+    <div className="bg-bone-2/30 border border-gray-900/8 rounded-md px-3 py-2">
       <div className="text-[9px] font-bold uppercase tracking-[0.12em] text-mute mb-0.5">{label}</div>
       <div className={`text-xs font-bold text-ink truncate ${mono ? 'font-mono tabular-nums' : ''}`}>{value}</div>
     </div>
@@ -499,7 +499,7 @@ function Fact({ label, value, mono }) {
 /* ─── Action bar ─────────────────────────────────────────── */
 function ActionBar({ onApprove, onReject, onSkip, onReasonClick, busy, rejectReady }) {
   return (
-    <div className="border-t border-ink/15 bg-bone-2/30 p-3 space-y-2">
+    <div className="border-t border-gray-900/15 bg-bone-2/30 p-3 space-y-2">
       {/* Reject reason chips */}
       <div className="flex items-center gap-1.5 flex-wrap">
         <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-mute mr-1">빠른 거절</span>
@@ -538,7 +538,7 @@ function ActionBar({ onApprove, onReject, onSkip, onReasonClick, busy, rejectRea
         <button
           onClick={onSkip}
           disabled={busy}
-          className="inline-flex items-center justify-center gap-2 bg-paper border border-ink/15 text-mute hover:text-ink hover:bg-bone-2 font-bold py-2.5 px-4 rounded-md disabled:opacity-50 transition-colors"
+          className="inline-flex items-center justify-center gap-2 bg-paper border border-gray-900/15 text-mute hover:text-ink hover:bg-bone-2 font-bold py-2.5 px-4 rounded-md disabled:opacity-50 transition-colors"
         >
           <span className="text-xs">보류</span>
           <Kbd>S</Kbd>
@@ -551,7 +551,7 @@ function ActionBar({ onApprove, onReject, onSkip, onReasonClick, busy, rejectRea
 function Kbd({ children, dark }) {
   return (
     <kbd className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border ${
-      dark ? 'bg-paper/10 border-paper/20 text-paper' : 'bg-bone-2 border-ink/15 text-mute'
+      dark ? 'bg-paper/10 border-paper/20 text-paper' : 'bg-bone-2 border-gray-900/15 text-mute'
     }`}>{children}</kbd>
   )
 }
@@ -573,7 +573,7 @@ function KbdHint() {
 function Hint({ k, v }) {
   return (
     <span className="inline-flex items-center gap-1">
-      <kbd className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border bg-paper border-ink/15 text-ink">{k}</kbd>
+      <kbd className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border bg-paper border-gray-900/15 text-ink">{k}</kbd>
       <span>{v}</span>
     </span>
   )
