@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import useCartStore from '@/store/cartStore'
 import { formatKRWFull } from '@/api/cards'
 import PokeCard from '@/components/common/PokeCard'
+import PackVisual from '@/components/common/PackVisual'
 import GradeBadge from '@/components/common/GradeBadge'
 import Icon from '@/components/common/Icon'
 import Sparkles from '@/components/common/Sparkles'
@@ -58,19 +59,23 @@ export default function CartPage() {
             {items.map((c) => {
               const productId = c.id || c._id
               const price = c.priceSnapshot || c.price || c.currentBid || 0
+              const isPack = c.itemType === 'pack' || c.type === 'pack' || c.type === 'box' || !!c.heroArt
+              const detailHref = isPack ? `/packs/${productId}` : `/products/${productId}`
               return (
                 <div key={productId} className="surface-pop p-5 flex gap-5 items-start">
-                  <PokeCard card={c} size="sm" interactive={false} showShine={false} />
+                  {isPack
+                    ? <PackVisual pack={c} size="sm" />
+                    : <PokeCard card={c} size="sm" interactive={false} showShine={false} />}
                   <div className="flex-1 min-w-0">
-                    <Link to={`/products/${productId}`} className="block hover:text-dex transition-colors">
+                    <Link to={detailHref} className="block hover:text-dex transition-colors">
                       <div className="font-display text-2xl font-bold text-ink">{c.nameKo || c.name}</div>
                       <div className="text-sm text-mute italic font-medium">{c.name}</div>
                     </Link>
                     <div className="text-xs text-mute font-mono mt-2 font-bold">
-                      {c.set || c.setShort} · {c.year} · #{c.number}
+                      {[c.set || c.setShort, c.year, c.number && `#${c.number}`].filter(Boolean).join(' · ')}
                     </div>
                     <div className="mt-3 flex items-center gap-4">
-                      <GradeBadge grade={c.grade} size="sm" />
+                      {!isPack && <GradeBadge grade={c.grade} size="sm" />}
                       <div className="flex items-center gap-2">
                         <button onClick={() => updateQty(productId, Math.max(1, (c.qty || 1) - 1))}
                           className="w-8 h-8 rounded-md bg-paper border-2 border-ink text-ink font-bold text-sm shadow-[0_2px_0_#1a1a1a] hover:bg-electric/30 transition-colors">−</button>

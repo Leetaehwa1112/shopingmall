@@ -8,6 +8,7 @@ const styleByScore = (score) => {
 }
 
 export default function GradeBadge({ grade, size = 'md' }) {
+  if (!grade || grade.score == null) return null
   const s = styleByScore(grade.score)
   const pad = size === 'lg' ? 'px-3 py-2' : size === 'sm' ? 'px-2 py-1' : 'px-2.5 py-1.5'
   const fz = size === 'lg' ? 'text-xs' : 'text-[10px]'

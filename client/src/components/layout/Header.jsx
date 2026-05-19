@@ -7,7 +7,7 @@ import Icon from '@/components/common/Icon'
 
 export default function Header() {
   const { isAuthenticated, isAdmin, user, logout } = useAuthStore()
-  const cartCount = useCartStore((s) => s.items.reduce((sum, i) => sum + (i.qty || 1), 0))
+  const cartCount = useCartStore((s) => (s.items || []).reduce((sum, i) => sum + (i.qty || 1), 0))
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)

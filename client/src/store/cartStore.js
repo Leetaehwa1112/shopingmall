@@ -120,7 +120,14 @@ const useCartStore = create(
           return sum + price * (i.qty || 1)
         }, 0),
     }),
-    { name: 'vault-cart' }
+    {
+      name: 'vault-cart',
+      // items만 persist (함수/loading은 제외) + 항상 배열 보장
+      partialize: (state) => ({ items: Array.isArray(state.items) ? state.items : [] }),
+      onRehydrateStorage: () => (state) => {
+        if (state && !Array.isArray(state.items)) state.items = []
+      },
+    }
   )
 )
 
