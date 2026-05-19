@@ -39,14 +39,14 @@ const cartItemSchema = new mongoose.Schema(
   { _id: false }
 )
 
-cartItemSchema.pre('validate', function (next) {
+// Mongoose 9: pre('validate')는 callback(next) 시그니처 미지원 → throw 방식
+cartItemSchema.pre('validate', function () {
   if (this.itemType === 'product' && !this.product) {
-    return next(new Error('product id가 필요합니다.'))
+    throw new Error('product id가 필요합니다.')
   }
   if (this.itemType === 'pack' && !this.pack) {
-    return next(new Error('pack id가 필요합니다.'))
+    throw new Error('pack id가 필요합니다.')
   }
-  next()
 })
 
 const cartSchema = new mongoose.Schema(

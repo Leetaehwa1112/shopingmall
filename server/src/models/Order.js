@@ -12,14 +12,14 @@ const orderItemSchema = new mongoose.Schema(
   { _id: false }
 )
 
-orderItemSchema.pre('validate', function (next) {
+// Mongoose 9: pre('validate')는 callback(next) 시그니처 미지원 → throw 방식
+orderItemSchema.pre('validate', function () {
   if (this.itemType === 'product' && !this.product) {
-    return next(new Error('주문 아이템(product)에 product id가 필요합니다.'))
+    throw new Error('주문 아이템(product)에 product id가 필요합니다.')
   }
   if (this.itemType === 'pack' && !this.pack) {
-    return next(new Error('주문 아이템(pack)에 pack id가 필요합니다.'))
+    throw new Error('주문 아이템(pack)에 pack id가 필요합니다.')
   }
-  next()
 })
 
 const addressSchema = new mongoose.Schema(
