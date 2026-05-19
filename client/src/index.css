@@ -679,3 +679,16 @@ body { margin: 0; }
 h1, h2, h3, h4, h5, h6, p { margin: 0; }
 ul, ol { margin: 0; padding-left: 0; list-style: none; }
 button { background: none; border: none; cursor: pointer; font-family: inherit; padding: 0; }
+
+/* ─── 저사양/접근성: prefers-reduced-motion 존중 ─────────────
+   사용자/OS가 모션 감소 모드면 모든 무한 애니메이션을 사실상 끔.
+   카드 그리드의 holo/sparkle/pulse/spotlight가 정지 → CPU/GPU 부담 감소.
+   배터리 절약 모드 일부 모바일 OS에서도 자동 활성화됨. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

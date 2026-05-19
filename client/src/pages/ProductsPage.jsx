@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { CATEGORIES } from '@/api/cards'
 import { normalizeProduct } from '@/api/normalize'
 import api from '@/api/axios'
@@ -19,24 +20,24 @@ export default function ProductsPage() {
   const [cat, setCat] = useState('all')
   const [sort, setSort] = useState('default')
   const [query, setQuery] = useState(queryParam)
-  const [products, setProducts] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
   const [page, setPage] = useState(1)
   const toast = useToastStore((s) => s.push)
 
   useEffect(() => { setQuery(queryParam) }, [queryParam])
 
+  // React Query로 캐시 — /products(auction|all)는 staleTime(5분) 동안 재요청 X
+  const { data: products = [], isLoading: loading, isError: error } = useQuery({
+    queryKey: ['products', isAuctionOnly ? 'auction' : 'all'],
+    queryFn: () => {
+      const params = { status: 'active', limit: 100 }
+      if (isAuctionOnly) params.sale_type = 'auction'
+      return api.get('/products', { params }).then((r) => r.data.data.map(normalizeProduct))
+    },
+  })
+
   useEffect(() => {
-    setLoading(true)
-    setError(false)
-    const params = { status: 'active', limit: 100 }
-    if (isAuctionOnly) params.sale_type = 'auction'
-    api.get('/products', { params })
-      .then(({ data }) => setProducts(data.data.map(normalizeProduct)))
-      .catch(() => { setError(true); setProducts([]); toast?.({ type: 'error', message: '상품 목록을 불러오지 못했어요.' }) })
-      .finally(() => setLoading(false))
-  }, [isAuctionOnly, toast])
+    if (error) toast?.({ type: 'error', message: '상품 목록을 불러오지 못했어요.' })
+  }, [error, toast])
 
   useEffect(() => { setPage(1) }, [cat, sort, query])
 

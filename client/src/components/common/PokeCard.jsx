@@ -1,7 +1,9 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 
 export default function PokeCard({ card, size = 'md', interactive = true, showShine = true }) {
   const ref = useRef(null)
+  const rafRef = useRef(0)
+  const pendingRef = useRef(null)
   const [loaded, setLoaded] = useState(false)
   const [err, setErr] = useState(false)
 
@@ -13,17 +15,30 @@ export default function PokeCard({ card, size = 'md', interactive = true, showSh
     xl: { w: 380, h: 532 },
   }[size]
 
+  // mousemove를 rAF로 스로틀 — 프레임당 1회만 transform 적용 (메인 스레드 부담 ↓)
   const handleMove = (e) => {
     if (!interactive || !ref.current) return
-    const rect = ref.current.getBoundingClientRect()
-    const x = (e.clientX - rect.left) / rect.width
-    const y = (e.clientY - rect.top) / rect.height
-    ref.current.style.transform = `perspective(1000px) rotateX(${(0.5 - y) * 12}deg) rotateY(${(x - 0.5) * 12}deg) scale(1.02)`
+    pendingRef.current = { x: e.clientX, y: e.clientY }
+    if (rafRef.current) return
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = 0
+      const node = ref.current
+      const p = pendingRef.current
+      if (!node || !p) return
+      const rect = node.getBoundingClientRect()
+      const x = (p.x - rect.left) / rect.width
+      const y = (p.y - rect.top) / rect.height
+      node.style.transform = `perspective(1000px) rotateX(${(0.5 - y) * 12}deg) rotateY(${(x - 0.5) * 12}deg) scale(1.02)`
+    })
   }
   const handleLeave = () => {
     if (!interactive || !ref.current) return
+    if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = 0 }
     ref.current.style.transform = ''
   }
+
+  // 언마운트 시 rAF 정리
+  useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }, [])
 
   return (
     <div

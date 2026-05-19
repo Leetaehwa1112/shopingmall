@@ -122,11 +122,21 @@ export default function CardTile({ card }) {
 }
 
 function AuctionFooter({ card }) {
+  // 칩 전환 시점(urgent / ended)에만 정밀 setTimeout으로 1회 갱신.
+  // 초 단위 디스플레이는 자식 <Countdown>의 자체 ticker가 담당 → 부모는 칩 상태만 추적.
   const [, force] = useState(0)
   useEffect(() => {
-    const id = setInterval(() => force((x) => x + 1), 1000)
-    return () => clearInterval(id)
-  }, [])
+    if (!card.endsAt) return
+    const now = Date.now()
+    const msToEnd = card.endsAt - now
+    if (msToEnd <= 0) return // 이미 종료
+    const HOUR = 1000 * 60 * 60
+    // 다음 전환까지의 시간: urgent 진입(end - 1hr) 또는 ended(end)
+    const nextDelay = msToEnd > HOUR ? msToEnd - HOUR : msToEnd
+    const id = setTimeout(() => force((x) => x + 1), nextDelay + 50)
+    return () => clearTimeout(id)
+  }, [card.endsAt])
+
   const t = timeUntil(card.endsAt)
   const ended = t.ended
   const urgent = !ended && t.totalMs < 1000 * 60 * 60

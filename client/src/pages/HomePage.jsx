@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
-import { useState, useEffect, useCallback } from 'react'
+import { useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { formatKRW, timeUntil } from '@/api/cards'
 import { normalizeProduct, normalizePack } from '@/api/normalize'
 import api from '@/api/axios'
@@ -16,39 +17,40 @@ import Eyebrow from '@/components/common/Eyebrow'
 import Sparkles from '@/components/common/Sparkles'
 import SectionHead from '@/components/common/SectionHead'
 
+// React Query fetchers — 페이지 unmount 후에도 5분 staleTime 캐시 유지 (queryClient default)
+const fetchAuctions = () =>
+  api.get('/products', { params: { sale_type: 'auction', status: 'active', limit: 10 } })
+    .then((r) => r.data.data.map(normalizeProduct))
+const fetchBuynow = () =>
+  api.get('/products', { params: { sale_type: 'buynow', status: 'active', limit: 4 } })
+    .then((r) => r.data.data.map(normalizeProduct))
+const fetchFeaturedPacks = () =>
+  api.get('/packs', { params: { status: 'active', limit: 4 } })
+    .then((r) => r.data.data.map(normalizePack))
+
 export default function HomePage() {
-  const [auctions, setAuctions] = useState([])
-  const [buyNow, setBuyNow] = useState([])
-  const [featuredPacks, setFeaturedPacks] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const auctionsQ = useQuery({ queryKey: ['home-auctions'], queryFn: fetchAuctions })
+  const buyNowQ   = useQuery({ queryKey: ['home-buynow'],   queryFn: fetchBuynow })
+  const packsQ    = useQuery({ queryKey: ['home-packs'],    queryFn: fetchFeaturedPacks })
 
-  const fetchAll = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const [auctRes, buyRes, packRes] = await Promise.all([
-        api.get('/products', { params: { sale_type: 'auction', status: 'active', limit: 10 } }),
-        api.get('/products', { params: { sale_type: 'buynow',  status: 'active', limit: 4 } }),
-        api.get('/packs',    { params: { status: 'active', limit: 4 } }),
-      ])
-      setAuctions(auctRes.data.data.map(normalizeProduct))
-      setBuyNow(buyRes.data.data.map(normalizeProduct))
-      setFeaturedPacks(packRes.data.data.map(normalizePack))
-    } catch (err) {
-      setError(err?.message || '데이터를 불러오지 못했습니다.')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  const auctions = auctionsQ.data ?? []
+  const buyNow = buyNowQ.data ?? []
+  const featuredPacks = packsQ.data ?? []
+  const loading = auctionsQ.isLoading || buyNowQ.isLoading || packsQ.isLoading
+  const error = auctionsQ.error || buyNowQ.error || packsQ.error
+  const fetchAll = () => {
+    auctionsQ.refetch(); buyNowQ.refetch(); packsQ.refetch()
+  }
 
-  useEffect(() => { fetchAll() }, [fetchAll])
-
-  const activeAuctions = auctions.filter((a) => !a.endsAt || a.endsAt - Date.now() > 0)
-  const FEATURED_LIVE = activeAuctions[0]
-  const TOP_LOT = auctions.find((a) => (a.id || a._id) !== (FEATURED_LIVE?.id || FEATURED_LIVE?._id)) || auctions[0]
-  const usedIds = new Set([FEATURED_LIVE, TOP_LOT].filter(Boolean).map((c) => c.id || c._id))
-  const LIVE_CARDS = activeAuctions.filter((c) => !usedIds.has(c.id || c._id)).slice(0, 3)
+  // 파생값 memoize — auctions 참조 변경 시에만 재계산
+  const { activeAuctions, FEATURED_LIVE, TOP_LOT, LIVE_CARDS } = useMemo(() => {
+    const active = auctions.filter((a) => !a.endsAt || a.endsAt - Date.now() > 0)
+    const featured = active[0]
+    const topLot = auctions.find((a) => (a.id || a._id) !== (featured?.id || featured?._id)) || auctions[0]
+    const usedIds = new Set([featured, topLot].filter(Boolean).map((c) => c.id || c._id))
+    const live = active.filter((c) => !usedIds.has(c.id || c._id)).slice(0, 3)
+    return { activeAuctions: active, FEATURED_LIVE: featured, TOP_LOT: topLot, LIVE_CARDS: live }
+  }, [auctions])
 
   const heroPrimaryCta = activeAuctions.length > 0
     ? `두근두근 입찰 · ${activeAuctions.length}건 LIVE`
