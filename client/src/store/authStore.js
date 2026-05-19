@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import useWishlistStore from './wishlistStore'
 
 const useAuthStore = create(
   persist(
@@ -17,10 +18,8 @@ const useAuthStore = create(
           isAdmin: user?.user_type === 'admin' || user?.role === 'admin',
           verified: true,
         })
-        // 위시리스트 서버 동기화 (lazy import로 순환참조 방지)
-        import('./wishlistStore').then((m) => {
-          m.default.getState().syncFromServer?.()
-        }).catch(() => {})
+        // 위시리스트 서버 동기화
+        try { useWishlistStore.getState().syncFromServer?.() } catch { /* noop */ }
       },
       register: (user, token) => set({
         user, token, isAuthenticated: true, isAdmin: false, verified: false,
@@ -28,9 +27,7 @@ const useAuthStore = create(
       verify: () => set({ verified: true }),
       logout: () => {
         set({ user: null, token: null, isAuthenticated: false, isAdmin: false, verified: false })
-        import('./wishlistStore').then((m) => {
-          m.default.getState().clear?.()
-        }).catch(() => {})
+        try { useWishlistStore.getState().clear?.() } catch { /* noop */ }
       },
     }),
     { name: 'vault-auth' }
