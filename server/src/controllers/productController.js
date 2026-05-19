@@ -159,7 +159,10 @@ const placeBid = async (req, res) => {
       return res.status(400).json({ success: false, message: "유효한 입찰 금액을 입력해주세요." });
     }
 
-    const product = await Product.findById(req.params.id);
+    // 1) 사전 조회로 친절한 에러 메시지 (경매 종료/유형/연속입찰 등)
+    const product = await Product.findById(req.params.id).select(
+      "sale_type status endsAt currentBid startPrice price bidHistory"
+    );
     if (!product) {
       return res.status(404).json({ success: false, message: "상품을 찾을 수 없습니다." });
     }
@@ -173,7 +176,8 @@ const placeBid = async (req, res) => {
       return res.status(400).json({ success: false, message: "이미 종료된 경매입니다." });
     }
 
-    const minBid = (product.currentBid || product.startPrice || product.price || 0) + 1;
+    const baseline = product.currentBid || product.startPrice || product.price || 0;
+    const minBid = baseline + 1;
     if (numAmount < minBid) {
       return res.status(400).json({
         success: false,
@@ -181,32 +185,52 @@ const placeBid = async (req, res) => {
       });
     }
 
-    // 마지막 입찰자가 본인인지 (연속 입찰 방지 — 선택 정책)
     const lastBid = product.bidHistory?.[0];
     if (lastBid && String(lastBid.bidder_id) === String(req.user._id)) {
       return res.status(400).json({ success: false, message: "이미 최고 입찰자입니다." });
     }
 
-    // unshift + 50건 cap
     const bidEntry = {
       bidder: req.user.name || "익명 트레이너",
       bidder_id: req.user._id,
       amount: numAmount,
       at: new Date(),
     };
-    product.bidHistory = [bidEntry, ...(product.bidHistory || [])].slice(0, 50);
-    product.currentBid = numAmount;
-    product.bidCount = (product.bidCount || 0) + 1;
 
-    await product.save();
+    // 2) atomic update — currentBid < numAmount 조건이 매치될 때만 갱신
+    //    동시 입찰 race 방지: 다른 요청이 먼저 더 높은 금액으로 갱신했다면 409
+    const updated = await Product.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        sale_type: "auction",
+        status: "active",
+        $or: [{ currentBid: { $lt: numAmount } }, { currentBid: { $exists: false } }],
+        $and: [
+          { $or: [{ endsAt: null }, { endsAt: { $gt: new Date() } }] },
+        ],
+      },
+      {
+        $set: { currentBid: numAmount },
+        $inc: { bidCount: 1 },
+        $push: { bidHistory: { $each: [bidEntry], $position: 0, $slice: 50 } },
+      },
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(409).json({
+        success: false,
+        message: "더 높은 입찰이 이미 들어왔어요. 새로고침 후 다시 시도해주세요.",
+      });
+    }
 
     res.status(201).json({
       success: true,
       message: "입찰이 등록되었습니다.",
       data: {
-        currentBid: product.currentBid,
-        bidCount: product.bidCount,
-        bidHistory: product.bidHistory,
+        currentBid: updated.currentBid,
+        bidCount: updated.bidCount,
+        bidHistory: updated.bidHistory,
       },
     });
   } catch (error) {

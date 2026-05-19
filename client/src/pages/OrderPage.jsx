@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useCartStore from '@/store/cartStore'
+import useToastStore from '@/store/toastStore'
 import { formatKRWFull, getShippingOptionsForPrice, getShippingTier, SHIPPING_TIER } from '@/api/cards'
 import api from '@/api/axios'
 import Icon from '@/components/common/Icon'
@@ -18,6 +19,7 @@ const PAY_METHODS = [
 
 export default function OrderPage() {
   const { items, total, clear } = useCartStore()
+  const toast = useToastStore((s) => s.push)
   const navigate = useNavigate()
 
   const maxPrice = useMemo(() => Math.max(0, ...items.map((c) => c.price || c.currentBid || 0)), [items])
@@ -59,7 +61,10 @@ export default function OrderPage() {
 
   const submit = async (e) => {
     e.preventDefault()
-    if (!window.PortOne) return alert('결제 모듈을 불러오는 중이에요. 잠시 후 다시 시도해주세요.')
+    if (!window.PortOne) {
+      toast({ type: 'error', message: '결제 모듈을 불러오는 중이에요. 잠시 후 다시 시도해주세요.' })
+      return
+    }
 
     const payInfo = PAY_METHODS.find((m) => m.id === form.method) || PAY_METHODS[0]
     const paymentId = 'PV-' + Date.now().toString(36).toUpperCase()
@@ -93,7 +98,7 @@ export default function OrderPage() {
 
       if (rsp?.code) {
         setPaying(false)
-        alert(rsp.message || '결제가 취소되었어요.')
+        toast({ type: 'info', message: rsp.message || '결제가 취소되었어요.' })
         return
       }
 
@@ -128,7 +133,8 @@ export default function OrderPage() {
     } catch (err) {
       setPaying(false)
       console.error('결제 오류:', err)
-      alert(err.response?.data?.message || err?.message || JSON.stringify(err))
+      const msg = err.response?.data?.message || err?.message || '결제에 실패했어요. 잠시 후 다시 시도해주세요.'
+      toast({ type: 'error', message: Array.isArray(msg) ? msg.join(', ') : msg })
     }
   }
 

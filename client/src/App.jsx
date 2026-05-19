@@ -61,8 +61,10 @@ export default function App() {
             <Route path="register" element={<RegisterPage />} />
             <Route path="mypage" element={<MyPage />} />
             <Route path="my-orders" element={<MyOrdersPage />} />
-          <Route path="admin/login" element={<AdminLoginPage />} />
           </Route>
+
+          {/* admin 로그인은 Layout(일반 헤더/푸터) 밖에서 풀스크린 */}
+          <Route path="/admin/login" element={<AdminLoginPage />} />
 
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
