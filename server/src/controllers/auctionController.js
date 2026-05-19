@@ -48,17 +48,51 @@ const createApplication = async (req, res) => {
       photos, description,
     } = req.body;
 
+    // ─── 입력 검증 (서버는 항상 검증 — 클라 검증은 UX용) ───
+    const errors = [];
+    if (!name || typeof name !== "string" || !name.trim()) errors.push("카드명(영문)이 필요합니다.");
+    if (name && name.length > 100) errors.push("카드명은 100자 이하로 입력해주세요.");
+    if (!["PSA", "BGS", "CGC"].includes(gradeCompany)) errors.push("등급사를 선택해주세요 (PSA/BGS/CGC).");
+    const scoreNum = Number(gradeScore);
+    if (!Number.isFinite(scoreNum) || scoreNum < 1 || scoreNum > 10) errors.push("등급 점수는 1~10 사이여야 합니다.");
+    if (!["auction", "buynow"].includes(saleType)) errors.push("판매 유형을 선택해주세요.");
+    const startNum = Number(startPrice);
+    if (!Number.isFinite(startNum) || startNum < 0) errors.push("시작가는 0 이상이어야 합니다.");
+    if (startNum > 100_000_000_000) errors.push("시작가가 너무 큽니다."); // 1000억 상한
+    if (buyNowPrice != null && buyNowPrice !== "") {
+      const bnp = Number(buyNowPrice);
+      if (!Number.isFinite(bnp) || bnp <= startNum) errors.push("즉시낙찰가는 시작가보다 커야 합니다.");
+    }
+    if (endsAt) {
+      const t = new Date(endsAt).getTime();
+      if (!Number.isFinite(t)) errors.push("경매 종료 시각이 올바르지 않습니다.");
+      else if (t < Date.now() + 60_000) errors.push("경매 종료 시각은 최소 1분 이후여야 합니다.");
+    }
+    if (description && description.length > 5000) errors.push("설명은 5000자 이하로 입력해주세요.");
+    if (Array.isArray(photos) && photos.length > 10) errors.push("사진은 최대 10장까지 첨부 가능합니다.");
+
+    if (errors.length) {
+      return res.status(400).json({ success: false, message: errors });
+    }
+
     const application = await AuctionApplication.create({
       user: req.user._id,
-      name, nameKo, set, year, number,
-      gradeCompany, gradeScore, gradeCert,
+      name: name.trim(),
+      nameKo: typeof nameKo === "string" ? nameKo.trim() : "",
+      set: typeof set === "string" ? set.trim() : "",
+      year: typeof year === "string" ? year.trim() : (year ?? ""),
+      number: typeof number === "string" ? number.trim() : "",
+      gradeCompany,
+      gradeScore,
+      gradeCert: typeof gradeCert === "string" ? gradeCert.trim() : "",
       cardCountry: cardCountry || "USA",
-      saleType, startPrice,
-      buyNowPrice: buyNowPrice || null,
+      saleType,
+      startPrice: startNum,
+      buyNowPrice: buyNowPrice ? Number(buyNowPrice) : null,
       endsAt: endsAt || null,
-      minIncrement: minIncrement || 1000000,
-      photos: photos || [],
-      description: description || "",
+      minIncrement: Number(minIncrement) || 1000000,
+      photos: Array.isArray(photos) ? photos.slice(0, 10) : [],
+      description: typeof description === "string" ? description.slice(0, 5000) : "",
     });
 
     res.status(201).json({ success: true, data: application });

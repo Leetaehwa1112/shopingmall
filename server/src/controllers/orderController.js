@@ -17,6 +17,35 @@ const handleError = (res, err) => {
 // [POST] /api/orders
 const createOrder = async (req, res) => {
   try {
+    // ─── 입력 검증 ───
+    const { shippingMethod, recipient, phone, address, paymentMethod } = req.body || {}
+    const errors = []
+    if (!['standard', 'fedex', 'quick', 'brinks', 'pickup'].includes(shippingMethod)) {
+      errors.push('배송 수단을 선택해주세요.')
+    }
+    if (!['card', 'toss', 'kakao', 'bank', 'escrow'].includes(paymentMethod)) {
+      errors.push('결제 수단을 선택해주세요.')
+    }
+    if (!recipient || typeof recipient !== 'string' || !recipient.trim()) {
+      errors.push('수령인 이름이 필요합니다.')
+    } else if (recipient.length > 50) {
+      errors.push('수령인 이름은 50자 이하로 입력해주세요.')
+    }
+    if (!phone || typeof phone !== 'string' || !/^[0-9+\-\s()]{8,20}$/.test(phone.trim())) {
+      errors.push('연락처를 올바르게 입력해주세요.')
+    }
+    if (shippingMethod !== 'pickup') {
+      if (!address || typeof address !== 'object') errors.push('배송 주소가 필요합니다.')
+      else {
+        if (!address.zipcode || !/^[0-9\-]{3,10}$/.test(String(address.zipcode))) errors.push('우편번호가 올바르지 않습니다.')
+        if (!address.street || !String(address.street).trim()) errors.push('도로명 주소가 필요합니다.')
+      }
+    }
+
+    if (errors.length) {
+      return res.status(400).json({ success: false, message: errors })
+    }
+
     const order = await orderService.createOrder(req.user._id, req.body)
     res.status(201).json({ success: true, data: order })
   } catch (err) { handleError(res, err) }
