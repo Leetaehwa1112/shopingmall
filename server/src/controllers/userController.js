@@ -214,8 +214,9 @@ const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // 이메일로 유저 찾기
-    const user = await User.findOne({ email });
+    // 이메일로 유저 찾기 (스키마 lowercase로 저장되므로 쿼리도 정규화)
+    const normalizedEmail = (email || "").toLowerCase().trim();
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return res
         .status(401)
