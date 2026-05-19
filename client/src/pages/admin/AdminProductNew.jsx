@@ -55,7 +55,7 @@ export default function AdminProductNew() {
         </button>
         <span className="text-line">/</span>
         <div>
-          <div className="pixel-label text-dex mb-1">New Card</div>
+          <div className="inline-flex items-center gap-2 mb-2"><span className="led led-red led-pulse" style={{ width: 6, height: 6 }} /><span className="text-[10px] font-bold tracking-[0.18em] text-fire uppercase">New Card · 새 카드 등록</span></div>
           <h1 className="font-display text-3xl font-bold text-ink">카드 등록</h1>
         </div>
       </div>
@@ -68,7 +68,7 @@ export default function AdminProductNew() {
             <div>
               <Lbl>카테고리 *</Lbl>
               <select value={form.category} onChange={(e) => f('category')(e.target.value)}
-                className="w-full bg-bone-2 border border-line rounded-lg px-4 py-2.5 text-sm text-ink font-bold focus:border-ink outline-none">
+                className="w-full bg-bone-2 border border-ink/15 rounded-lg px-4 py-2.5 text-sm text-ink font-bold focus:border-ink outline-none">
                 {CATEGORIES.filter((c) => c.id !== 'all').map((c) => (
                   <option key={c.id} value={c.id}>{c.label}</option>
                 ))}
@@ -88,7 +88,7 @@ export default function AdminProductNew() {
             <div>
               <Lbl>등급사</Lbl>
               <select value={form.company} onChange={(e) => f('company')(e.target.value)}
-                className="w-full bg-bone-2 border border-line rounded-lg px-4 py-2.5 text-sm text-ink font-bold focus:border-ink outline-none">
+                className="w-full bg-bone-2 border border-ink/15 rounded-lg px-4 py-2.5 text-sm text-ink font-bold focus:border-ink outline-none">
                 <option>PSA</option><option>BGS</option><option>CGC</option>
               </select>
             </div>
@@ -101,7 +101,7 @@ export default function AdminProductNew() {
               {[['USA', '🇺🇸', 'US판'], ['JPN', '🇯🇵', 'JP판'], ['KOR', '🇰🇷', 'KR판']].map(([val, flag, label]) => (
                 <button key={val} type="button" onClick={() => f('country')(val)}
                   className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all ${
-                    form.country === val ? 'border-ink bg-ink/[0.04] elev-1' : 'border-line hover:border-ink/30'
+                    form.country === val ? 'border-ink bg-ink/[0.04] ' : 'border-ink/15 hover:border-ink/30'
                   }`}>
                   <span className="text-xl">{flag}</span> {label}
                 </button>
@@ -114,12 +114,12 @@ export default function AdminProductNew() {
         <Section title="판매 방식">
           <div className="grid grid-cols-2 gap-3 mb-4">
             <button type="button" onClick={() => f('type')('buynow')}
-              className={`p-4 rounded-xl border transition-all ${form.type === 'buynow' ? 'border-ink bg-ink/[0.03] elev-1' : 'border-line hover:border-ink/30'}`}>
+              className={`p-4 rounded-xl border transition-all ${form.type === 'buynow' ? 'border-ink bg-ink/[0.03] ' : 'border-ink/15 hover:border-ink/30'}`}>
               <div className="font-display font-bold text-ink">즉시 구매</div>
               <div className="text-xs text-mute mt-1">고정 가격</div>
             </button>
             <button type="button" onClick={() => f('type')('auction')}
-              className={`p-4 rounded-xl border transition-all ${form.type === 'auction' ? 'border-ink bg-ink/[0.03] elev-1' : 'border-line hover:border-ink/30'}`}>
+              className={`p-4 rounded-xl border transition-all ${form.type === 'auction' ? 'border-ink bg-ink/[0.03] ' : 'border-ink/15 hover:border-ink/30'}`}>
               <div className="font-display font-bold text-ink">경매</div>
               <div className="text-xs text-mute mt-1">초희귀 카드만</div>
             </button>
@@ -152,10 +152,10 @@ export default function AdminProductNew() {
         <Section title="설명">
           <textarea value={form.description} onChange={(e) => f('description')(e.target.value)}
             rows={4} placeholder="카드 컨디션, 출처, 특이사항 등"
-            className="w-full bg-bone-2 border border-line rounded-xl px-4 py-3 text-sm text-ink focus:border-ink outline-none transition-colors" />
+            className="w-full bg-bone-2 border border-ink/15 rounded-xl px-4 py-3 text-sm text-ink focus:border-ink outline-none transition-colors" />
         </Section>
 
-        <div className="flex gap-3 justify-end pt-6 border-t border-line">
+        <div className="flex gap-3 justify-end pt-6 border-t border-ink/15">
           <Button variant="ghost" type="button" onClick={() => navigate('/admin/products')} disabled={loading}>취소</Button>
           <Button variant="accent" type="submit" disabled={loading}>
             {loading ? '등록 중...' : '등록하기'}
@@ -168,7 +168,7 @@ export default function AdminProductNew() {
 
 function Section({ title, children }) {
   return (
-    <div className="surface-soft p-6 elev-1">
+    <div className="surface-pop p-6 ">
       <div className="font-display font-bold text-ink text-lg mb-4">{title}</div>
       {children}
     </div>
@@ -182,7 +182,7 @@ function Input({ label, value, onChange, ...rest }) {
     <label className="block">
       <Lbl>{label}</Lbl>
       <input value={value} onChange={(e) => onChange(e.target.value)} {...rest}
-        className="w-full bg-bone-2 border border-line rounded-lg px-4 py-2.5 text-sm text-ink focus:border-ink focus:bg-paper outline-none transition-colors" />
+        className="w-full bg-bone-2 border border-ink/15 rounded-lg px-4 py-2.5 text-sm text-ink focus:border-ink focus:bg-paper outline-none transition-colors" />
     </label>
   )
 }

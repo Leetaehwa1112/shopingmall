@@ -1,155 +1,250 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { formatKRWFull } from '@/api/cards'
 import api from '@/api/axios'
-import Button from '@/components/common/Button'
-import Icon from '@/components/common/Icon'
+import useAuthStore from '@/store/authStore'
 import useToastStore from '@/store/toastStore'
+import Icon from '@/components/common/Icon'
+import {
+  PageHeader, StatGrid, StatCard, FilterBar, SearchInput, Select, Spacer,
+  FilterChips, DataTable, Pagination, BulkBar, BulkButton, StatusPill,
+  Cell, ImgThumb, RowActions, IconBtn, EmptyState, InlineNumberCell, logAudit,
+} from '@/components/admin/ui'
 
-const PAGE_SIZE = 8
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
+const LOW_STOCK = 3
 
 export default function AdminPacks() {
   const navigate = useNavigate()
+  const { user } = useAuthStore()
   const toast = useToastStore((s) => s.push)
-  const [filter, setFilter] = useState('all')
+
   const [list, setList] = useState([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [filter, setFilter] = useState('all')   // type pack|box|all
+  const [search, setSearch] = useState('')
+  const [stockFilter, setStockFilter] = useState('all')
+  const [sort, setSort] = useState({ key: 'createdAt', dir: 'desc' })
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
+  const [selected, setSelected] = useState([])
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
-  const fetchList = async (type) => {
+  const fetchList = useCallback(() => {
     setLoading(true)
+    const params = { status: '', limit: 200 }
+    if (filter !== 'all') params.type = filter
+    api.get('/packs', { params })
+      .then(({ data }) => { setList(data.data || []); setTotal(data.total || 0) })
+      .catch(() => toast({ type: 'error', title: '불러오기 실패', message: '팩 목록 로딩 실패' }))
+      .finally(() => setLoading(false))
+  }, [filter])
+
+  useEffect(() => { fetchList() }, [fetchList])
+  useEffect(() => { setPage(1); setSelected([]) }, [filter, search, stockFilter])
+
+  const filtered = useMemo(() => {
+    let rows = list.slice()
+    if (search) {
+      const q = search.toLowerCase()
+      rows = rows.filter((r) =>
+        (r.name || '').toLowerCase().includes(q) ||
+        (r.nameKo || '').toLowerCase().includes(q) ||
+        (r.sku || '').toLowerCase().includes(q) ||
+        (r.setShort || '').toLowerCase().includes(q)
+      )
+    }
+    if (stockFilter === 'in')  rows = rows.filter((r) => (r.stock || 0) > LOW_STOCK)
+    if (stockFilter === 'low') rows = rows.filter((r) => (r.stock || 0) > 0 && (r.stock || 0) <= LOW_STOCK)
+    if (stockFilter === 'out') rows = rows.filter((r) => (r.stock || 0) <= 0)
+    rows.sort((a, b) => {
+      const dir = sort.dir === 'asc' ? 1 : -1
+      const get = (r) => ({
+        name: r.nameKo || r.name || '',
+        sku: r.sku || '',
+        price: r.price || 0,
+        stock: r.stock || 0,
+        year: r.year || 0,
+        createdAt: new Date(r.createdAt).getTime() || 0,
+      }[sort.key])
+      const av = get(a), bv = get(b)
+      if (av < bv) return -1 * dir
+      if (av > bv) return  1 * dir
+      return 0
+    })
+    return rows
+  }, [list, search, stockFilter, sort])
+
+  const paged = useMemo(() => filtered.slice((page - 1) * pageSize, page * pageSize), [filtered, page, pageSize])
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
+
+  const kpis = useMemo(() => ({
+    total: list.length,
+    low: list.filter((r) => (r.stock || 0) > 0 && (r.stock || 0) <= LOW_STOCK).length,
+    out: list.filter((r) => (r.stock || 0) <= 0).length,
+    box: list.filter((r) => r.type === 'box').length,
+  }), [list])
+
+  const handleSort = (key) =>
+    setSort((s) => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'desc' })
+
+  const patchPack = async (id, body, summary) => {
+    setList((rows) => rows.map((r) => r._id === id ? { ...r, ...body } : r))
     try {
-      const params = { status: '', limit: 100 }
-      if (type && type !== 'all') params.type = type
-      const { data } = await api.get('/packs', { params })
-      setList(data.data)
-      setTotal(data.total)
-    } catch {
-      toast({ type: 'error', title: '불러오기 실패', message: '팩 목록을 가져오지 못했습니다.' })
-    } finally {
-      setLoading(false)
+      await api.put(`/packs/${id}`, body)
+      logAudit({ actor: user?.name, action: 'pack.update', entity: 'pack', entityId: id, summary })
+    } catch (e) {
+      fetchList()
+      throw e
     }
   }
 
-  useEffect(() => { fetchList(filter); setPage(1) }, [filter])
-
-  const handleDelete = async (id) => {
+  const handleDelete = async (id, name) => {
     try {
       await api.delete(`/packs/${id}`)
-      toast({ type: 'success', title: '삭제 완료', message: '팩이 삭제되었습니다.' })
+      logAudit({ actor: user?.name, action: 'pack.delete', entity: 'pack', entityId: id, summary: name })
+      toast({ type: 'success', title: '삭제 완료' })
       setDeleteTarget(null)
-      fetchList(filter)
-    } catch {
-      toast({ type: 'error', title: '삭제 실패', message: '팩 삭제에 실패했습니다.' })
-    }
+      fetchList()
+    } catch { toast({ type: 'error', title: '삭제 실패' }) }
   }
 
-  const counts = {
-    all: total,
-    pack: list.filter((p) => p.type === 'pack').length,
-    box: list.filter((p) => p.type === 'box').length,
+  const handleBulkDelete = async () => {
+    if (!selected.length) return
+    if (!confirm(`${selected.length}개 팩을 삭제할까요?`)) return
+    for (const id of selected) { try { await api.delete(`/packs/${id}`) } catch {} }
+    logAudit({ actor: user?.name, action: 'pack.bulk.delete', entity: 'pack', entityId: `${selected.length}개`, meta: { ids: selected } })
+    toast({ type: 'success', title: `${selected.length}개 삭제` })
+    setSelected([])
+    fetchList()
   }
-
-  const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE))
-  const paged = list.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
-    <div className="space-y-6 max-w-7xl">
-      <div className="flex justify-between items-end flex-wrap gap-4">
-        <div>
-          <div className="pixel-label text-mute mb-3">Packs</div>
-          <h1 className="font-display text-4xl font-bold text-ink tracking-tight">카드팩 관리</h1>
+    <div className="space-y-4 max-w-[1400px]">
+      <PageHeader
+        kicker="PACKS · 카드팩"
+        ledTone="yellow"
+        title="카드팩 관리"
+        subtitle={`총 ${total.toLocaleString()}개 팩/박스`}
+        breadcrumb={['Admin', '카탈로그', '카드팩 관리']}
+        actions={
+          <>
+            <button onClick={fetchList} className="inline-flex items-center gap-1.5 text-xs font-bold text-mute hover:text-ink px-3 py-1.5 rounded-md border border-ink/15 bg-paper hover:bg-bone-2">
+              <Icon name="arrow" size={12} strokeWidth={2.2} /> 새로고침
+            </button>
+            <button onClick={() => navigate('/admin/packs/new')} className="inline-flex items-center gap-1.5 text-xs font-bold bg-ink text-paper px-3 py-1.5 rounded-md hover:bg-ink/90">
+              <Icon name="plus" size={12} strokeWidth={2.5} /> 카드팩 등록
+            </button>
+          </>
+        }
+      />
+
+      <StatGrid cols={4}>
+        <StatCard label="전체 팩/박스" value={kpis.total} sub="등록 SKU" icon="star" />
+        <StatCard label="재고 부족" value={kpis.low} sub={`≤ ${LOW_STOCK}개`} icon="flame" tone="amber" urgent={kpis.low > 0} onClick={() => setStockFilter('low')} />
+        <StatCard label="품절" value={kpis.out} sub="재고 0" icon="lock" tone="red" urgent={kpis.out > 0} onClick={() => setStockFilter('out')} />
+        <StatCard label="박스 상품" value={kpis.box} sub="BOX 타입" icon="package" />
+      </StatGrid>
+
+      <FilterBar>
+        <SearchInput value={search} onSubmit={setSearch} placeholder="이름 / SKU / 세트 검색" width={260} />
+        <Select label="재고" value={stockFilter} onChange={setStockFilter} options={[
+          { value: 'all', label: '전체' },
+          { value: 'in',  label: '정상' },
+          { value: 'low', label: '부족' },
+          { value: 'out', label: '품절' },
+        ]} />
+        <Spacer />
+        <Select label="페이지당" value={pageSize} onChange={(v) => setPageSize(Number(v))}
+          options={PAGE_SIZE_OPTIONS.map((n) => ({ value: n, label: `${n}건` }))} />
+      </FilterBar>
+
+      <FilterChips value={filter} onChange={setFilter} options={[
+        { value: 'all', label: '전체' },
+        { value: 'pack', label: '부스터팩' },
+        { value: 'box', label: '박스' },
+      ]} />
+
+      <button
+        onClick={() => navigate('/admin/packs/new')}
+        className="group w-full flex items-center justify-between gap-4 bg-ink text-paper rounded-xl px-5 py-4 hover:bg-ink-2 transition-colors shadow-[0_2px_0_#1a1a1a] hover:shadow-[0_4px_0_#1a1a1a] hover:-translate-y-0.5 transform"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="w-10 h-10 rounded-lg bg-paper/10 border border-paper/20 flex items-center justify-center flex-shrink-0">
+            <Icon name="plus" size={18} strokeWidth={2.5} />
+          </span>
+          <div className="text-left min-w-0">
+            <div className="font-display text-sm font-bold tracking-tight">새 카드팩 등록</div>
+            <div className="text-[11px] text-paper/70 font-medium mt-0.5">팩/박스 정보 · 히어로 아트 · 가격 · 재고 입력</div>
+          </div>
         </div>
-        <Button variant="accent" onClick={() => navigate('/admin/packs/new')}>
-          <Icon name="plus" size={14} strokeWidth={2.5} /> 카드팩 등록
-        </Button>
-      </div>
+        <span className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-wider uppercase text-paper/80 group-hover:text-paper">
+          시작 <Icon name="arrow" size={12} strokeWidth={2.4} />
+        </span>
+      </button>
 
-      <div className="flex gap-2 flex-wrap">
-        {[['all', '전체'], ['pack', '부스터팩'], ['box', '박스']].map(([v, label]) => (
-          <button key={v} onClick={() => setFilter(v)}
-            className={`px-4 py-2 text-sm font-bold rounded-full border transition-all ${
-              filter === v ? 'bg-ink text-paper border-ink' : 'bg-paper border-line text-ink hover:border-ink/30'
-            }`}>
-            {label} <span className="opacity-60 font-mono text-xs">{counts[v] ?? 0}</span>
-          </button>
-        ))}
-      </div>
+      <BulkBar count={selected.length} onClear={() => setSelected([])}
+        actions={<BulkButton tone="danger" onClick={handleBulkDelete}>일괄 삭제</BulkButton>} />
 
-      <div className="surface-soft overflow-x-auto">
-        {loading ? (
-          <div className="py-16 text-center text-mute text-sm font-bold">불러오는 중...</div>
-        ) : list.length === 0 ? (
-          <div className="py-16 text-center text-mute text-sm font-bold">등록된 팩이 없습니다.</div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-bone-2/50 border-b border-line">
-              <tr className="text-[10px] font-bold tracking-[0.18em] uppercase text-mute">
-                <th className="text-left p-4">img</th>
-                <th className="text-left p-4">SKU</th>
-                <th className="text-left p-4">이름</th>
-                <th className="text-left p-4">세트</th>
-                <th className="text-left p-4">연도</th>
-                <th className="text-center p-4">종류</th>
-                <th className="text-center p-4">재고</th>
-                <th className="text-right p-4">가격</th>
-                <th className="p-4"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {paged.map((p) => (
-                <tr key={p._id} className="border-b border-line last:border-0 hover:bg-bone-2/30">
-                  <td className="p-3">
-                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-bone-2 flex items-center justify-center">
-                      {p.heroArt
-                        ? <img src={p.heroArt} alt={p.name} className="w-full h-full object-cover" onError={(e) => e.target.style.display = 'none'} />
-                        : <span className="text-mute text-xs">—</span>}
-                    </div>
-                  </td>
-                  <td className="p-4 font-mono text-xs text-mute font-bold">{p.sku}</td>
-                  <td className="p-4">
-                    <div className="font-bold text-ink">{p.nameKo || p.name}</div>
-                    <div className="text-xs text-mute italic">{p.name}</div>
-                  </td>
-                  <td className="p-4 text-mute text-xs font-bold">{p.setShort}</td>
-                  <td className="p-4 text-mute font-mono text-xs">{p.year}</td>
-                  <td className="p-4 text-center">
-                    {p.type === 'box' ? (
-                      <span className="text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-1 rounded-full">BOX</span>
-                    ) : (
-                      <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-1 rounded-full">PACK</span>
-                    )}
-                  </td>
-                  <td className="p-4 text-center">
-                    <span className={`font-mono font-bold text-sm ${p.stock <= 3 ? 'text-dex' : 'text-ink'}`}>
-                      {p.stock}
-                    </span>
-                    {p.stock <= 3 && <span className="ml-1 text-[10px] text-dex font-bold">LOW</span>}
-                  </td>
-                  <td className="p-4 text-right font-mono text-ink font-bold tabular-nums">{formatKRWFull(p.price)}</td>
-                  <td className="p-4 text-right whitespace-nowrap">
-                    <button onClick={() => navigate(`/admin/packs/${p._id}/edit`)}
-                      className="text-xs text-ink hover:text-dex font-bold mr-3">수정</button>
-                    <button onClick={() => setDeleteTarget(p)}
-                      className="text-xs text-mute hover:text-dex font-bold">삭제</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      <DataTable
+        density="compact"
+        loading={loading}
+        rows={paged}
+        rowKey={(r) => r._id}
+        selected={selected}
+        onSelect={setSelected}
+        sort={sort}
+        onSort={handleSort}
+        empty={<EmptyState icon="star" title="등록된 팩이 없습니다" />}
+        columns={[
+          { key: 'img', label: '', render: (r) => <ImgThumb src={r.heroArt} alt={r.name} /> },
+          { key: 'sku', label: 'SKU', sortable: true, render: (r) =>
+            <span className="font-mono text-[11px] text-mute font-bold">{r.sku}</span>
+          },
+          { key: 'name', label: '이름', sortable: true, render: (r) =>
+            <Cell primary={r.nameKo || r.name} secondary={r.nameKo ? r.name : r.setShort} />
+          },
+          { key: 'set', label: '세트', render: (r) =>
+            <span className="text-[11px] text-mute font-bold">{r.setShort}</span>
+          },
+          { key: 'year', label: '연도', align: 'center', sortable: true, render: (r) =>
+            <span className="font-mono text-[11px] text-mute tabular-nums">{r.year}</span>
+          },
+          { key: 'type', label: '종류', align: 'center', render: (r) =>
+            r.type === 'box'
+              ? <StatusPill tone="amber">BOX</StatusPill>
+              : <StatusPill tone="emerald">PACK</StatusPill>
+          },
+          { key: 'stock', label: '재고', align: 'center', sortable: true, render: (r) =>
+            <InlineNumberCell
+              value={r.stock}
+              lowThreshold={LOW_STOCK}
+              onSave={(n) => patchPack(r._id, { stock: n }, `재고 ${r.stock} → ${n} · ${r.nameKo || r.name}`)}
+            />
+          },
+          { key: 'price', label: '가격', align: 'right', sortable: true, render: (r) =>
+            <InlineNumberCell
+              value={r.price}
+              format={(v) => formatKRWFull(v)}
+              onSave={(n) => patchPack(r._id, { price: n }, `가격 ${r.price} → ${n} · ${r.nameKo || r.name}`)}
+            />
+          },
+          { key: 'actions', label: '', align: 'right', render: (r) =>
+            <RowActions>
+              <IconBtn icon="arrow" label="수정" onClick={() => navigate(`/admin/packs/${r._id}/edit`)} />
+              <IconBtn icon="close" label="삭제" tone="danger" onClick={() => setDeleteTarget(r)} />
+            </RowActions>
+          },
+        ]}
+      />
 
-      {!loading && totalPages > 1 && (
-        <Pagination page={page} totalPages={totalPages} total={list.length} onPage={setPage} />
-      )}
+      <Pagination page={page} totalPages={totalPages} total={filtered.length} pageSize={pageSize} onPage={setPage} />
 
       {deleteTarget && (
         <ConfirmDelete
           name={deleteTarget.nameKo || deleteTarget.name}
-          onConfirm={() => handleDelete(deleteTarget._id)}
+          onConfirm={() => handleDelete(deleteTarget._id, deleteTarget.nameKo || deleteTarget.name)}
           onCancel={() => setDeleteTarget(null)}
         />
       )}
@@ -157,39 +252,17 @@ export default function AdminPacks() {
   )
 }
 
-function Pagination({ page, totalPages, total, onPage }) {
-  return (
-    <div className="flex items-center justify-between gap-2 pt-2">
-      <span className="text-xs text-mute font-mono">
-        {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} / {total}건
-      </span>
-      <div className="flex items-center gap-1.5">
-        <button onClick={() => onPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-          className="w-8 h-8 rounded-lg border border-line bg-paper text-ink font-bold hover:bg-bone-2 disabled:opacity-30 disabled:cursor-not-allowed text-sm">‹</button>
-        {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-          <button key={n} onClick={() => onPage(n)}
-            className={`w-8 h-8 rounded-lg border text-sm font-bold transition-all ${
-              n === page ? 'bg-ink text-paper border-ink' : 'bg-paper border-line text-ink hover:bg-bone-2'
-            }`}>{n}</button>
-        ))}
-        <button onClick={() => onPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-          className="w-8 h-8 rounded-lg border border-line bg-paper text-ink font-bold hover:bg-bone-2 disabled:opacity-30 disabled:cursor-not-allowed text-sm">›</button>
-      </div>
-    </div>
-  )
-}
-
 function ConfirmDelete({ name, onConfirm, onCancel }) {
   return (
-    <div className="fixed inset-0 bg-ink/60 backdrop-blur-sm z-50 flex items-center justify-center p-6">
-      <div className="surface-soft max-w-sm w-full p-8 elev-3 text-center">
-        <div className="font-display text-xl font-bold text-ink mb-2">정말 삭제하시겠습니까?</div>
-        <div className="text-sm text-mute mb-6">
-          <span className="font-bold text-ink">"{name}"</span> 이(가) 영구적으로 삭제됩니다.
-        </div>
-        <div className="flex gap-3 justify-center">
-          <Button variant="ghost" onClick={onCancel}>취소</Button>
-          <Button variant="accent" onClick={onConfirm}>삭제</Button>
+    <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+      <div className="bg-paper border border-ink/15 rounded-xl max-w-sm w-full p-6 shadow-2xl">
+        <h3 className="font-display text-base font-bold text-ink mb-1">삭제 확인</h3>
+        <p className="text-xs text-mute font-medium mb-5">
+          <span className="font-bold text-ink">"{name}"</span>이(가) 영구 삭제됩니다.
+        </p>
+        <div className="flex gap-2 justify-end">
+          <button onClick={onCancel} className="text-xs font-bold text-mute hover:text-ink px-3 py-1.5 rounded-md hover:bg-bone-2">취소</button>
+          <button onClick={onConfirm} className="text-xs font-bold bg-red-600 text-paper px-3 py-1.5 rounded-md hover:bg-red-700">삭제</button>
         </div>
       </div>
     </div>

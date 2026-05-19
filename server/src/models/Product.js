@@ -36,6 +36,16 @@ const productSchema = new mongoose.Schema(
     endsAt:     { type: Date },
     population: { type: mongoose.Schema.Types.Mixed, default: {} },
 
+    // 입찰 내역 — 최근 입찰부터 unshift, 최대 50건 유지
+    bidHistory: [
+      {
+        bidder:    { type: String, default: "" },
+        bidder_id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        amount:    { type: Number, required: true },
+        at:        { type: Date, default: Date.now },
+      },
+    ],
+
     category: {
       type: String,
       required: [true, "카테고리는 필수입니다."],

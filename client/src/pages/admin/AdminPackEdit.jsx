@@ -83,7 +83,7 @@ export default function AdminPackEdit() {
         </button>
         <span className="text-line">/</span>
         <div>
-          <div className="pixel-label text-amber-500 mb-1">Edit Pack</div>
+          <div className="inline-flex items-center gap-2 mb-2"><span className="led led-yellow led-pulse" style={{ width: 6, height: 6 }} /><span className="text-[10px] font-bold tracking-[0.18em] text-electric uppercase">Edit Pack · 팩 수정</span></div>
           <h1 className="font-display text-3xl font-bold text-ink">카드팩 수정</h1>
         </div>
       </div>
@@ -93,7 +93,7 @@ export default function AdminPackEdit() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <div className="text-[11px] text-mute font-bold mb-1.5 tracking-wide">SKU</div>
-              <div className="w-full bg-bone-2/60 border border-line rounded-lg px-4 py-2.5 text-sm text-mute font-mono font-bold cursor-not-allowed">
+              <div className="w-full bg-bone-2/60 border border-ink/15 rounded-lg px-4 py-2.5 text-sm text-mute font-mono font-bold cursor-not-allowed">
                 {form.sku}
               </div>
             </div>
@@ -113,7 +113,7 @@ export default function AdminPackEdit() {
             ].map(([val, label, desc]) => (
               <button key={val} type="button" onClick={() => f('type')(val)}
                 className={`p-4 rounded-xl border text-left transition-all ${
-                  form.type === val ? 'border-ink bg-ink/[0.03] elev-1' : 'border-line hover:border-ink/30'
+                  form.type === val ? 'border-ink bg-ink/[0.03] ' : 'border-ink/15 hover:border-ink/30'
                 }`}>
                 <div className="font-display font-bold text-ink">{label}</div>
                 <div className="text-xs text-mute mt-1">{desc}</div>
@@ -147,7 +147,7 @@ export default function AdminPackEdit() {
             {[['active', '판매중'], ['sold_out', '품절'], ['hidden', '숨김']].map(([val, label]) => (
               <button key={val} type="button" onClick={() => f('status')(val)}
                 className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all ${
-                  form.status === val ? 'border-ink bg-ink/[0.04] text-ink elev-1' : 'border-line text-mute hover:border-ink/30'
+                  form.status === val ? 'border-ink bg-ink/[0.04] text-ink ' : 'border-ink/15 text-mute hover:border-ink/30'
                 }`}>
                 {label}
               </button>
@@ -158,10 +158,10 @@ export default function AdminPackEdit() {
         <Section title="설명">
           <textarea value={form.description} onChange={(e) => f('description')(e.target.value)}
             rows={4} placeholder="팩 구성, 특이사항 등"
-            className="w-full bg-bone-2 border border-line rounded-xl px-4 py-3 text-sm text-ink focus:border-ink outline-none transition-colors" />
+            className="w-full bg-bone-2 border border-ink/15 rounded-xl px-4 py-3 text-sm text-ink focus:border-ink outline-none transition-colors" />
         </Section>
 
-        <div className="flex gap-3 justify-end pt-6 border-t border-line">
+        <div className="flex gap-3 justify-end pt-6 border-t border-ink/15">
           <Button variant="ghost" type="button" onClick={() => navigate('/admin/packs')} disabled={loading}>취소</Button>
           <Button variant="accent" type="submit" disabled={loading}>
             {loading ? '저장 중...' : '저장하기'}
@@ -174,7 +174,7 @@ export default function AdminPackEdit() {
 
 function Section({ title, children }) {
   return (
-    <div className="surface-soft p-6 elev-1">
+    <div className="surface-pop p-6 ">
       <div className="font-display font-bold text-ink text-lg mb-4">{title}</div>
       {children}
     </div>
@@ -185,7 +185,7 @@ function Input({ label, value, onChange, ...rest }) {
     <label className="block">
       <div className="text-[11px] text-mute font-bold mb-1.5 tracking-wide">{label}</div>
       <input value={value} onChange={(e) => onChange(e.target.value)} {...rest}
-        className="w-full bg-bone-2 border border-line rounded-lg px-4 py-2.5 text-sm text-ink focus:border-ink focus:bg-paper outline-none transition-colors" />
+        className="w-full bg-bone-2 border border-ink/15 rounded-lg px-4 py-2.5 text-sm text-ink focus:border-ink focus:bg-paper outline-none transition-colors" />
     </label>
   )
 }

@@ -1,5 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
-import { formatKRWFull, formatDateShort, formatTime, formatAddress, formatDateTime } from '@/utils/format'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import {
+  formatKRWFull, formatDateShort, formatTime,
+  formatAddress, formatDateTime,
+} from '@/utils/format'
 import {
   ORDER_STATUS, ORDER_FILTERS,
   getPaymentLabel, getShippingLabel,
@@ -7,213 +10,522 @@ import {
 import {
   getAllOrders, updateOrderStatus as apiUpdateStatus, updateOrderTracking,
 } from '@/api/orderApi'
-import Button from '@/components/common/Button'
+import useAuthStore from '@/store/authStore'
+import useToastStore from '@/store/toastStore'
 import Icon from '@/components/common/Icon'
+import {
+  PageHeader, StatGrid, StatCard, FilterBar, SearchInput, Select, DateRange, QuickRanges,
+  FilterChips, Spacer, DataTable, StatusPill, Pagination, BulkBar, BulkButton,
+  Cell, RowActions, IconBtn, InlineSelect, Drawer, DSection, KV, EmptyState, logAudit,
+} from '@/components/admin/ui'
 
-const STATUS    = ORDER_STATUS
-const FILTERS   = ORDER_FILTERS
-const PAGE_SIZE = 10
+const STATUS = ORDER_STATUS
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
+
+// status → tone mapping for StatusPill
+const statusTone = (s) => ({
+  pending_payment: 'amber', paid: 'emerald', preparing: 'blue',
+  shipped: 'blue', delivered: 'emerald', cancelled: 'red', refunded: 'red',
+}[s] || 'gray')
 
 export default function AdminOrders() {
-  const [orders, setOrders]       = useState([])
-  const [loading, setLoading]     = useState(true)
-  const [filter, setFilter]       = useState('all')
-  const [page, setPage]           = useState(1)
+  const { user } = useAuthStore()
+  const toast = useToastStore((s) => s.push)
+
+  // server-side state
+  const [orders, setOrders] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
-  const [total, setTotal]         = useState(0)
-  const [selected, setSelected]   = useState(null)
-  const [search, setSearch]       = useState('')
-  const [searchInput, setSearchInput] = useState('')
+
+  // filters
+  const [filter, setFilter] = useState('all')
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
+  const [sort, setSort] = useState({ key: 'createdAt', dir: 'desc' })
+  const [range, setRange] = useState({ from: '', to: '' })
+  const [quickRange, setQuickRange] = useState('all')
+  const [payment, setPayment] = useState('all')
+
+  // selection + drawer
+  const [selected, setSelected] = useState([])
+  const [drawerOrder, setDrawerOrder] = useState(null)
+  const [bulkTrackOpen, setBulkTrackOpen] = useState(false)
 
   const fetchOrders = useCallback(() => {
     setLoading(true)
-    getAllOrders({ page, limit: PAGE_SIZE, status: filter, search })
+    getAllOrders({ page, limit: pageSize, status: filter, search })
       .then(({ data }) => {
         setOrders(data.data || [])
         setTotalPages(data.totalPages || 1)
         setTotal(data.total || 0)
       })
-      .catch(() => setOrders([]))
+      .catch(() => { setOrders([]); setTotal(0) })
       .finally(() => setLoading(false))
-  }, [filter, page, search])
+  }, [filter, page, pageSize, search])
 
   useEffect(() => { fetchOrders() }, [fetchOrders])
+  useEffect(() => { setPage(1); setSelected([]) }, [filter, search, range, payment])
 
-  const handleFilter = (v) => { setFilter(v); setPage(1) }
-  const handleSearch = (e) => { e.preventDefault(); setSearch(searchInput); setPage(1) }
+  // apply local date-range + payment + sort on top of server result
+  const filtered = useMemo(() => {
+    let rows = orders.slice()
+    if (payment !== 'all') rows = rows.filter((o) => o.payment?.method === payment)
+    if (range.from) rows = rows.filter((o) => new Date(o.createdAt) >= new Date(range.from))
+    if (range.to)   rows = rows.filter((o) => new Date(o.createdAt) <= new Date(`${range.to}T23:59:59`))
+    rows.sort((a, b) => {
+      const dir = sort.dir === 'asc' ? 1 : -1
+      const get = (o) => ({
+        createdAt: new Date(o.createdAt).getTime(),
+        totalAmount: o.totalAmount || 0,
+        status: o.status,
+        orderNumber: o.orderNumber,
+      }[sort.key])
+      const av = get(a), bv = get(b)
+      if (av < bv) return -1 * dir
+      if (av > bv) return  1 * dir
+      return 0
+    })
+    return rows
+  }, [orders, range, payment, sort])
+
+  // KPIs based on currently loaded page (cheap, indicative)
+  const kpis = useMemo(() => {
+    const today = new Date().toDateString()
+    const todays = orders.filter((o) => new Date(o.createdAt).toDateString() === today)
+    return {
+      total,
+      todayCount: todays.length,
+      todayRevenue: todays.reduce((s, o) => s + (o.totalAmount || 0), 0),
+      shippingDue: orders.filter((o) => o.status === 'paid' && !o.shipping?.trackingNumber).length,
+      cancelled: orders.filter((o) => o.status === 'cancelled' || o.status === 'refunded').length,
+    }
+  }, [orders, total])
+
+  const handleSort = (key) => {
+    setSort((s) => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'desc' })
+  }
 
   const handleStatusChange = async (orderId, newStatus) => {
+    const prev = orders.find((o) => o._id === orderId)?.status
     try {
       await apiUpdateStatus(orderId, newStatus)
+      logAudit({
+        actor: user?.name, action: 'order.status', entity: 'order', entityId: orderId,
+        summary: `${prev} → ${newStatus}`,
+      })
+      toast({ type: 'success', title: '상태 변경 완료', message: STATUS[newStatus]?.label })
       fetchOrders()
-      if (selected?._id === orderId) setSelected((o) => ({ ...o, status: newStatus }))
+      if (drawerOrder?._id === orderId) setDrawerOrder((o) => ({ ...o, status: newStatus }))
     } catch (err) {
-      alert(err.response?.data?.message || '상태 변경 실패')
+      toast({ type: 'error', title: '변경 실패', message: err.response?.data?.message || '상태 변경 실패' })
     }
   }
 
+  const handleBulkStatus = async (newStatus) => {
+    if (!selected.length) return
+    if (!confirm(`${selected.length}건의 주문을 [${STATUS[newStatus]?.label}](으)로 변경할까요?`)) return
+    for (const id of selected) {
+      try { await apiUpdateStatus(id, newStatus) } catch {/* ignore individual fail */}
+    }
+    logAudit({
+      actor: user?.name, action: 'order.bulk.status', entity: 'order',
+      entityId: `${selected.length}건`,
+      summary: `→ ${STATUS[newStatus]?.label}`, meta: { ids: selected },
+    })
+    toast({ type: 'success', title: '일괄 변경 완료', message: `${selected.length}건 → ${STATUS[newStatus]?.label}` })
+    setSelected([])
+    fetchOrders()
+  }
+
+  const filterOptions = ORDER_FILTERS.map((f) => ({
+    value: f.value, label: f.label, led: f.led,
+  }))
+
+  const paymentOptions = [
+    { value: 'all', label: '전체 결제' },
+    { value: 'card', label: '신용카드' },
+    { value: 'toss', label: '토스페이' },
+    { value: 'kakao', label: '카카오페이' },
+    { value: 'bank', label: '가상계좌' },
+    { value: 'escrow', label: '에스크로' },
+  ]
+
   return (
-    <div className="space-y-6 max-w-7xl">
-      {/* Header */}
-      <div className="flex items-end justify-between gap-4 flex-wrap">
-        <div>
-          <div className="pixel-label text-mute mb-2">Orders</div>
-          <h1 className="font-display text-4xl font-bold text-ink tracking-tight">주문 관리</h1>
-          <p className="text-sm text-mute mt-1">총 <span className="font-bold text-ink">{total}</span>건</p>
-        </div>
-        {/* Search */}
-        <form onSubmit={handleSearch} className="flex gap-2">
-          <input
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="주문번호 / 구매자 이름 검색"
-            className="bg-paper border border-line rounded-lg px-3 py-2 text-sm text-ink focus:border-ink outline-none w-56"
-          />
-          <Button variant="secondary" size="sm" type="submit">
-            <Icon name="search" size={13} strokeWidth={2} /> 검색
-          </Button>
-        </form>
+    <div className="space-y-4 max-w-[1400px]">
+      <PageHeader
+        kicker="ORDERS"
+        ledTone="green"
+        title="주문 관리"
+        subtitle={`서버 총 ${total.toLocaleString()}건 · 현재 페이지 ${orders.length}건`}
+        breadcrumb={['Admin', '거래', '주문 관리']}
+        actions={
+          <>
+            <button onClick={() => setBulkTrackOpen(true)} className="inline-flex items-center gap-1.5 text-xs font-bold bg-emerald-600 text-paper px-3 py-1.5 rounded-md hover:bg-emerald-700">
+              <Icon name="package" size={12} strokeWidth={2.5} /> 송장 일괄 등록
+            </button>
+            <button onClick={fetchOrders} className="inline-flex items-center gap-1.5 text-xs font-bold text-mute hover:text-ink px-3 py-1.5 rounded-md border border-ink/15 bg-paper hover:bg-bone-2">
+              <Icon name="arrow" size={12} strokeWidth={2.2} /> 새로고침
+            </button>
+          </>
+        }
+      />
+
+      {/* KPI */}
+      <StatGrid cols={4}>
+        <StatCard label="오늘 주문" value={kpis.todayCount} sub={formatKRWFull(kpis.todayRevenue)} icon="cart" tone="blue" />
+        <StatCard
+          label="배송 준비 대기"
+          value={kpis.shippingDue}
+          sub="결제완료, 송장미등록"
+          icon="package"
+          tone="amber"
+          urgent={kpis.shippingDue > 5}
+          onClick={() => { setFilter('paid'); setSearch('') }}
+        />
+        <StatCard label="취소/환불" value={kpis.cancelled} sub="현 페이지 기준" icon="flame" tone="red" />
+        <StatCard label="전체 주문" value={total.toLocaleString()} sub="누적" icon="trophy" />
+      </StatGrid>
+
+      {/* Filter bar */}
+      <FilterBar>
+        <SearchInput value={search} onSubmit={setSearch} placeholder="주문번호 / 구매자 이름" width={240} />
+        <QuickRanges value={quickRange} onChange={(v) => { setQuickRange(v); setRange(rangeFromQuick(v)) }} />
+        <DateRange from={range.from} to={range.to} onChange={(r) => { setRange(r); setQuickRange('custom') }} />
+        <Select label="결제" value={payment} onChange={setPayment} options={paymentOptions} />
+        <Spacer />
+        <Select
+          label="페이지당"
+          value={pageSize}
+          onChange={(v) => { setPageSize(Number(v)); setPage(1) }}
+          options={PAGE_SIZE_OPTIONS.map((n) => ({ value: n, label: `${n}건` }))}
+        />
+      </FilterBar>
+
+      {/* Status chips */}
+      <div className="-mx-1 px-1 overflow-x-auto">
+        <FilterChips value={filter} onChange={setFilter} options={filterOptions} />
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex gap-2 flex-wrap border-b border-line pb-4">
-        {FILTERS.map(({ value: v, label }) => {
-          const st = STATUS[v]
-          return (
-            <button key={v} onClick={() => handleFilter(v)}
-              className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-bold rounded-full border transition-all ${
-                filter === v
-                  ? 'bg-ink text-paper border-ink elev-1 scale-[1.03]'
-                  : 'bg-paper border-line text-mute hover:text-ink hover:border-ink/40 hover:bg-bone-2'
-              }`}>
-              {st && (
-                <span className={`inline-block rounded-full flex-shrink-0 led led-${st.led}`}
-                  style={{ width: 7, height: 7, opacity: filter === v ? 1 : 0.45 }} />
-              )}
-              {label}
-            </button>
-          )
-        })}
-      </div>
+      {/* Bulk action bar */}
+      <BulkBar
+        count={selected.length}
+        onClear={() => setSelected([])}
+        actions={
+          <>
+            <BulkButton tone="success" onClick={() => handleBulkStatus('preparing')}>배송 준비로</BulkButton>
+            <BulkButton tone="success" onClick={() => handleBulkStatus('shipped')}>운송중으로</BulkButton>
+            <BulkButton tone="default" onClick={() => handleBulkStatus('delivered')}>도착 처리</BulkButton>
+            <BulkButton tone="danger"  onClick={() => handleBulkStatus('cancelled')}>취소</BulkButton>
+          </>
+        }
+      />
 
       {/* Table */}
-      <div className="surface-soft overflow-x-auto elev-1">
-        {loading ? (
-          <div className="p-20 text-center text-mute font-bold">
-            <span className="led led-blue led-pulse mr-2" />불러오는 중...
-          </div>
-        ) : orders.length === 0 ? (
-          <div className="p-20 text-center">
-            <Icon name="package" size={40} strokeWidth={1.3} className="text-mute mx-auto mb-4" />
-            <p className="font-bold text-ink mb-1">주문이 없습니다</p>
-            <p className="text-sm text-mute">해당 조건의 주문이 없어요.</p>
-          </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-bone-2/60 border-b border-line">
-              <tr className="text-[10px] font-bold tracking-[0.18em] uppercase text-mute">
-                <th className="text-left p-4">주문번호</th>
-                <th className="text-left p-4">일시</th>
-                <th className="text-left p-4">구매자</th>
-                <th className="text-left p-4">상품</th>
-                <th className="text-left p-4">배송</th>
-                <th className="text-right p-4">금액</th>
-                <th className="text-center p-4">결제</th>
-                <th className="text-center p-4">상태</th>
-                <th className="p-4"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map((o) => {
-                const st = STATUS[o.status] || STATUS.paid
-                const firstItem = o.items?.[0]
-                const moreCount = (o.items?.length || 0) - 1
-                const date = formatDateShort(o.createdAt)
-                const time = formatTime(o.createdAt)
-                return (
-                  <tr key={o._id} className="border-b border-line last:border-0 hover:bg-bone-2/30 transition-colors">
-                    <td className="p-4 font-mono text-ink font-bold text-xs">{o.orderNumber}</td>
-                    <td className="p-4 text-mute font-mono text-xs whitespace-nowrap">
-                      <div>{date}</div>
-                      <div className="opacity-60">{time}</div>
-                    </td>
-                    <td className="p-4">
-                      <div className="font-bold text-ink text-xs">{o.shipping?.recipient}</div>
-                      <div className="text-mute font-mono text-[10px]">{o.user?.email || '-'}</div>
-                    </td>
-                    <td className="p-4">
-                      <div className="font-bold text-ink text-xs">
-                        {firstItem?.product?.nameKo || firstItem?.product?.name || '-'}
-                        {moreCount > 0 && <span className="text-mute font-normal ml-1">외 {moreCount}</span>}
-                      </div>
-                      <div className="text-mute text-[10px]">수량 {o.items?.reduce((s, i) => s + i.qty, 0)}개</div>
-                    </td>
-                    <td className="p-4 text-mute text-xs">{getShippingLabel(o.shipping?.method)}</td>
-                    <td className="p-4 text-right font-mono font-bold text-ink tabular-nums text-xs">
-                      {formatKRWFull(o.totalAmount)}
-                    </td>
-                    <td className="p-4 text-center text-xs text-mute font-bold">
-                      {getPaymentLabel(o.payment?.method)}
-                    </td>
-                    <td className="p-4 text-center">
-                      <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border ${st.color}`}>
-                        <span className={`led led-${st.led}`} style={{ width: 5, height: 5 }} />
-                        {st.label}
-                      </span>
-                    </td>
-                    <td className="p-4 text-right">
-                      <button onClick={() => setSelected(o)}
-                        className="text-xs text-mute hover:text-ink font-bold inline-flex items-center gap-1 transition-colors">
-                        상세 <Icon name="arrow" size={11} strokeWidth={2.2} />
-                      </button>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
+      <DataTable
+        density="compact"
+        loading={loading}
+        rows={filtered}
+        rowKey={(r) => r._id}
+        selected={selected}
+        onSelect={setSelected}
+        sort={sort}
+        onSort={handleSort}
+        onRowClick={(r) => setDrawerOrder(r)}
+        empty={<EmptyState icon="cart" title="주문이 없습니다" desc="해당 조건의 주문이 없어요." />}
+        columns={[
+          { key: 'orderNumber', label: '주문번호', sortable: true, render: (o) =>
+            <span className="font-mono text-[11px] text-ink font-bold">{o.orderNumber}</span>
+          },
+          { key: 'createdAt', label: '일시', sortable: true, render: (o) =>
+            <div className="font-mono text-[11px] tabular-nums">
+              <div className="text-ink font-bold">{formatDateShort(o.createdAt)}</div>
+              <div className="text-mute">{formatTime(o.createdAt)}</div>
+            </div>
+          },
+          { key: 'buyer', label: '구매자', render: (o) =>
+            <Cell primary={o.shipping?.recipient || '—'} secondary={o.user?.email} />
+          },
+          { key: 'product', label: '상품', render: (o) => {
+            const f = o.items?.[0]
+            const more = (o.items?.length || 0) - 1
+            const qty = o.items?.reduce((s, i) => s + i.qty, 0)
+            return <Cell
+              primary={`${f?.product?.nameKo || f?.product?.name || '—'}${more > 0 ? ` 외 ${more}` : ''}`}
+              secondary={`${qty || 0}개`}
+            />
+          }},
+          { key: 'shipping', label: '배송', render: (o) =>
+            <span className="text-[11px] text-ink font-medium">
+              {getShippingLabel(o.shipping?.method)}
+              {o.shipping?.trackingNumber && (
+                <span className="ml-1 text-[10px] text-emerald-600 font-mono">·{o.shipping.trackingNumber.slice(-6)}</span>
+              )}
+            </span>
+          },
+          { key: 'totalAmount', label: '금액', align: 'right', sortable: true, render: (o) =>
+            <span className="font-mono text-xs font-bold tabular-nums text-ink">{formatKRWFull(o.totalAmount)}</span>
+          },
+          { key: 'payment', label: '결제', align: 'center', render: (o) =>
+            <span className="text-[11px] text-mute font-bold">{getPaymentLabel(o.payment?.method)}</span>
+          },
+          { key: 'status', label: '상태', align: 'center', sortable: true, render: (o) => {
+            const st = STATUS[o.status] || STATUS.paid
+            return (
+              <InlineSelect
+                tone={statusTone(o.status)}
+                value={o.status}
+                onChange={(v) => handleStatusChange(o._id, v)}
+                options={Object.entries(STATUS).map(([k, v]) => ({ value: k, label: v.label }))}
+              />
+            )
+          }},
+          { key: 'actions', label: '', align: 'right', render: (o) =>
+            <RowActions>
+              <IconBtn icon="arrow" label="상세" onClick={() => setDrawerOrder(o)} />
+            </RowActions>
+          },
+        ]}
+      />
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between gap-2 pt-1">
-          <span className="text-xs text-mute font-mono">
-            {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} / {total}건
-          </span>
-          <div className="flex gap-1.5">
-            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-              className="w-8 h-8 rounded-lg border border-line bg-paper text-ink font-bold text-sm hover:bg-bone-2 disabled:opacity-30 disabled:cursor-not-allowed">‹</button>
-            {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => i + 1).map((n) => (
-              <button key={n} onClick={() => setPage(n)}
-                className={`w-8 h-8 rounded-lg border text-sm font-bold transition-all ${
-                  n === page ? 'bg-ink text-paper border-ink' : 'bg-paper border-line text-ink hover:bg-bone-2'
-                }`}>{n}</button>
-            ))}
-            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-              className="w-8 h-8 rounded-lg border border-line bg-paper text-ink font-bold text-sm hover:bg-bone-2 disabled:opacity-30 disabled:cursor-not-allowed">›</button>
-          </div>
-        </div>
-      )}
+      <Pagination
+        page={page} totalPages={totalPages} total={total} pageSize={pageSize}
+        onPage={setPage}
+      />
 
-      {/* Detail Modal */}
-      {selected && (
-        <DetailModal
-          order={selected}
-          onClose={() => setSelected(null)}
+      {drawerOrder && (
+        <OrderDrawer
+          order={drawerOrder}
+          onClose={() => setDrawerOrder(null)}
           onStatusChange={handleStatusChange}
           onTrackingUpdate={fetchOrders}
+          actor={user?.name}
+        />
+      )}
+
+      {bulkTrackOpen && (
+        <BulkTrackingModal
+          onClose={() => setBulkTrackOpen(false)}
+          onDone={() => { setBulkTrackOpen(false); fetchOrders() }}
+          orders={orders}
+          actor={user?.name}
         />
       )}
     </div>
   )
 }
 
-// ─── Detail Modal ────────────────────────────────────────────
-function DetailModal({ order, onClose, onStatusChange, onTrackingUpdate }) {
+/* ─── Bulk tracking CSV import ────────────────────────────── */
+function BulkTrackingModal({ onClose, onDone, orders, actor }) {
+  const [text, setText] = useState('')
+  const [parsed, setParsed] = useState([])
+  const [running, setRunning] = useState(false)
+  const [results, setResults] = useState(null)
+
+  // parse on the fly so admin sees preview before committing
+  useEffect(() => {
+    const rows = parseCsv(text, orders)
+    setParsed(rows)
+  }, [text, orders])
+
+  const handleRun = async () => {
+    setRunning(true)
+    const ok = []; const fail = []
+    for (const row of parsed) {
+      if (!row.matchId) { fail.push({ ...row, err: '주문번호 매칭 실패' }); continue }
+      try {
+        await updateOrderTracking(row.matchId, { trackingNumber: row.tracking, carrier: row.carrier })
+        ok.push(row)
+      } catch (e) {
+        fail.push({ ...row, err: e.response?.data?.message || '저장 실패' })
+      }
+    }
+    if (ok.length) {
+      logAudit({
+        actor, action: 'order.bulk.tracking', entity: 'order',
+        entityId: `${ok.length}건`,
+        summary: `송장 일괄 등록 ${ok.length}건 · 실패 ${fail.length}건`,
+      })
+    }
+    setResults({ ok, fail })
+    setRunning(false)
+    if (fail.length === 0) {
+      setTimeout(onDone, 1200)
+    }
+  }
+
+  const validCount = parsed.filter((r) => r.matchId && r.tracking).length
+
+  return (
+    <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+      <div className="bg-paper border border-ink/15 rounded-xl shadow-2xl max-w-3xl w-full max-h-[85vh] flex flex-col">
+        <div className="px-5 py-4 border-b border-ink/15 flex items-start justify-between">
+          <div>
+            <h2 className="font-display text-base font-bold text-ink">송장 일괄 등록</h2>
+            <p className="text-[11px] text-mute font-medium mt-0.5">
+              엑셀에서 복사 → 붙여넣기. 형식: <code className="font-mono bg-bone-2 px-1 rounded">주문번호,캐리어,송장번호</code>
+              <span className="text-mute/70"> (캐리어 생략 시 FedEx)</span>
+            </p>
+          </div>
+          <button onClick={onClose} className="text-mute hover:text-ink p-1 -m-1">
+            <Icon name="close" size={18} strokeWidth={2} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {!results ? (
+            <>
+              <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                rows={8}
+                placeholder={`ORD-20250101-0001,FedEx,1234567890\nORD-20250101-0002,Brink's,9876543210\nORD-20250101-0003,7777777777`}
+                className="w-full bg-bone-2/30 border border-ink/15 rounded-md px-3 py-2 text-xs font-mono text-ink placeholder:text-mute focus:border-ink focus:bg-paper outline-none resize-none"
+              />
+
+              {/* Preview */}
+              {parsed.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-mute">미리보기</div>
+                    <div className="text-[11px] font-bold">
+                      <span className="text-emerald-600">매칭 {validCount}</span>
+                      <span className="text-mute mx-1">·</span>
+                      <span className="text-red-600">실패 {parsed.length - validCount}</span>
+                    </div>
+                  </div>
+                  <div className="border border-ink/10 rounded-md overflow-hidden max-h-64 overflow-y-auto">
+                    <table className="w-full text-xs">
+                      <thead className="bg-bone-2/60 text-[10px] font-bold text-mute uppercase tracking-wider">
+                        <tr>
+                          <th className="text-left px-2 py-1.5">상태</th>
+                          <th className="text-left px-2 py-1.5">주문번호</th>
+                          <th className="text-left px-2 py-1.5">캐리어</th>
+                          <th className="text-left px-2 py-1.5">송장번호</th>
+                          <th className="text-left px-2 py-1.5">매칭 정보</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {parsed.map((row, i) => (
+                          <tr key={i} className="border-t border-ink/8">
+                            <td className="px-2 py-1.5">
+                              {row.matchId && row.tracking
+                                ? <span className="text-[10px] font-bold text-emerald-600">OK</span>
+                                : <span className="text-[10px] font-bold text-red-600">ERR</span>}
+                            </td>
+                            <td className="px-2 py-1.5 font-mono">{row.orderNumber}</td>
+                            <td className="px-2 py-1.5">{row.carrier}</td>
+                            <td className="px-2 py-1.5 font-mono">{row.tracking}</td>
+                            <td className="px-2 py-1.5 text-[11px] text-mute truncate max-w-[200px]">
+                              {row.matchId ? row.matchInfo : '주문번호 매칭 안 됨'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <ResultPanel results={results} />
+          )}
+        </div>
+
+        <div className="px-5 py-3 border-t border-ink/15 bg-bone-2/30 flex items-center justify-end gap-2">
+          {!results ? (
+            <>
+              <button onClick={onClose} className="text-xs font-bold text-mute hover:text-ink px-3 py-1.5 rounded-md hover:bg-bone-2">취소</button>
+              <button
+                onClick={handleRun}
+                disabled={running || validCount === 0}
+                className="text-xs font-bold bg-emerald-600 text-paper px-4 py-1.5 rounded-md hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {running ? '처리 중...' : `${validCount}건 등록`}
+              </button>
+            </>
+          ) : (
+            <button onClick={onDone} className="text-xs font-bold bg-ink text-paper px-4 py-1.5 rounded-md hover:bg-ink/90">완료</button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ResultPanel({ results }) {
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-emerald-50 border border-emerald-200 rounded-md p-3">
+          <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">성공</div>
+          <div className="font-display text-2xl font-bold text-emerald-700 tabular-nums">{results.ok.length}</div>
+        </div>
+        <div className={`rounded-md p-3 border ${results.fail.length ? 'bg-red-50 border-red-200' : 'bg-bone-2/40 border-ink/10'}`}>
+          <div className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${results.fail.length ? 'text-red-700' : 'text-mute'}`}>실패</div>
+          <div className={`font-display text-2xl font-bold tabular-nums ${results.fail.length ? 'text-red-700' : 'text-mute'}`}>{results.fail.length}</div>
+        </div>
+      </div>
+      {results.fail.length > 0 && (
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-mute mb-2">실패 상세</div>
+          <div className="border border-red-200 rounded-md overflow-hidden">
+            {results.fail.map((row, i) => (
+              <div key={i} className="px-3 py-2 text-xs border-t border-red-100 first:border-t-0 flex items-center justify-between gap-2 bg-red-50/40">
+                <span className="font-mono text-ink">{row.orderNumber}</span>
+                <span className="text-red-700 font-bold">{row.err}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Tolerant CSV/TSV parser for paste-from-Excel */
+function parseCsv(text, orders) {
+  if (!text.trim()) return []
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
+  return lines.map((line) => {
+    // accept tab or comma
+    const parts = line.split(/[\t,]/).map((p) => p.trim()).filter(Boolean)
+    let orderNumber, carrier, tracking
+    if (parts.length >= 3) {
+      [orderNumber, carrier, tracking] = parts
+    } else if (parts.length === 2) {
+      [orderNumber, tracking] = parts
+      carrier = 'FedEx'
+    } else {
+      orderNumber = parts[0]; carrier = 'FedEx'; tracking = ''
+    }
+    const match = orders.find((o) => o.orderNumber === orderNumber)
+    return {
+      orderNumber, carrier, tracking,
+      matchId: match?._id,
+      matchInfo: match ? `${match.shipping?.recipient || ''} · ${match.status}` : '',
+    }
+  })
+}
+
+/* helper: quick range → from/to */
+function rangeFromQuick(v) {
+  if (v === 'all' || v === 'custom') return { from: '', to: '' }
+  const to = new Date()
+  const from = new Date()
+  if (v === 'today') from.setHours(0, 0, 0, 0)
+  if (v === '7d')  from.setDate(from.getDate() - 7)
+  if (v === '30d') from.setDate(from.getDate() - 30)
+  if (v === '90d') from.setDate(from.getDate() - 90)
+  const fmt = (d) => d.toISOString().slice(0, 10)
+  return { from: fmt(from), to: fmt(to) }
+}
+
+/* ─── Drawer ────────────────────────────────────────────── */
+function OrderDrawer({ order, onClose, onStatusChange, onTrackingUpdate, actor }) {
   const [trackingNo, setTrackingNo] = useState(order.shipping?.trackingNumber || '')
   const [carrier, setCarrier] = useState(order.shipping?.carrier || 'FedEx')
-  const [statusVal, setStatusVal] = useState(order.status)
   const [saving, setSaving] = useState(false)
   const st = STATUS[order.status] || STATUS.paid
 
@@ -221,142 +533,94 @@ function DetailModal({ order, onClose, onStatusChange, onTrackingUpdate }) {
     setSaving(true)
     try {
       await updateOrderTracking(order._id, { trackingNumber: trackingNo, carrier })
+      logAudit({ actor, action: 'order.tracking', entity: 'order', entityId: order._id, summary: `${carrier} ${trackingNo}` })
       onTrackingUpdate()
       alert('송장이 등록되었습니다.')
     } catch (err) {
       alert(err.response?.data?.message || '송장 등록 실패')
-    } finally {
-      setSaving(false)
-    }
+    } finally { setSaving(false) }
   }
-
-  const handleStatusSave = async () => {
-    await onStatusChange(order._id, statusVal)
-  }
-
-  const date = formatDateTime(order.createdAt)
 
   return (
-    <div className="fixed inset-0 bg-ink/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="surface-soft max-w-3xl w-full p-8 max-h-[90vh] overflow-y-auto elev-3 rounded-2xl">
-        {/* Header */}
-        <div className="flex justify-between items-start mb-6">
-          <div>
-            <div className="pixel-label text-dex mb-2">Order Detail</div>
-            <h2 className="font-display text-2xl font-bold text-ink">{order.orderNumber}</h2>
-            <div className={`inline-flex items-center gap-1.5 mt-2 text-xs font-bold px-2.5 py-1 rounded-full border ${st.color}`}>
-              <span className={`led led-${st.led}`} style={{ width: 6, height: 6 }} />
-              {st.label}
-            </div>
+    <Drawer
+      open
+      onClose={onClose}
+      title={order.orderNumber}
+      subtitle={formatDateTime(order.createdAt)}
+      width={580}
+      footer={
+        <>
+          <span className="text-[11px] text-mute mr-auto">ESC로 닫기</span>
+          <button onClick={onClose} className="text-xs font-bold text-mute hover:text-ink px-3 py-1.5 rounded-md hover:bg-bone-2">닫기</button>
+        </>
+      }
+    >
+      <div className="flex items-center gap-2 mb-4">
+        <StatusPill tone={statusTone(order.status)} led={st.led}>{st.label}</StatusPill>
+        {order.escrow?.status === 'held' && <StatusPill tone="emerald" dot>에스크로 보호중</StatusPill>}
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <DSection title="주문">
+          <KV k="주문번호" v={order.orderNumber} mono />
+          <KV k="주문일시" v={formatDateTime(order.createdAt)} />
+          <KV k="상품 수" v={`${order.items?.length || 0}건`} />
+        </DSection>
+        <DSection title="결제">
+          <KV k="결제 수단" v={getPaymentLabel(order.payment?.method)} />
+          <KV k="상품 합계" v={formatKRWFull(order.subtotal)} mono />
+          <KV k="배송비" v={order.shippingFee > 0 ? formatKRWFull(order.shippingFee) : '무료'} mono />
+          <KV k="총 결제" v={formatKRWFull(order.totalAmount)} mono highlight />
+        </DSection>
+        <DSection title="구매자">
+          <KV k="이름" v={order.shipping?.recipient} />
+          <KV k="연락처" v={order.shipping?.phone} />
+          <KV k="이메일" v={order.user?.email || '-'} />
+        </DSection>
+        <DSection title="배송지">
+          <KV k="방법" v={getShippingLabel(order.shipping?.method)} />
+          <KV k="주소" v={formatAddress(order.shipping?.address)} />
+          <KV k="서명 필수" v={order.shipping?.requireSignature ? '예' : '아니오'} />
+          {order.shipping?.memo && <KV k="요청" v={order.shipping.memo} />}
+        </DSection>
+      </div>
+
+      <DSection title="상품 목록">
+        {order.items?.map((it, idx) => (
+          <div key={idx} className="flex justify-between items-center bg-bone-2/40 border border-ink/8 rounded-md px-3 py-2 text-xs mb-1">
+            <div className="font-bold text-ink truncate">{it.product?.nameKo || it.product?.name || '-'}</div>
+            <div className="font-mono text-mute ml-2 flex-shrink-0">{formatKRWFull(it.unitPrice)} × {it.qty}</div>
           </div>
-          <button onClick={onClose} className="text-mute hover:text-ink p-1">
-            <Icon name="close" size={20} strokeWidth={2} />
+        ))}
+      </DSection>
+
+      <DSection title="송장 등록">
+        <div className="flex gap-2 mb-2">
+          <select value={carrier} onChange={(e) => setCarrier(e.target.value)}
+            className="bg-paper border border-ink/15 rounded-md px-2 py-1.5 text-xs text-ink font-bold focus:border-ink outline-none">
+            <option>FedEx</option><option>Brink's</option><option>CJ대한통운</option><option>우체국</option>
+          </select>
+          <input value={trackingNo} onChange={(e) => setTrackingNo(e.target.value)}
+            placeholder="송장번호"
+            className="flex-1 bg-paper border border-ink/15 rounded-md px-2 py-1.5 text-xs text-ink font-mono focus:border-ink outline-none" />
+          <button onClick={handleTrackingSave} disabled={saving}
+            className="text-xs font-bold bg-ink text-paper px-3 py-1.5 rounded-md hover:bg-ink/90 disabled:opacity-50">
+            {saving ? '저장중' : '등록'}
           </button>
         </div>
+      </DSection>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Left: 주문 / 구매자 / 결제 */}
-          <div className="space-y-5">
-            <DSec title="주문 정보">
-              <KV k="주문일시" v={date} />
-              <KV k="주문번호" v={order.orderNumber} mono />
-              <KV k="상품 수" v={`${order.items?.length || 0}건`} />
-            </DSec>
-            <DSec title="결제">
-              <KV k="결제 수단" v={getPaymentLabel(order.payment?.method)} />
-              <KV k="상품 합계" v={formatKRWFull(order.subtotal)} mono />
-              <KV k="배송비" v={order.shippingFee > 0 ? formatKRWFull(order.shippingFee) : '무료'} mono />
-              <div className="border-t border-line my-1" />
-              <KV k="총 결제" v={formatKRWFull(order.totalAmount)} mono highlight />
-              {order.escrow?.status === 'held' && (
-                <div className="mt-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-200 inline-flex items-center gap-1">
-                  <Icon name="shield" size={10} strokeWidth={2} /> 에스크로 보호중
-                </div>
-              )}
-            </DSec>
-            <DSec title="구매자">
-              <KV k="이름" v={order.shipping?.recipient} />
-              <KV k="연락처" v={order.shipping?.phone} />
-              <KV k="이메일" v={order.user?.email || '-'} />
-            </DSec>
-          </div>
-
-          {/* Right: 배송 / 상품 / 상태관리 */}
-          <div className="space-y-5">
-            <DSec title="배송지">
-              <KV k="방법" v={getShippingLabel(order.shipping?.method)} />
-              <KV k="주소" v={formatAddress(order.shipping?.address)} />
-              <KV k="서명 필수" v={order.shipping?.requireSignature ? '예' : '아니오'} />
-              {order.shipping?.memo && <KV k="요청 사항" v={order.shipping.memo} />}
-            </DSec>
-
-            {/* 상품 목록 */}
-            <DSec title="상품 목록">
-              <div className="space-y-2">
-                {order.items?.map((it, idx) => (
-                  <div key={idx} className="flex justify-between items-center bg-bone-2/50 rounded-lg px-3 py-2 text-xs">
-                    <div className="font-bold text-ink truncate">{it.product?.nameKo || it.product?.name || '-'}</div>
-                    <div className="font-mono text-mute ml-2 flex-shrink-0">{formatKRWFull(it.unitPrice)} × {it.qty}</div>
-                  </div>
-                ))}
-              </div>
-            </DSec>
-
-            {/* 송장 등록 */}
-            <DSec title="송장 등록">
-              <div className="flex gap-2 mb-2">
-                <select value={carrier} onChange={(e) => setCarrier(e.target.value)}
-                  className="bg-paper border border-line rounded-lg px-3 py-2 text-xs text-ink focus:border-ink outline-none">
-                  <option value="FedEx">FedEx</option>
-                  <option value="Brink's">Brink's</option>
-                  <option value="CJ대한통운">CJ대한통운</option>
-                  <option value="우체국">우체국</option>
-                </select>
-                <input value={trackingNo} onChange={(e) => setTrackingNo(e.target.value)}
-                  placeholder="송장번호 입력"
-                  className="flex-1 bg-paper border border-line rounded-lg px-3 py-2 text-xs text-ink font-mono focus:border-ink outline-none" />
-              </div>
-              <Button variant="secondary" size="sm" onClick={handleTrackingSave} disabled={saving}>
-                {saving ? '저장 중...' : '송장 등록'}
-              </Button>
-            </DSec>
-
-            {/* 상태 변경 */}
-            <DSec title="상태 변경">
-              <div className="flex gap-2">
-                <select value={statusVal} onChange={(e) => setStatusVal(e.target.value)}
-                  className="flex-1 bg-paper border border-line rounded-lg px-3 py-2 text-sm text-ink focus:border-ink outline-none">
-                  {Object.entries(STATUS).map(([k, v]) => (
-                    <option key={k} value={k}>{v.label}</option>
-                  ))}
-                </select>
-                <Button variant="primary" size="sm" onClick={handleStatusSave}>변경</Button>
-              </div>
-            </DSec>
-          </div>
+      <DSection title="상태 변경">
+        <div className="flex flex-wrap gap-1.5">
+          {Object.entries(STATUS).filter(([k]) => k !== order.status).map(([k, v]) => (
+            <button key={k}
+              onClick={() => onStatusChange(order._id, k)}
+              className={`text-[11px] font-bold px-2.5 py-1 rounded-md border ${v.color} hover:opacity-80`}>
+              → {v.label}
+            </button>
+          ))}
         </div>
-
-        <div className="flex justify-end gap-3 mt-6 pt-5 border-t border-line">
-          <Button variant="ghost" onClick={onClose}>닫기</Button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function DSec({ title, children }) {
-  return (
-    <div>
-      <div className="text-[10px] font-bold text-mute tracking-[0.18em] uppercase mb-2">{title}</div>
-      <div className="space-y-1.5">{children}</div>
-    </div>
-  )
-}
-function KV({ k, v, mono, highlight }) {
-  return (
-    <div className="flex justify-between gap-3 text-xs">
-      <span className="text-mute font-bold flex-shrink-0">{k}</span>
-      <span className={`text-right break-all ${mono ? 'font-mono tabular-nums' : ''} ${highlight ? 'text-dex font-bold text-sm' : 'text-ink font-bold'}`}>{v}</span>
-    </div>
+      </DSection>
+    </Drawer>
   )
 }

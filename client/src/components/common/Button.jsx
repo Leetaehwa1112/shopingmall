@@ -1,10 +1,13 @@
 const variants = {
-  primary: 'btn-primary',
-  accent: 'btn-accent',
-  gold: 'btn-gold',
+  primary:   'btn-primary',
+  accent:    'btn-accent',
+  gold:      'btn-gold',
+  spark:     'btn-spark',     // rainbow holo CTA — hero, signup
+  pop:       'btn-pop',       // chunky bordered red — main bid CTA
+  electric:  'btn-electric',  // yellow pop — secondary playful
   secondary: 'btn-secondary',
-  ghost: 'btn-ghost',
-  dark: 'btn-primary',
+  ghost:     'btn-ghost',
+  dark:      'btn-primary',
 }
 const sizes = { sm: 'btn-sm', md: 'btn-md', lg: 'btn-lg' }
 

@@ -2,11 +2,11 @@ import { useState, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import useAuthStore from '@/store/authStore'
 import { registerUser, checkEmailAvailable } from '@/api/userApi'
-import Button from '@/components/common/Button'
 import Pokeball from '@/components/common/Pokeball'
+import Sparkles from '@/components/common/Sparkles'
+import Eyebrow from '@/components/common/Eyebrow'
 import Icon from '@/components/common/Icon'
 
-// 비밀번호 규칙
 const PW_RULES = [
   { id: 'len',     label: '8자 이상',     test: (v) => v.length >= 8 },
   { id: 'num',     label: '숫자 포함',     test: (v) => /\d/.test(v) },
@@ -19,8 +19,8 @@ function getStrength(pw) {
   if (!pw) return { score: 0, label: '', color: '' }
   if (passed <= 1) return { score: 1, label: '약함', color: 'bg-dex' }
   if (passed === 2) return { score: 2, label: '보통', color: 'bg-gold' }
-  if (passed === 3) return { score: 3, label: '양호', color: 'bg-blue' }
-  return { score: 4, label: '강함', color: 'bg-emerald-500' }
+  if (passed === 3) return { score: 3, label: '양호', color: 'bg-water' }
+  return { score: 4, label: '강함', color: 'bg-grass' }
 }
 
 export default function RegisterPage() {
@@ -31,7 +31,7 @@ export default function RegisterPage() {
     name: '', email: '', password: '', phone: '',
     agreeAll: false, agreeTerms: false, agreePrivacy: false, agreeMarketing: false,
   })
-  const [emailStatus, setEmailStatus] = useState(null) // null | 'checking' | 'available' | 'taken' | 'invalid'
+  const [emailStatus, setEmailStatus] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
@@ -115,30 +115,35 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-6 py-12">
+    <div className="min-h-[80vh] flex items-center justify-center px-6 py-12 bg-confetti">
       <div className="w-full max-w-md">
-        <Link to="/" className="flex flex-col items-center gap-3 mb-6">
-          <Pokeball size={48} />
+        <Link to="/" className="flex flex-col items-center gap-3 mb-6 sparkle-host relative">
+          <Sparkles always />
+          <div className="float-bob">
+            <Pokeball size={56} />
+          </div>
           <div className="font-display font-bold text-3xl text-ink">
             Poké<span className="text-dex">vault</span>
           </div>
         </Link>
 
-        <form onSubmit={submit} className="surface-soft p-8 elev-2 space-y-5">
+        <form onSubmit={submit} className="surface-pop p-8 space-y-5">
           <div>
-            <div className="pixel-label text-mute mb-2">Join Us</div>
-            <h1 className="font-display text-2xl font-bold text-ink">트레이너 등록</h1>
-            <p className="text-xs text-mute mt-2">경매 참여를 위해서는 가입 후 본인 인증이 필요합니다.</p>
+            <Eyebrow tone="electric" led="yellow" pulse>JOIN US · 트레이너 등록</Eyebrow>
+            <h1 className="mt-3 font-display text-3xl font-bold text-ink tracking-tight">
+              트레이너 되기
+              <span className="ml-2 text-fire">!</span>
+            </h1>
+            <p className="text-xs text-mute mt-2 font-medium">경매 참여를 위해서는 가입 후 본인 인증이 필요해요.</p>
           </div>
 
           {error && (
-            <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 text-xs font-bold px-4 py-3 rounded-lg">
+            <div className="flex items-start gap-2 bg-rose-50 border-2 border-dex text-dex text-xs font-bold px-4 py-3 rounded-lg shadow-[0_2px_0_#1a1a1a]">
               <Icon name="close" size={12} strokeWidth={3} className="shrink-0 mt-0.5" />
               {error}
             </div>
           )}
 
-          {/* 이름 */}
           <TextInput
             label="이름"
             value={form.name}
@@ -147,7 +152,6 @@ export default function RegisterPage() {
             autoComplete="name"
           />
 
-          {/* 이메일 + 실시간 중복 체크 */}
           <div>
             <TextInput
               label="이메일"
@@ -163,23 +167,22 @@ export default function RegisterPage() {
               <p className="mt-1.5 text-[11px] text-mute font-medium">확인 중...</p>
             )}
             {emailStatus === 'available' && (
-              <p className="mt-1.5 text-[11px] text-emerald-600 font-bold flex items-center gap-1">
-                <Icon name="check" size={10} strokeWidth={3} /> 사용 가능한 이메일입니다
+              <p className="mt-1.5 text-[11px] text-grass font-bold flex items-center gap-1">
+                <Icon name="check" size={10} strokeWidth={3} /> 사용 가능한 이메일이에요!
               </p>
             )}
             {emailStatus === 'taken' && (
               <p className="mt-1.5 text-[11px] text-dex font-bold flex items-center gap-1">
-                <Icon name="close" size={10} strokeWidth={3} /> 이미 사용 중인 이메일입니다
+                <Icon name="close" size={10} strokeWidth={3} /> 이미 사용 중인 이메일이에요
               </p>
             )}
             {emailStatus === 'invalid' && (
               <p className="mt-1.5 text-[11px] text-dex font-bold flex items-center gap-1">
-                <Icon name="close" size={10} strokeWidth={3} /> 올바른 이메일 형식이 아닙니다
+                <Icon name="close" size={10} strokeWidth={3} /> 올바른 이메일 형식이 아니에요
               </p>
             )}
           </div>
 
-          {/* 비밀번호 + 강도 표시 */}
           <div>
             <TextInput
               label="비밀번호"
@@ -191,12 +194,11 @@ export default function RegisterPage() {
             />
             {form.password && (
               <div className="mt-2 space-y-2">
-                {/* 강도 바 */}
                 <div className="flex items-center gap-2">
                   <div className="flex-1 flex gap-1">
                     {[1, 2, 3, 4].map((n) => (
                       <div key={n}
-                        className={`h-1 flex-1 rounded-full transition-colors ${
+                        className={`h-1.5 flex-1 rounded-full transition-colors border border-ink/20 ${
                           n <= pwStrength.score ? pwStrength.color : 'bg-line'
                         }`}
                       />
@@ -205,15 +207,14 @@ export default function RegisterPage() {
                   <span className={`text-[10px] font-bold ${
                     pwStrength.score <= 1 ? 'text-dex' :
                     pwStrength.score === 2 ? 'text-gold' :
-                    pwStrength.score === 3 ? 'text-blue' : 'text-emerald-600'
+                    pwStrength.score === 3 ? 'text-water' : 'text-grass'
                   }`}>{pwStrength.label}</span>
                 </div>
-                {/* 규칙 체크리스트 */}
                 <div className="grid grid-cols-2 gap-x-3 gap-y-1">
                   {PW_RULES.map((rule, i) => (
                     <span key={rule.id}
                       className={`text-[10px] font-bold flex items-center gap-1 ${
-                        pwRulePassed[i] ? 'text-emerald-600' : 'text-mute'
+                        pwRulePassed[i] ? 'text-grass' : 'text-mute'
                       }`}>
                       <Icon name={pwRulePassed[i] ? 'check' : 'close'} size={9} strokeWidth={3} />
                       {rule.label}
@@ -224,7 +225,6 @@ export default function RegisterPage() {
             )}
           </div>
 
-          {/* 휴대폰 */}
           <TextInput
             label="휴대폰"
             value={form.phone}
@@ -233,10 +233,8 @@ export default function RegisterPage() {
             autoComplete="tel"
           />
 
-          {/* 약관 동의 */}
-          <div className="space-y-2 pt-4 border-t border-line">
-            {/* 전체 동의 */}
-            <label className="flex items-center gap-2.5 cursor-pointer p-3 rounded-lg bg-bone-2 hover:bg-line transition-colors">
+          <div className="space-y-2 pt-4 border-t-2 border-ink/15">
+            <label className="flex items-center gap-2.5 cursor-pointer p-3 rounded-lg bg-electric/20 border-2 border-ink hover:bg-electric/40 transition-colors">
               <input
                 type="checkbox"
                 checked={form.agreeAll}
@@ -246,7 +244,6 @@ export default function RegisterPage() {
               <span className="text-sm font-bold text-ink">전체 동의</span>
             </label>
 
-            {/* 구분선 + 개별 항목 */}
             <div className="space-y-1 pl-1">
               <CheckItem
                 checked={form.agreeTerms}
@@ -272,13 +269,14 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          <Button variant="accent" size="lg" className="w-full" type="submit"
-            disabled={loading || emailStatus === 'taken' || emailStatus === 'invalid'}>
-            {loading ? '처리 중...' : '가입하기'}
-          </Button>
+          <button type="submit"
+            disabled={loading || emailStatus === 'taken' || emailStatus === 'invalid'}
+            className="btn-pop w-full py-3 rounded-xl font-bold disabled:opacity-60 disabled:cursor-not-allowed">
+            {loading ? '처리 중...' : '트레이너 등록!'}
+          </button>
 
-          <div className="text-center text-xs text-mute">
-            이미 회원이신가요? <Link to="/login" className="text-dex font-bold">로그인 →</Link>
+          <div className="text-center text-xs text-mute font-medium">
+            이미 회원이신가요? <Link to="/login" className="text-dex font-bold hover:underline">로그인 →</Link>
           </div>
         </form>
       </div>
@@ -288,29 +286,29 @@ export default function RegisterPage() {
 
 function TextInput({ label, value, onChange, onBlur, status, ...rest }) {
   const borderCls = status === 'ok'
-    ? 'border-emerald-400 focus:border-emerald-500'
+    ? 'border-grass focus:border-grass'
     : status === 'err'
       ? 'border-dex focus:border-dex'
-      : 'border-line focus:border-ink'
+      : 'border-ink/20 focus:border-ink'
   return (
     <label className="block">
-      <div className="text-[11px] text-mute font-bold mb-1.5 tracking-wide">{label}</div>
+      <div className="text-[11px] text-ink font-bold mb-1.5 tracking-wide">{label}</div>
       <div className="relative">
         <input
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onBlur={onBlur}
           {...rest}
-          className={`w-full bg-bone-2 border rounded-lg px-4 py-3 text-sm text-ink focus:bg-paper outline-none transition-colors ${borderCls} ${status ? 'pr-9' : ''}`}
+          className={`w-full bg-bone-2 border-2 rounded-lg px-4 py-3 text-sm text-ink focus:bg-paper outline-none transition-colors font-medium ${borderCls} ${status ? 'pr-9' : ''}`}
         />
         {status === 'ok' && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500 pointer-events-none">
-            <Icon name="check" size={14} strokeWidth={2.5} />
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-grass pointer-events-none">
+            <Icon name="check" size={14} strokeWidth={3} />
           </span>
         )}
         {status === 'err' && (
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-dex pointer-events-none">
-            <Icon name="close" size={14} strokeWidth={2.5} />
+            <Icon name="close" size={14} strokeWidth={3} />
           </span>
         )}
       </div>

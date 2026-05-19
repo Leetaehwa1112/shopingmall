@@ -6,11 +6,13 @@ import api from '@/api/axios'
 import PackVisual from '@/components/common/PackVisual'
 import PackTile from '@/components/common/PackTile'
 import ShippingBanner from '@/components/common/ShippingBanner'
-import Button from '@/components/common/Button'
 import Icon from '@/components/common/Icon'
+import Sparkles from '@/components/common/Sparkles'
+import Eyebrow from '@/components/common/Eyebrow'
 import useCartStore from '@/store/cartStore'
 import useWishlistStore from '@/store/wishlistStore'
 import useToastStore from '@/store/toastStore'
+import PackOpener from '@/components/dex/PackOpener'
 
 export default function PackDetailPage() {
   const { id } = useParams()
@@ -22,6 +24,7 @@ export default function PackDetailPage() {
   const [related, setRelated] = useState([])
   const [loading, setLoading] = useState(true)
   const [qty, setQty] = useState(1)
+  const [opening, setOpening] = useState(false)
 
   useEffect(() => {
     setLoading(true)
@@ -38,19 +41,27 @@ export default function PackDetailPage() {
       .finally(() => setLoading(false))
   }, [id])
 
-  if (loading) return <div className="p-20 text-center text-mute font-bold">불러오는 중...</div>
-  if (!pack)   return <div className="p-20 text-center text-mute">카드팩을 찾을 수 없습니다.</div>
+  if (loading) return (
+    <div className="p-20 text-center">
+      <div className="inline-flex items-center gap-3 text-mute font-bold">
+        <span className="led led-yellow led-pulse" style={{ width: 8, height: 8 }} />
+        팩을 꺼내는 중...
+      </div>
+    </div>
+  )
+  if (!pack) return <div className="p-20 text-center text-mute font-bold">카드팩을 찾을 수 없어요.</div>
 
   const packId = pack.id || pack._id
+  const wished = wishlist.has(packId)
 
   const handleAdd = () => {
     add({ ...pack, qty })
-    toast({ type: 'success', title: '장바구니에 추가', message: `${pack.nameKo || pack.name} ${qty}개` })
+    toast({ type: 'success', title: '장바구니에 추가했어요', message: `${pack.nameKo || pack.name} ${qty}개` })
   }
 
   const handleQuick = () => {
     add({ ...pack, qty, shippingOption: 'quick' })
-    toast({ type: 'success', title: '⚡ 퀵 배송 선택됨', message: `${pack.nameKo || pack.name} · 당일 2-4시간 내 도착` })
+    toast({ type: 'success', title: '⚡ 퀵 배송 선택!', message: `${pack.nameKo || pack.name} · 당일 2-4시간 내 도착` })
     navigate('/order')
   }
 
@@ -65,87 +76,107 @@ export default function PackDetailPage() {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-12">
-        {/* LEFT: Pack visual */}
-        <div className="surface-soft p-10 flex justify-center items-center min-h-[500px] relative overflow-hidden"
-          style={{ background: `radial-gradient(ellipse at center, ${pack.accent || '#fbbf24'}15 0%, transparent 70%)` }}>
-          <PackVisual pack={pack} size="lg" />
+        {/* LEFT: Pack visual — chunky + holo + sparkles + polka */}
+        <div className="surface-pop sparkle-host holo-shine bg-confetti p-10 flex justify-center items-center min-h-[500px] relative overflow-hidden">
+          <Sparkles always />
+          <div className="absolute inset-0 bg-polka opacity-40 pointer-events-none" aria-hidden />
+          <div className="relative float-bob">
+            <PackVisual pack={pack} size="lg" />
+          </div>
         </div>
 
         {/* RIGHT: Info */}
         <div className="space-y-6">
           <div>
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-full mb-3">
-              <span className="led led-yellow" style={{ width: 7, height: 7 }} />
-              <span className="pixel-label text-amber-700">
-                {pack.type === 'box' ? 'SEALED BOX' : 'SEALED PACK'}
-              </span>
-            </span>
-            <div className="text-sm font-mono text-mute mb-2">
+            <Eyebrow tone="electric" led="yellow" pulse>
+              {pack.type === 'box' ? 'SEALED BOX · 미개봉 박스' : 'SEALED PACK · 두근두근 개봉'}
+            </Eyebrow>
+            <div className="text-xs font-mono text-mute mt-3 mb-2 font-bold">
               {pack.setShort} · {pack.year} · {pack.cardsPerPack ? `${pack.cardsPerPack}장 / ` : ''}{pack.type === 'box' ? '박스' : '팩'}
             </div>
-            <h1 className="font-display text-4xl lg:text-5xl font-bold text-ink tracking-tight leading-none">
+            <h1 className="font-display text-4xl lg:text-5xl font-bold text-ink tracking-tight leading-[1.05]">
               {pack.nameKo || pack.name}
             </h1>
-            <div className="text-lg italic text-mute mt-2">{pack.name}</div>
+            <div className="text-lg italic text-mute mt-2 font-medium">{pack.name}</div>
           </div>
 
-          <p className="text-ink/80 leading-relaxed">{pack.description}</p>
+          {pack.description && (
+            <p className="text-ink/80 leading-relaxed font-medium">{pack.description}</p>
+          )}
 
-          <div className="surface-soft p-6 elev-2 space-y-5">
+          <div className="surface-pop p-6 space-y-5">
             <div className="flex items-end justify-between">
               <div>
-                <div className="text-[10px] font-bold text-mute tracking-[0.18em] uppercase mb-1.5">판매가</div>
+                <div className="text-[10px] font-bold text-dex tracking-[0.18em] uppercase mb-1.5">⚡ 판매가</div>
                 <div className="font-display text-5xl font-bold text-ink leading-none tabular-nums">{formatKRW(pack.price)}</div>
                 <div className="text-xs text-mute font-mono mt-2">{formatKRWFull(pack.price)}</div>
               </div>
               <div className="text-right">
                 <div className="text-[10px] font-bold text-mute tracking-[0.18em] uppercase mb-1.5">재고</div>
-                <div className="font-display text-3xl font-bold text-emerald-600 tabular-nums">{pack.stock}</div>
+                <div className="font-display text-3xl font-bold text-grass tabular-nums">{pack.stock}</div>
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-mute">수량</span>
+            <div className="flex items-center justify-between pt-2 border-t-2 border-ink/15">
+              <span className="text-sm font-bold text-ink">수량</span>
               <div className="flex items-center gap-3">
                 <button onClick={() => setQty(Math.max(1, qty - 1))}
-                  className="w-9 h-9 rounded-lg bg-bone-2 hover:bg-line text-ink font-bold">−</button>
-                <span className="font-display text-lg font-bold text-ink w-8 text-center tabular-nums">{qty}</span>
+                  className="w-10 h-10 rounded-lg bg-paper border-2 border-ink text-ink font-bold shadow-[0_2px_0_#1a1a1a] hover:bg-electric/30 transition-colors">−</button>
+                <span className="font-display text-2xl font-bold text-ink w-10 text-center tabular-nums">{qty}</span>
                 <button onClick={() => setQty(Math.min(pack.stock || 99, qty + 1))}
-                  className="w-9 h-9 rounded-lg bg-bone-2 hover:bg-line text-ink font-bold">+</button>
+                  className="w-10 h-10 rounded-lg bg-paper border-2 border-ink text-ink font-bold shadow-[0_2px_0_#1a1a1a] hover:bg-electric/30 transition-colors">+</button>
               </div>
             </div>
 
             <div className="flex gap-2">
-              <Button variant="primary" size="lg" className="flex-1" onClick={handleAdd}>
-                <Icon name="cart" size={16} strokeWidth={1.8} /> 장바구니
-              </Button>
-              <Button variant="accent" size="lg" onClick={() => { add({ ...pack, qty }); navigate('/order') }}>
-                바로 구매
-              </Button>
+              <button onClick={handleAdd}
+                className="flex-1 inline-flex items-center justify-center gap-2 bg-paper border-2 border-ink text-ink font-bold py-3 rounded-xl shadow-[0_3px_0_#1a1a1a] hover:bg-electric/30 hover:-translate-y-0.5 transition-all">
+                <Icon name="cart" size={16} strokeWidth={2} /> 장바구니
+              </button>
+              <button onClick={() => { add({ ...pack, qty }); navigate('/order') }}
+                className="btn-pop px-6 py-3 rounded-xl font-bold">
+                바로 데려가기
+              </button>
             </div>
 
             <button onClick={handleQuick}
-              className="w-full bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-ink font-bold py-3 rounded-xl elev-2 transition-all flex items-center justify-center gap-2">
+              className="w-full bg-electric border-2 border-ink text-ink font-bold py-3 rounded-xl shadow-[0_3px_0_#1a1a1a] hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2">
               <Icon name="bolt" size={18} strokeWidth={2.5} />
-              <span>퀵 배송으로 받기</span>
-              <span className="text-xs font-mono opacity-70">+₩50,000 · 당일</span>
+              <span>⚡ 퀵 배송으로 오늘 받기</span>
+              <span className="text-xs font-mono opacity-80">+₩50,000</span>
             </button>
 
-            <Button variant="secondary" size="sm" className="w-full" onClick={() => wishlist.toggle(packId)}>
-              <Icon name="star" size={14} strokeWidth={1.8} style={{ fill: wishlist.has(packId) ? '#f5b800' : 'none' }} />
-              {wishlist.has(packId) ? '관심 등록됨' : '관심 등록'}
-            </Button>
+            {/* 데모 — 팩 열어보기 (실제 카드 미지급) */}
+            <button
+              onClick={() => setOpening(true)}
+              className="w-full bg-paper border-2 border-dashed border-ink/40 text-ink font-bold py-2.5 rounded-xl hover:bg-electric/15 hover:border-ink transition-all flex items-center justify-center gap-2 group"
+            >
+              <span className="text-base">📦</span>
+              <span>지금 미리 열어보기 <span className="text-xs text-mute font-medium">(데모)</span></span>
+              <span className="text-xs opacity-60 group-hover:translate-x-0.5 transition-transform">→</span>
+            </button>
+
+            <button onClick={() => wishlist.toggle(packId)}
+              className={`w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-ink font-bold text-sm transition-all ${
+                wished ? 'bg-gold/30 text-ink' : 'bg-paper text-ink hover:bg-electric/20'
+              }`}>
+              <Icon name="star" size={14} strokeWidth={2} style={{ fill: wished ? 'currentColor' : 'none' }} />
+              {wished ? '관심 등록됨 ★' : '관심 등록'}
+            </button>
           </div>
 
           <ShippingBanner price={pack.price} isPack={true} />
 
           <div className="grid grid-cols-2 gap-2 text-xs">
-            {[['shield', '미개봉 인증', 'blue'], ['trophy', '정품 보증', 'yellow'],
-              ['package', '보안 운송', 'red'], ['lock', '에스크로 결제', 'green']].map(([icon, text, c]) => (
-              <div key={text} className="flex items-center gap-2 px-3 py-2.5 bg-paper rounded-lg border border-line">
-                <span className={`led led-${c}`} style={{ width: 6, height: 6 }} />
-                <Icon name={icon} size={14} strokeWidth={1.6} className="text-ink/70" />
-                <span className="text-ink font-medium">{text}</span>
+            {[
+              ['shield',  '미개봉 인증',  'water'],
+              ['trophy',  '정품 보증',    'electric'],
+              ['package', '보안 운송',    'fire'],
+              ['lock',    '에스크로 결제','grass'],
+            ].map(([icon, text, tone]) => (
+              <div key={text} className={`chip-type chip-type-${tone}`}>
+                <Icon name={icon} size={12} strokeWidth={2} />
+                <span>{text}</span>
               </div>
             ))}
           </div>
@@ -154,12 +185,17 @@ export default function PackDetailPage() {
 
       {related.length > 0 && (
         <div className="mt-20">
-          <h2 className="font-display text-3xl font-bold text-ink mb-8 tracking-tight">다른 카드팩</h2>
+          <Eyebrow tone="electric" led="yellow">MORE PACKS · 더 둘러볼래요?</Eyebrow>
+          <h2 className="font-display text-3xl font-bold text-ink mt-3 mb-8 tracking-tight">
+            이런 팩은 어때요?
+          </h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {related.map((p) => <PackTile key={p.id || p._id} pack={p} />)}
           </div>
         </div>
       )}
+
+      {opening && <PackOpener pack={pack} onClose={() => setOpening(false)} />}
     </div>
   )
 }

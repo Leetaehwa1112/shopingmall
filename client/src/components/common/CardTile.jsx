@@ -37,7 +37,14 @@ export default function CardTile({ card }) {
   const auctionEnded = cardType === 'auction' && card.endsAt && card.endsAt - Date.now() <= 0
 
   return (
-    <Link to={`/products/${cardId}`} className="group block surface-card overflow-hidden">
+    <Link to={`/products/${cardId}`} className="group block surface-card holo-shine sparkle-host overflow-hidden relative">
+      <span aria-hidden="true">
+        <span className="sparkle s1" />
+        <span className="sparkle s2" />
+        <span className="sparkle s3" />
+        <span className="sparkle s4" />
+        <span className="sparkle s5" />
+      </span>
       {/* Status strip — micro pixel label */}
       <div className="px-4 pt-4 flex justify-between items-center">
         {cardType === 'auction' ? (
@@ -70,8 +77,8 @@ export default function CardTile({ card }) {
         </button>
       </div>
 
-      {/* Big card image */}
-      <div className="px-6 py-5 flex justify-center"
+      {/* Big card image — holo sheen sweeps across on hover */}
+      <div className="px-6 py-5 flex justify-center holo-sheen"
         style={{ background: `radial-gradient(ellipse at center, ${card.accent || '#fbf7ec'}12 0%, transparent 70%)` }}>
         <PokeCard card={card} size="md" />
       </div>

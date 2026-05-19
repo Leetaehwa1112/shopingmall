@@ -7,13 +7,17 @@ const {
   createProduct,
   updateProduct,
   deleteProduct,
+  placeBid,
 } = require("../controllers/productController");
-const { admin } = require("../middlewares/auth");
+const { protect, admin } = require("../middlewares/auth");
 
 // Public routes
 router.get("/", getProducts);
 router.get("/sku/:sku", getProductBySku);
 router.get("/:id", getProductById);
+
+// Authenticated user routes
+router.post("/:id/bid", protect, placeBid);
 
 // Admin-only routes
 router.post("/", ...admin, createProduct);

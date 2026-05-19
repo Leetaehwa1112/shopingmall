@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
-@source inline("{text,bg,border}-{dex,dex-d,dex-dd,led-g,led-r,led-b,led-y,lcd,lcd-d,lcd-bg,ash,bone,gold,paper,line,ink,mute}");
-@source inline("{bg,border}-{dex,dex-d,led-g,led-r,led-b,led-y,lcd,lcd-d,lcd-bg,ash,gold,paper,line,ink,mute}/{5,10,15,20,30,40,50,60,70,80,90}");
+@source inline("{text,bg,border}-{dex,dex-d,dex-dd,led-g,led-r,led-b,led-y,lcd,lcd-d,lcd-bg,ash,bone,gold,paper,line,ink,mute,fire,water,electric,psychic,grass,sky,rose}");
+@source inline("{bg,border}-{dex,dex-d,led-g,led-r,led-b,led-y,lcd,lcd-d,lcd-bg,ash,gold,paper,line,ink,mute,fire,water,electric,psychic,grass,sky,rose}/{5,10,15,20,30,40,50,60,70,80,90}");
 
 @theme {
   /* === Brand accents === */
@@ -10,6 +10,15 @@
   --color-dex-dd: #7f1d1d;
   --color-gold:   #f5b800;
   --color-blue:   #2a4480;
+
+  /* === Pokémon type palette (playful accents) === */
+  --color-fire:     #ff7a45;
+  --color-water:    #3ba7e8;
+  --color-electric: #facc15;
+  --color-psychic:  #c084fc;
+  --color-grass:    #7bc043;
+  --color-sky:      #7dd3fc;
+  --color-rose:     #fb7185;
 
   /* === LED indicators (small) === */
   --color-led-g: #84cc16;
@@ -69,6 +78,335 @@ body {
 .font-display { font-family: var(--font-display); }
 .font-body   { font-family: var(--font-body); }
 .font-mono   { font-family: var(--font-mono); }
+
+/* ═════════════════════════════════════════════════════════════
+   THRILL LAYER v2 — Pack Opening Energy
+   "두근두근 / 갖고싶다 / 컬렉션의 빈 자리"
+   Bright cream base · Type-colour accents · Holographic shine
+   ═════════════════════════════════════════════════════════════ */
+
+/* === Polka-dot ambient (포켓몬 카드 뒷면 느낌의 도트 패턴) === */
+.bg-polka {
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(13,23,48,0.06) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+.bg-confetti {
+  background-image:
+    radial-gradient(circle at 20% 25%, rgba(220,38,38,0.10) 0, transparent 12%),
+    radial-gradient(circle at 80% 35%, rgba(59,167,232,0.10) 0, transparent 14%),
+    radial-gradient(circle at 60% 75%, rgba(192,132,252,0.10) 0, transparent 13%),
+    radial-gradient(circle at 25% 80%, rgba(250,204,21,0.10) 0, transparent 13%);
+  background-size: 100% 100%;
+}
+
+/* === Holo SHINE — rotating prismatic gradient (much stronger than premium "edge") === */
+@keyframes holo-rotate {
+  to { transform: rotate(360deg); }
+}
+@keyframes holo-pan {
+  0%   { background-position:   0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position:   0% 50%; }
+}
+.holo-shine {
+  position: relative;
+  isolation: isolate;
+}
+.holo-shine::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    conic-gradient(from 0deg,
+      #ff7eb6, #ffd86b, #7bc043, #7dd3fc, #c084fc, #ff7eb6);
+  filter: blur(22px);
+  opacity: 0;
+  z-index: -1;
+  transition: opacity 0.5s ease;
+  animation: holo-rotate 8s linear infinite;
+  pointer-events: none;
+}
+.holo-shine:hover::before,
+.holo-shine.is-on::before { opacity: 0.55; }
+
+/* Rainbow border — like a holo card's foil edge */
+.rainbow-border {
+  position: relative;
+  isolation: isolate;
+}
+.rainbow-border::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(120deg,
+    #ff7eb6 0%, #7dd3fc 25%, #c084fc 50%, #facc15 75%, #ff7eb6 100%);
+  background-size: 300% 300%;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  animation: holo-pan 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Holo sheen — light sweeping across surface */
+.holo-sheen {
+  position: relative;
+  overflow: hidden;
+}
+.holo-sheen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(115deg,
+      rgba(255,126,182,0)   10%,
+      rgba(255,126,182,0.25) 25%,
+      rgba(126,200,255,0.30) 40%,
+      rgba(167,139,250,0.28) 55%,
+      rgba(255,216,107,0.28) 70%,
+      rgba(255,126,182,0)   85%);
+  background-size: 220% 220%;
+  mix-blend-mode: screen;
+  opacity: 0;
+  pointer-events: none;
+  animation: holo-pan 4s ease-in-out infinite;
+  transition: opacity 0.4s ease;
+}
+.holo-sheen:hover::after,
+.holo-sheen.is-on::after { opacity: 1; }
+
+/* === Sparkle particles — pinprick stars that twinkle on hover === */
+@keyframes sparkle-twinkle {
+  0%, 100% { transform: scale(0); opacity: 0; }
+  50%      { transform: scale(1); opacity: 1; }
+}
+.sparkle-host { position: relative; }
+.sparkle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background:
+    radial-gradient(circle at center, #fff 0%, #fff 35%, transparent 70%),
+    conic-gradient(from 0deg, transparent 0deg, #fff 90deg, transparent 180deg, #fff 270deg, transparent 360deg);
+  background-blend-mode: screen;
+  filter: drop-shadow(0 0 4px #ffd86b);
+  pointer-events: none;
+  opacity: 0;
+}
+.sparkle-host:hover .sparkle,
+.sparkle-host.is-on .sparkle {
+  animation: sparkle-twinkle 1.6s ease-in-out infinite;
+}
+.sparkle.s1 { top: 8%;  left: 12%; animation-delay: 0s;    }
+.sparkle.s2 { top: 22%; right: 10%; animation-delay: 0.3s; width: 6px; height: 6px; }
+.sparkle.s3 { bottom: 18%; left: 18%; animation-delay: 0.6s; width: 10px; height: 10px; }
+.sparkle.s4 { bottom: 8%;  right: 16%; animation-delay: 0.9s; }
+.sparkle.s5 { top: 50%; left: 4%;   animation-delay: 1.2s; width: 5px; height: 5px; }
+
+/* === Float / bob animations for playful elements === */
+@keyframes float-bob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-8px) rotate(3deg); }
+}
+.float-bob { animation: float-bob 4s ease-in-out infinite; }
+
+@keyframes wobble-pop {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  25%      { transform: scale(1.06) rotate(-2deg); }
+  50%      { transform: scale(0.98) rotate(2deg); }
+  75%      { transform: scale(1.04) rotate(-1deg); }
+}
+.wobble-pop:hover { animation: wobble-pop 0.6s ease-in-out; }
+
+/* === Buttons — playful additions === */
+.btn-spark {
+  background: linear-gradient(120deg, #ff7eb6, #c084fc 30%, #7dd3fc 60%, #facc15);
+  background-size: 250% 250%;
+  color: #1a1306;
+  border: 2px solid rgba(255,255,255,0.5);
+  box-shadow:
+    0 3px 0 rgba(0,0,0,0.15),
+    0 8px 22px rgba(192,132,252,0.45),
+    inset 0 1px 0 rgba(255,255,255,0.5);
+  animation: holo-pan 4s ease-in-out infinite;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+.btn-spark:hover {
+  box-shadow:
+    0 3px 0 rgba(0,0,0,0.15),
+    0 10px 28px rgba(192,132,252,0.6),
+    inset 0 1px 0 rgba(255,255,255,0.6);
+  transform: translateY(-2px);
+}
+.btn-spark:active { transform: translateY(0); }
+
+.btn-pop {
+  background: var(--color-dex);
+  color: var(--color-paper);
+  border: 2px solid #1a1a1a;
+  box-shadow: 0 4px 0 #1a1a1a, 0 8px 16px rgba(220,38,38,0.35);
+  font-weight: 800;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.15s ease;
+}
+.btn-pop:hover {
+  background: var(--color-dex-d);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 #1a1a1a, 0 10px 18px rgba(220,38,38,0.45);
+}
+.btn-pop:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #1a1a1a, 0 4px 8px rgba(220,38,38,0.25);
+}
+
+.btn-electric {
+  background: var(--color-electric);
+  color: #1a1306;
+  border: 2px solid #1a1a1a;
+  box-shadow: 0 4px 0 #1a1a1a, 0 8px 16px rgba(250,204,21,0.4);
+  font-weight: 800;
+}
+.btn-electric:hover {
+  background: #ffd633;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 #1a1a1a, 0 10px 18px rgba(250,204,21,0.55);
+}
+.btn-electric:active { transform: translateY(2px); box-shadow: 0 1px 0 #1a1a1a, 0 4px 8px rgba(250,204,21,0.25); }
+
+/* === Type chips — Pokémon-style rounded chips with type colours === */
+.chip-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  padding: 4px 11px;
+  border-radius: 9999px;
+  border: 2px solid #1a1a1a;
+  box-shadow: 0 2px 0 #1a1a1a;
+  text-transform: uppercase;
+}
+.chip-type-fire     { background: var(--color-fire);     color: #fff; }
+.chip-type-water    { background: var(--color-water);    color: #fff; }
+.chip-type-electric { background: var(--color-electric); color: #1a1306; }
+.chip-type-psychic  { background: var(--color-psychic);  color: #fff; }
+.chip-type-grass    { background: var(--color-grass);    color: #fff; }
+.chip-type-rose     { background: var(--color-rose);     color: #fff; }
+
+/* === Stamp — slightly-rotated playful label === */
+.stamp {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  padding: 6px 14px;
+  border: 2.5px solid currentColor;
+  border-radius: 6px;
+  transform: rotate(-3deg);
+  text-transform: uppercase;
+}
+
+/* === Pricetag — playful collectible tag === */
+.pricetag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--color-ink);
+  padding: 3px 10px 3px 16px;
+  background: var(--color-electric);
+  border: 2px solid #1a1a1a;
+  border-radius: 0 6px 6px 0;
+  position: relative;
+}
+.pricetag::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-right: 10px solid #1a1a1a;
+}
+.pricetag::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 5px;
+  height: 5px;
+  background: #1a1a1a;
+  border-radius: 50%;
+}
+
+/* === Playful surface — pop card with thick border === */
+.surface-pop {
+  background: var(--color-paper);
+  border: 2.5px solid #1a1a1a;
+  border-radius: 22px;
+  box-shadow: 0 4px 0 #1a1a1a, 0 10px 28px rgba(13,23,48,0.12);
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.25s ease;
+}
+.surface-pop:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 7px 0 #1a1a1a, 0 14px 32px rgba(13,23,48,0.18);
+}
+
+/* === Section eyebrow chip — friendly, type-tinted === */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-ink);
+  padding: 6px 12px;
+  background: #fff;
+  border: 2px solid #1a1a1a;
+  border-radius: 9999px;
+  box-shadow: 0 2px 0 #1a1a1a;
+}
+
+/* === Helpers === */
+.text-fire     { color: var(--color-fire); }
+.text-water    { color: var(--color-water); }
+.text-electric { color: var(--color-electric); }
+.text-psychic  { color: var(--color-psychic); }
+.text-grass    { color: var(--color-grass); }
+.bg-fire       { background: var(--color-fire); }
+.bg-water      { background: var(--color-water); }
+.bg-electric   { background: var(--color-electric); }
+.bg-psychic    { background: var(--color-psychic); }
+.bg-grass      { background: var(--color-grass); }
+
+/* === Override surface-card lift for more playful bounce === */
+.surface-card {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.25s ease,
+              border-color 0.2s;
+}
+.surface-card:hover {
+  transform: translateY(-6px);
+  border-color: #1a1a1a;
+  box-shadow: 0 14px 36px rgba(13, 23, 48, 0.14);
+}
 
 /* === DEX CASING — used ONLY for Hero TOP LOT, processing modals === */
 .dex-casing {

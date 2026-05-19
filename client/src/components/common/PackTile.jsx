@@ -16,7 +16,7 @@ export default function PackTile({ pack }) {
   }
 
   return (
-    <Link to={`/packs/${packId}`} className="group block surface-card overflow-hidden">
+    <Link to={`/packs/${packId}`} className="group block surface-card holo-shine sparkle-host overflow-hidden relative">
       <div className="px-4 pt-4 flex justify-between items-center">
         <span className="inline-flex items-center gap-2">
           <span className="led led-yellow" style={{ width: 7, height: 7 }} />
@@ -31,10 +31,16 @@ export default function PackTile({ pack }) {
         </button>
       </div>
 
-      <div className="px-6 py-6 flex justify-center"
+      <div className="px-6 py-6 flex justify-center holo-sheen"
         style={{ background: `radial-gradient(ellipse at center, ${pack.accent}12 0%, transparent 70%)` }}>
         <PackVisual pack={pack} size="md" />
       </div>
+      <span aria-hidden="true">
+        <span className="sparkle s1" />
+        <span className="sparkle s2" />
+        <span className="sparkle s3" />
+        <span className="sparkle s4" />
+      </span>
 
       <div className="px-5 pb-5 border-t border-line pt-4">
         <h3 className="font-display text-xl font-bold text-ink leading-tight">{pack.nameKo}</h3>

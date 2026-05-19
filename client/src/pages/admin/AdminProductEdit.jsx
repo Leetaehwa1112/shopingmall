@@ -79,7 +79,7 @@ export default function AdminProductEdit() {
         </button>
         <span className="text-line">/</span>
         <div>
-          <div className="pixel-label text-amber-500 mb-1">Edit Card</div>
+          <div className="inline-flex items-center gap-2 mb-2"><span className="led led-yellow led-pulse" style={{ width: 6, height: 6 }} /><span className="text-[10px] font-bold tracking-[0.18em] text-electric uppercase">Edit Card · 카드 수정</span></div>
           <h1 className="font-display text-3xl font-bold text-ink">카드 수정</h1>
         </div>
       </div>
@@ -89,14 +89,14 @@ export default function AdminProductEdit() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Lbl>SKU</Lbl>
-              <div className="w-full bg-bone-2/60 border border-line rounded-lg px-4 py-2.5 text-sm text-mute font-mono font-bold cursor-not-allowed">
+              <div className="w-full bg-bone-2/60 border border-ink/15 rounded-lg px-4 py-2.5 text-sm text-mute font-mono font-bold cursor-not-allowed">
                 {form.sku}
               </div>
             </div>
             <div>
               <Lbl>카테고리 *</Lbl>
               <select value={form.category} onChange={(e) => f('category')(e.target.value)}
-                className="w-full bg-bone-2 border border-line rounded-lg px-4 py-2.5 text-sm text-ink font-bold focus:border-ink outline-none">
+                className="w-full bg-bone-2 border border-ink/15 rounded-lg px-4 py-2.5 text-sm text-ink font-bold focus:border-ink outline-none">
                 {CATEGORIES.filter((c) => c.id !== 'all').map((c) => (
                   <option key={c.id} value={c.id}>{c.label}</option>
                 ))}
@@ -112,7 +112,7 @@ export default function AdminProductEdit() {
           <div className="grid grid-cols-2 gap-3 mb-4">
             {[['buynow', '즉시 구매', '고정 가격'], ['auction', '경매', '초희귀 카드만']].map(([val, label, desc]) => (
               <button key={val} type="button" onClick={() => f('sale_type')(val)}
-                className={`p-4 rounded-xl border transition-all ${form.sale_type === val ? 'border-ink bg-ink/[0.03] elev-1' : 'border-line hover:border-ink/30'}`}>
+                className={`p-4 rounded-xl border transition-all ${form.sale_type === val ? 'border-ink bg-ink/[0.03] ' : 'border-ink/15 hover:border-ink/30'}`}>
                 <div className="font-display font-bold text-ink">{label}</div>
                 <div className="text-xs text-mute mt-1">{desc}</div>
               </button>
@@ -125,7 +125,7 @@ export default function AdminProductEdit() {
             {[['active', '판매중'], ['sold_out', '품절'], ['hidden', '숨김']].map(([val, label]) => (
               <button key={val} type="button" onClick={() => f('status')(val)}
                 className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all ${
-                  form.status === val ? 'border-ink bg-ink/[0.04] text-ink elev-1' : 'border-line text-mute hover:border-ink/30'
+                  form.status === val ? 'border-ink bg-ink/[0.04] text-ink ' : 'border-ink/15 text-mute hover:border-ink/30'
                 }`}>
                 {label}
               </button>
@@ -149,10 +149,10 @@ export default function AdminProductEdit() {
         <Section title="설명">
           <textarea value={form.description} onChange={(e) => f('description')(e.target.value)}
             rows={4} placeholder="카드 컨디션, 출처, 특이사항 등"
-            className="w-full bg-bone-2 border border-line rounded-xl px-4 py-3 text-sm text-ink focus:border-ink outline-none transition-colors" />
+            className="w-full bg-bone-2 border border-ink/15 rounded-xl px-4 py-3 text-sm text-ink focus:border-ink outline-none transition-colors" />
         </Section>
 
-        <div className="flex gap-3 justify-end pt-6 border-t border-line">
+        <div className="flex gap-3 justify-end pt-6 border-t border-ink/15">
           <Button variant="ghost" type="button" onClick={() => navigate('/admin/products')} disabled={loading}>취소</Button>
           <Button variant="accent" type="submit" disabled={loading}>
             {loading ? '저장 중...' : '저장하기'}
@@ -165,7 +165,7 @@ export default function AdminProductEdit() {
 
 function Section({ title, children }) {
   return (
-    <div className="surface-soft p-6 elev-1">
+    <div className="surface-pop p-6 ">
       <div className="font-display font-bold text-ink text-lg mb-4">{title}</div>
       {children}
     </div>
@@ -179,7 +179,7 @@ function Input({ label, value, onChange, className = '', ...rest }) {
     <label className={`block ${className}`}>
       <Lbl>{label}</Lbl>
       <input value={value} onChange={(e) => onChange(e.target.value)} {...rest}
-        className="w-full bg-bone-2 border border-line rounded-lg px-4 py-2.5 text-sm text-ink focus:border-ink focus:bg-paper outline-none transition-colors" />
+        className="w-full bg-bone-2 border border-ink/15 rounded-lg px-4 py-2.5 text-sm text-ink focus:border-ink focus:bg-paper outline-none transition-colors" />
     </label>
   )
 }

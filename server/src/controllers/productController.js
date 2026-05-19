@@ -149,6 +149,71 @@ const deleteProduct = async (req, res) => {
   }
 };
 
+// [POST] /api/products/:id/bid - 경매 입찰 (로그인 필수)
+const placeBid = async (req, res) => {
+  try {
+    const { amount } = req.body;
+    const numAmount = Number(amount);
+
+    if (!numAmount || numAmount <= 0) {
+      return res.status(400).json({ success: false, message: "유효한 입찰 금액을 입력해주세요." });
+    }
+
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ success: false, message: "상품을 찾을 수 없습니다." });
+    }
+    if (product.sale_type !== "auction") {
+      return res.status(400).json({ success: false, message: "경매 상품이 아닙니다." });
+    }
+    if (product.status !== "active") {
+      return res.status(400).json({ success: false, message: "진행 중인 경매가 아닙니다." });
+    }
+    if (product.endsAt && new Date(product.endsAt).getTime() < Date.now()) {
+      return res.status(400).json({ success: false, message: "이미 종료된 경매입니다." });
+    }
+
+    const minBid = (product.currentBid || product.startPrice || product.price || 0) + 1;
+    if (numAmount < minBid) {
+      return res.status(400).json({
+        success: false,
+        message: `최소 입찰가는 ${minBid.toLocaleString("ko-KR")}원 이상이어야 합니다.`,
+      });
+    }
+
+    // 마지막 입찰자가 본인인지 (연속 입찰 방지 — 선택 정책)
+    const lastBid = product.bidHistory?.[0];
+    if (lastBid && String(lastBid.bidder_id) === String(req.user._id)) {
+      return res.status(400).json({ success: false, message: "이미 최고 입찰자입니다." });
+    }
+
+    // unshift + 50건 cap
+    const bidEntry = {
+      bidder: req.user.name || "익명 트레이너",
+      bidder_id: req.user._id,
+      amount: numAmount,
+      at: new Date(),
+    };
+    product.bidHistory = [bidEntry, ...(product.bidHistory || [])].slice(0, 50);
+    product.currentBid = numAmount;
+    product.bidCount = (product.bidCount || 0) + 1;
+
+    await product.save();
+
+    res.status(201).json({
+      success: true,
+      message: "입찰이 등록되었습니다.",
+      data: {
+        currentBid: product.currentBid,
+        bidCount: product.bidCount,
+        bidHistory: product.bidHistory,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getProducts,
   getProductById,
@@ -156,4 +221,5 @@ module.exports = {
   createProduct,
   updateProduct,
   deleteProduct,
+  placeBid,
 };

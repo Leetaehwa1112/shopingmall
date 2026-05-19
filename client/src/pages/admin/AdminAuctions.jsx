@@ -1,174 +1,252 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import api from '@/api/axios'
-import Button from '@/components/common/Button'
-import Icon from '@/components/common/Icon'
+import useAuthStore from '@/store/authStore'
 import useToastStore from '@/store/toastStore'
+import Icon from '@/components/common/Icon'
+import {
+  PageHeader, StatGrid, StatCard, FilterBar, SearchInput, Select, Spacer,
+  FilterChips, DataTable, Pagination, BulkBar, BulkButton, StatusPill,
+  Cell, RowActions, IconBtn, Drawer, DSection, KV, EmptyState, logAudit,
+} from '@/components/admin/ui'
 
 const COUNTRY_FLAG = { USA: '🇺🇸', JPN: '🇯🇵', KOR: '🇰🇷' }
 
-const STATUS_TABS = [
-  { value: '', label: '전체' },
-  { value: 'pending', label: '검토 대기' },
-  { value: 'approved', label: '승인됨' },
-  { value: 'live', label: '진행 중' },
-  { value: 'ended', label: '종료' },
-  { value: 'rejected', label: '거절됨' },
-]
-
-const STATUS_STYLE = {
-  pending:  'bg-amber-50 text-amber-700 border-amber-200',
-  approved: 'bg-blue-50 text-blue-700 border-blue-200',
-  live:     'bg-emerald-50 text-emerald-700 border-emerald-200',
-  ended:    'bg-bone-2 text-mute border-line',
-  rejected: 'bg-red-50 text-red-700 border-red-200',
-}
-const STATUS_LABEL = {
-  pending: '검토 대기', approved: '승인됨', live: '진행 중', ended: '종료', rejected: '거절됨',
+const STATUS = {
+  pending:  { label: '검수 대기', tone: 'amber', led: 'yellow' },
+  approved: { label: '승인됨',   tone: 'blue',  led: 'blue' },
+  live:     { label: '진행 중',  tone: 'emerald', led: 'green' },
+  ended:    { label: '종료',     tone: 'gray',  led: 'green' },
+  rejected: { label: '거절됨',   tone: 'red',   led: 'red' },
 }
 
-const PAGE_SIZE = 8
+const PAGE_SIZE_OPTIONS = [10, 25, 50]
 
 export default function AdminAuctions() {
+  const navigate = useNavigate()
+  const { user } = useAuthStore()
   const toast = useToastStore((s) => s.push)
-  const [tab, setTab] = useState('')
+
   const [list, setList] = useState([])
-  const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [selected, setSelected] = useState(null)
+  const [total, setTotal] = useState(0)
+  const [filter, setFilter] = useState('')
+  const [search, setSearch] = useState('')
+  const [saleType, setSaleType] = useState('all')
+  const [sort, setSort] = useState({ key: 'createdAt', dir: 'desc' })
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
+  const [selected, setSelected] = useState([])
+  const [drawer, setDrawer] = useState(null)
 
-  const fetchList = async (status = '') => {
+  const fetchList = useCallback(() => {
     setLoading(true)
-    try {
-      const params = status ? { status } : {}
-      const { data } = await api.get('/auctions', { params })
-      setList(data.data)
-      setTotal(data.total)
-    } catch {
-      toast({ type: 'error', title: '불러오기 실패', message: '경매 목록을 가져오지 못했습니다.' })
-    } finally {
-      setLoading(false)
-    }
-  }
+    const params = filter ? { status: filter } : {}
+    api.get('/auctions', { params })
+      .then(({ data }) => { setList(data.data || []); setTotal(data.total || 0) })
+      .catch(() => toast({ type: 'error', title: '불러오기 실패', message: '경매 목록을 가져오지 못했습니다.' }))
+      .finally(() => setLoading(false))
+  }, [filter])
 
-  useEffect(() => { fetchList(tab); setPage(1) }, [tab])
+  useEffect(() => { fetchList() }, [fetchList])
+  useEffect(() => { setPage(1); setSelected([]) }, [filter, search, saleType])
+
+  // local filter + sort
+  const filtered = useMemo(() => {
+    let rows = list.slice()
+    if (search) {
+      const q = search.toLowerCase()
+      rows = rows.filter((r) =>
+        (r.name || '').toLowerCase().includes(q) ||
+        (r.nameKo || '').toLowerCase().includes(q) ||
+        (r.user?.name || '').toLowerCase().includes(q) ||
+        (r.user?.email || '').toLowerCase().includes(q)
+      )
+    }
+    if (saleType !== 'all') rows = rows.filter((r) => r.saleType === saleType)
+    rows.sort((a, b) => {
+      const dir = sort.dir === 'asc' ? 1 : -1
+      const get = (r) => ({
+        createdAt: new Date(r.createdAt).getTime(),
+        startPrice: r.startPrice || 0,
+        currentBid: r.currentBid || 0,
+        bidCount: r.bidCount || 0,
+        status: r.status,
+      }[sort.key])
+      const av = get(a), bv = get(b)
+      if (av < bv) return -1 * dir
+      if (av > bv) return  1 * dir
+      return 0
+    })
+    return rows
+  }, [list, search, saleType, sort])
+
+  const paged = useMemo(() =>
+    filtered.slice((page - 1) * pageSize, page * pageSize),
+    [filtered, page, pageSize]
+  )
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
+
+  const kpis = useMemo(() => ({
+    pending: list.filter((i) => i.status === 'pending').length,
+    live: list.filter((i) => i.status === 'live').length,
+    bidValue: list.reduce((s, i) => s + (i.currentBid || 0), 0),
+    today: list.filter((i) => new Date(i.createdAt).toDateString() === new Date().toDateString()).length,
+  }), [list])
+
+  const handleSort = (key) =>
+    setSort((s) => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'desc' })
 
   const handleStatusChange = async (id, status, adminNote) => {
     try {
       await api.patch(`/auctions/${id}/status`, { status, adminNote })
-      toast({ type: 'success', title: '상태 변경 완료', message: `${STATUS_LABEL[status]}(으)로 변경됐습니다.` })
-      setSelected(null)
-      fetchList(tab)
+      logAudit({ actor: user?.name, action: `auction.${status}`, entity: 'auction', entityId: id, summary: `${STATUS[status]?.label}${adminNote ? ` (${adminNote})` : ''}` })
+      toast({ type: 'success', title: '상태 변경 완료', message: STATUS[status]?.label })
+      setDrawer(null)
+      fetchList()
     } catch {
       toast({ type: 'error', title: '변경 실패', message: '상태 변경에 실패했습니다.' })
     }
   }
 
-  const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE))
-  const paged = list.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const handleBulk = async (status) => {
+    if (!selected.length) return
+    if (!confirm(`${selected.length}건을 [${STATUS[status]?.label}](으)로 변경할까요?`)) return
+    for (const id of selected) {
+      try { await api.patch(`/auctions/${id}/status`, { status }) } catch {}
+    }
+    logAudit({ actor: user?.name, action: `auction.bulk.${status}`, entity: 'auction', entityId: `${selected.length}건`, summary: `→ ${STATUS[status]?.label}`, meta: { ids: selected } })
+    toast({ type: 'success', title: '일괄 변경 완료', message: `${selected.length}건 → ${STATUS[status]?.label}` })
+    setSelected([])
+    fetchList()
+  }
+
+  const filterOptions = [
+    { value: '', label: '전체' },
+    { value: 'pending', label: '검수 대기', led: 'yellow', count: kpis.pending },
+    { value: 'approved', label: '승인됨', led: 'blue' },
+    { value: 'live', label: '진행 중', led: 'green', count: kpis.live },
+    { value: 'ended', label: '종료' },
+    { value: 'rejected', label: '거절됨', led: 'red' },
+  ]
 
   return (
-    <div className="space-y-6 max-w-7xl">
-      <div className="flex justify-between items-end flex-wrap gap-4">
-        <div>
-          <div className="pixel-label text-mute mb-3">Auctions</div>
-          <h1 className="font-display text-4xl font-bold text-ink tracking-tight">경매 관리</h1>
-        </div>
-        <div className="text-sm text-mute font-bold">총 <span className="text-ink">{total}</span>건</div>
-      </div>
+    <div className="space-y-4 max-w-[1400px]">
+      <PageHeader
+        kicker="AUCTIONS"
+        ledTone="red"
+        title="경매 관리"
+        subtitle={`총 ${total.toLocaleString()}건의 경매 신청/진행`}
+        breadcrumb={['Admin', '거래', '경매 관리']}
+        actions={
+          <>
+            {kpis.pending > 0 && (
+              <Link to="/admin/auctions/review"
+                className="inline-flex items-center gap-1.5 text-xs font-bold bg-red-600 text-paper px-3 py-1.5 rounded-md hover:bg-red-700 animate-pulse">
+                <Icon name="bolt" size={12} strokeWidth={2.5} />
+                검수 인박스 ({kpis.pending})
+              </Link>
+            )}
+            <button onClick={fetchList} className="inline-flex items-center gap-1.5 text-xs font-bold text-mute hover:text-ink px-3 py-1.5 rounded-md border border-ink/15 bg-paper hover:bg-bone-2">
+              <Icon name="arrow" size={12} strokeWidth={2.2} /> 새로고침
+            </button>
+          </>
+        }
+      />
 
-      {/* 탭 */}
-      <div className="flex gap-2 flex-wrap">
-        {STATUS_TABS.map(({ value, label }) => (
-          <button key={value} onClick={() => setTab(value)}
-            className={`px-4 py-2 text-sm font-bold rounded-full border transition-all ${
-              tab === value ? 'bg-ink text-paper border-ink' : 'bg-paper border-line text-ink hover:border-ink/30'
-            }`}>
-            {label}
-          </button>
-        ))}
-      </div>
+      <StatGrid cols={4}>
+        <StatCard label="검수 대기" value={kpis.pending} sub="클릭 → 인박스" icon="flame" tone="red" urgent={kpis.pending > 0}
+          onClick={() => navigate('/admin/auctions/review')} />
+        <StatCard label="진행 중" value={kpis.live} sub="실시간 입찰 중" icon="trophy" tone="emerald" />
+        <StatCard label="누적 입찰가" value={`₩${(kpis.bidValue / 10000).toFixed(0)}만`} sub="현재 최고가 합" icon="package" />
+        <StatCard label="오늘 신청" value={kpis.today} sub="신규 등록" icon="cart" tone="blue" />
+      </StatGrid>
 
-      {/* 테이블 */}
-      <div className="surface-soft overflow-x-auto">
-        {loading ? (
-          <div className="py-16 text-center text-mute text-sm font-bold">불러오는 중...</div>
-        ) : list.length === 0 ? (
-          <div className="py-16 text-center text-mute text-sm font-bold">해당 건이 없습니다.</div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-bone-2/50 border-b border-line">
-              <tr className="text-[10px] font-bold tracking-[0.18em] uppercase text-mute">
-                <th className="text-left p-4">신청자</th>
-                <th className="text-left p-4">카드</th>
-                <th className="text-left p-4">등급</th>
-                <th className="text-left p-4">유형</th>
-                <th className="text-right p-4">시작가</th>
-                <th className="text-left p-4">상태</th>
-                <th className="text-left p-4">신청일</th>
-                <th className="p-4"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {paged.map((item) => (
-                <tr key={item._id} className="border-b border-line last:border-0 hover:bg-bone-2/30">
-                  <td className="p-4">
-                    <div className="font-bold text-ink">{item.user?.name}</div>
-                    <div className="text-xs text-mute">{item.user?.email}</div>
-                  </td>
-                  <td className="p-4">
-                    <div className="font-bold text-ink">{item.nameKo || item.name}</div>
-                    {item.nameKo && <div className="text-xs text-mute italic">{item.name}</div>}
-                    {item.set && <div className="text-xs text-mute">{item.set} {item.year && `· ${item.year}`}</div>}
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-1.5">
-                      {item.cardCountry && <span className="text-lg">{COUNTRY_FLAG[item.cardCountry]}</span>}
-                      <span className="font-mono font-bold text-ink">{item.gradeCompany} {item.gradeScore}</span>
-                    </div>
-                    {item.gradeCert && <div className="text-xs text-mute">#{item.gradeCert}</div>}
-                  </td>
-                  <td className="p-4">
-                    {item.saleType === 'auction' ? (
-                      <span className="text-[10px] font-bold bg-dex/10 text-dex border border-dex/30 px-2 py-1 rounded-full tracking-wider inline-flex items-center gap-1.5">
-                        <span className="led led-red led-pulse" style={{ width: 5, height: 5 }} /> AUCTION
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-bold bg-blue-50 text-blue border border-blue/30 px-2 py-1 rounded-full tracking-wider">BUY NOW</span>
-                    )}
-                  </td>
-                  <td className="p-4 text-right font-mono font-bold tabular-nums">
-                    ₩{item.startPrice?.toLocaleString()}
-                  </td>
-                  <td className="p-4">
-                    <span className={`text-[10px] font-bold border px-2 py-1 rounded-full ${STATUS_STYLE[item.status]}`}>
-                      {STATUS_LABEL[item.status]}
-                    </span>
-                  </td>
-                  <td className="p-4 text-xs text-mute whitespace-nowrap">
-                    {new Date(item.createdAt).toLocaleDateString('ko-KR')}
-                  </td>
-                  <td className="p-4">
-                    <button onClick={() => setSelected(item)}
-                      className="text-xs text-ink hover:text-dex font-bold whitespace-nowrap">
-                      상세 →
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      <FilterBar>
+        <SearchInput value={search} onSubmit={setSearch} placeholder="카드명 / 신청자 검색" width={260} />
+        <Select label="유형" value={saleType} onChange={setSaleType} options={[
+          { value: 'all', label: '전체' },
+          { value: 'auction', label: '경매' },
+          { value: 'buynow', label: '즉시구매' },
+        ]} />
+        <Spacer />
+        <Select label="페이지당" value={pageSize} onChange={(v) => setPageSize(Number(v))}
+          options={PAGE_SIZE_OPTIONS.map((n) => ({ value: n, label: `${n}건` }))} />
+      </FilterBar>
 
-      {!loading && totalPages > 1 && (
-        <Pagination page={page} totalPages={totalPages} total={list.length} onPage={setPage} />
-      )}
+      <FilterChips value={filter} onChange={setFilter} options={filterOptions} />
 
-      {selected && (
-        <DetailModal
-          item={selected}
-          onClose={() => setSelected(null)}
+      <BulkBar count={selected.length} onClear={() => setSelected([])}
+        actions={
+          <>
+            <BulkButton tone="success" onClick={() => handleBulk('approved')}>일괄 승인</BulkButton>
+            <BulkButton tone="success" onClick={() => handleBulk('live')}>경매 시작</BulkButton>
+            <BulkButton tone="danger"  onClick={() => handleBulk('rejected')}>거절</BulkButton>
+          </>
+        }
+      />
+
+      <DataTable
+        density="compact"
+        loading={loading}
+        rows={paged}
+        rowKey={(r) => r._id}
+        selected={selected}
+        onSelect={setSelected}
+        sort={sort}
+        onSort={handleSort}
+        onRowClick={(r) => setDrawer(r)}
+        empty={<EmptyState icon="flame" title="해당 건이 없습니다" />}
+        columns={[
+          { key: 'user', label: '신청자', render: (r) =>
+            <Cell primary={r.user?.name} secondary={r.user?.email} />
+          },
+          { key: 'name', label: '카드', render: (r) =>
+            <Cell primary={r.nameKo || r.name} secondary={r.set ? `${r.set}${r.year ? ` · ${r.year}` : ''}` : r.name} />
+          },
+          { key: 'grade', label: '등급', render: (r) =>
+            <div className="flex items-center gap-1.5">
+              {r.cardCountry && <span>{COUNTRY_FLAG[r.cardCountry]}</span>}
+              <span className="font-mono font-bold text-ink text-[11px]">{r.gradeCompany} {r.gradeScore}</span>
+            </div>
+          },
+          { key: 'saleType', label: '유형', align: 'center', render: (r) =>
+            r.saleType === 'auction'
+              ? <StatusPill tone="red" led="red">AUCTION</StatusPill>
+              : <StatusPill tone="blue">BUY NOW</StatusPill>
+          },
+          { key: 'startPrice', label: '시작가', align: 'right', sortable: true, render: (r) =>
+            <span className="font-mono text-xs font-bold tabular-nums">₩{r.startPrice?.toLocaleString()}</span>
+          },
+          { key: 'currentBid', label: '현재가', align: 'right', sortable: true, render: (r) =>
+            r.currentBid
+              ? <span className="font-mono text-xs font-bold tabular-nums text-dex">₩{r.currentBid.toLocaleString()}</span>
+              : <span className="text-mute text-[11px]">—</span>
+          },
+          { key: 'bidCount', label: '입찰', align: 'center', sortable: true, render: (r) =>
+            <span className="font-mono text-[11px] font-bold tabular-nums">{r.bidCount || 0}</span>
+          },
+          { key: 'status', label: '상태', align: 'center', sortable: true, render: (r) => {
+            const s = STATUS[r.status] || STATUS.pending
+            return <StatusPill tone={s.tone} led={s.led}>{s.label}</StatusPill>
+          }},
+          { key: 'createdAt', label: '신청일', sortable: true, render: (r) =>
+            <span className="text-[11px] text-mute font-mono">{new Date(r.createdAt).toLocaleDateString('ko-KR')}</span>
+          },
+          { key: 'actions', label: '', align: 'right', render: (r) =>
+            <RowActions>
+              <IconBtn icon="arrow" label="상세" onClick={() => setDrawer(r)} />
+            </RowActions>
+          },
+        ]}
+      />
+
+      <Pagination page={page} totalPages={totalPages} total={filtered.length} pageSize={pageSize} onPage={setPage} />
+
+      {drawer && (
+        <AuctionDrawer
+          item={drawer}
+          onClose={() => setDrawer(null)}
           onStatusChange={handleStatusChange}
         />
       )}
@@ -176,130 +254,78 @@ export default function AdminAuctions() {
   )
 }
 
-function Pagination({ page, totalPages, total, onPage }) {
-  return (
-    <div className="flex items-center justify-between gap-2 pt-2">
-      <span className="text-xs text-mute font-mono">
-        {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} / {total}건
-      </span>
-      <div className="flex items-center gap-1.5">
-        <button onClick={() => onPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-          className="w-8 h-8 rounded-lg border border-line bg-paper text-ink font-bold hover:bg-bone-2 disabled:opacity-30 disabled:cursor-not-allowed text-sm">‹</button>
-        {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-          <button key={n} onClick={() => onPage(n)}
-            className={`w-8 h-8 rounded-lg border text-sm font-bold transition-all ${
-              n === page ? 'bg-ink text-paper border-ink' : 'bg-paper border-line text-ink hover:bg-bone-2'
-            }`}>{n}</button>
-        ))}
-        <button onClick={() => onPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-          className="w-8 h-8 rounded-lg border border-line bg-paper text-ink font-bold hover:bg-bone-2 disabled:opacity-30 disabled:cursor-not-allowed text-sm">›</button>
-      </div>
-    </div>
-  )
-}
-
-function DetailModal({ item, onClose, onStatusChange }) {
+function AuctionDrawer({ item, onClose, onStatusChange }) {
   const [note, setNote] = useState(item.adminNote || '')
-
+  const s = STATUS[item.status] || STATUS.pending
   return (
-    <div className="fixed inset-0 bg-ink/60 backdrop-blur-sm z-50 flex items-center justify-center p-6">
-      <div className="surface-soft max-w-2xl w-full p-8 elev-3 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-start mb-6">
-          <div>
-            <div className="pixel-label text-dex mb-2">Auction Detail</div>
-            <h2 className="font-display text-2xl font-bold text-ink">{item.nameKo || item.name}</h2>
-            {item.nameKo && <div className="text-sm text-mute italic">{item.name}</div>}
-          </div>
-          <button onClick={onClose} className="text-mute hover:text-ink">
-            <Icon name="close" size={20} strokeWidth={2} />
-          </button>
-        </div>
-
-        <div className="space-y-5">
-          <Section title="신청자">
-            <Row k="이름" v={item.user?.name} />
-            <Row k="이메일" v={item.user?.email} />
-            {item.user?.phone && <Row k="연락처" v={item.user.phone} />}
-          </Section>
-
-          <Section title="카드 정보">
-            <Row k="카드명 (영문)" v={item.name} />
-            {item.nameKo && <Row k="카드명 (한글)" v={item.nameKo} />}
-            {item.set && <Row k="세트" v={item.set} />}
-            {item.year && <Row k="발매년도" v={item.year} />}
-            {item.number && <Row k="카드 번호" v={item.number} />}
-          </Section>
-
-          <Section title="등급">
-            <Row k="언어판" v={item.cardCountry ? `${COUNTRY_FLAG[item.cardCountry]} ${item.cardCountry}` : '-'} />
-            <Row k="등급사" v={item.gradeCompany} />
-            <Row k="점수" v={item.gradeScore} />
-            {item.gradeCert && <Row k="인증서 번호" v={`#${item.gradeCert}`} />}
-          </Section>
-
-          <Section title="판매 조건">
-            <Row k="유형" v={item.saleType === 'auction' ? '경매' : '즉시 구매'} />
-            <Row k="시작가" v={`₩${item.startPrice?.toLocaleString()}`} />
-            {item.buyNowPrice && <Row k="즉시 낙찰가" v={`₩${item.buyNowPrice?.toLocaleString()}`} />}
-            {item.endsAt && <Row k="종료 예정" v={new Date(item.endsAt).toLocaleString('ko-KR')} />}
-            <Row k="최소 호가" v={`₩${item.minIncrement?.toLocaleString()}`} />
-          </Section>
-
-          {(item.status === 'live') && (
-            <Section title="입찰 현황">
-              <Row k="현재 최고가" v={item.currentBid ? `₩${item.currentBid.toLocaleString()}` : '없음'} />
-              <Row k="입찰 수" v={`${item.bidCount}회`} />
-            </Section>
-          )}
-
-          <div>
-            <div className="font-display font-bold text-ink mb-2">어드민 메모</div>
-            <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3}
-              placeholder="검수 메모, 거절 사유 등"
-              className="w-full bg-bone-2 border border-line rounded-xl px-4 py-3 text-sm text-ink focus:border-ink outline-none transition-colors" />
-          </div>
-
-          <div>
-            <div className="font-display font-bold text-ink mb-3">상태 변경</div>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { value: 'approved', label: '승인', style: 'border-blue-300 text-blue-700 hover:bg-blue-50' },
-                { value: 'live', label: '경매 시작', style: 'border-emerald-300 text-emerald-700 hover:bg-emerald-50' },
-                { value: 'ended', label: '종료 처리', style: 'border-line text-mute hover:bg-bone-2' },
-                { value: 'rejected', label: '거절', style: 'border-red-300 text-red-700 hover:bg-red-50' },
-              ].filter(({ value }) => value !== item.status).map(({ value, label, style }) => (
-                <button key={value}
-                  onClick={() => onStatusChange(item._id, value, note)}
-                  className={`px-4 py-2 text-xs font-bold border rounded-lg transition-colors ${style}`}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-end mt-6 pt-4 border-t border-line">
-          <Button variant="ghost" onClick={onClose}>닫기</Button>
-        </div>
+    <Drawer
+      open
+      onClose={onClose}
+      title={item.nameKo || item.name}
+      subtitle={item.nameKo ? item.name : item.set}
+      width={560}
+      footer={
+        <>
+          <button onClick={onClose} className="text-xs font-bold text-mute hover:text-ink px-3 py-1.5 rounded-md hover:bg-bone-2">닫기</button>
+        </>
+      }
+    >
+      <div className="mb-4 flex items-center gap-2">
+        <StatusPill tone={s.tone} led={s.led}>{s.label}</StatusPill>
+        <span className="text-[11px] text-mute font-mono">신청일 {new Date(item.createdAt).toLocaleDateString('ko-KR')}</span>
       </div>
-    </div>
-  )
-}
 
-function Section({ title, children }) {
-  return (
-    <div>
-      <div className="font-display font-bold text-ink mb-2">{title}</div>
-      <div className="space-y-0">{children}</div>
-    </div>
-  )
-}
+      <div className="grid grid-cols-2 gap-4">
+        <DSection title="신청자">
+          <KV k="이름" v={item.user?.name} />
+          <KV k="이메일" v={item.user?.email} />
+          {item.user?.phone && <KV k="연락처" v={item.user.phone} />}
+        </DSection>
+        <DSection title="카드 정보">
+          <KV k="영문명" v={item.name} />
+          {item.nameKo && <KV k="한글명" v={item.nameKo} />}
+          {item.set && <KV k="세트" v={item.set} />}
+          {item.year && <KV k="연도" v={item.year} />}
+          {item.number && <KV k="번호" v={item.number} mono />}
+        </DSection>
+        <DSection title="등급">
+          <KV k="언어판" v={item.cardCountry ? `${COUNTRY_FLAG[item.cardCountry]} ${item.cardCountry}` : '-'} />
+          <KV k="등급사" v={item.gradeCompany} />
+          <KV k="점수" v={item.gradeScore} mono />
+          {item.gradeCert && <KV k="인증서" v={`#${item.gradeCert}`} mono />}
+        </DSection>
+        <DSection title="판매 조건">
+          <KV k="유형" v={item.saleType === 'auction' ? '경매' : '즉시 구매'} />
+          <KV k="시작가" v={`₩${item.startPrice?.toLocaleString()}`} mono />
+          {item.buyNowPrice && <KV k="즉시낙찰" v={`₩${item.buyNowPrice?.toLocaleString()}`} mono />}
+          <KV k="최소호가" v={`₩${item.minIncrement?.toLocaleString()}`} mono />
+          {item.endsAt && <KV k="종료" v={new Date(item.endsAt).toLocaleString('ko-KR')} />}
+        </DSection>
+      </div>
 
-function Row({ k, v }) {
-  return (
-    <div className="flex justify-between py-2 border-b border-line text-sm">
-      <span className="text-mute font-bold">{k}</span>
-      <span className="font-bold text-ink">{v}</span>
-    </div>
+      {item.status === 'live' && (
+        <DSection title="입찰 현황">
+          <KV k="현재 최고가" v={item.currentBid ? `₩${item.currentBid.toLocaleString()}` : '없음'} mono highlight />
+          <KV k="총 입찰 수" v={`${item.bidCount || 0}회`} mono />
+        </DSection>
+      )}
+
+      <DSection title="어드민 메모">
+        <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3}
+          placeholder="검수 메모, 거절 사유 등"
+          className="w-full bg-bone-2/50 border border-ink/15 rounded-md px-3 py-2 text-xs text-ink focus:border-ink outline-none" />
+      </DSection>
+
+      <DSection title="상태 변경">
+        <div className="flex flex-wrap gap-1.5">
+          {Object.entries(STATUS).filter(([k]) => k !== item.status).map(([k, v]) => (
+            <button key={k} onClick={() => onStatusChange(item._id, k, note)}
+              className={`text-[11px] font-bold px-3 py-1.5 rounded-md border ${k === 'rejected' ? 'border-red-300 text-red-700 hover:bg-red-50' : k === 'live' ? 'border-emerald-300 text-emerald-700 hover:bg-emerald-50' : k === 'approved' ? 'border-blue-300 text-blue-700 hover:bg-blue-50' : 'border-ink/15 text-mute hover:bg-bone-2'}`}>
+              → {v.label}
+            </button>
+          ))}
+        </div>
+      </DSection>
+    </Drawer>
   )
 }

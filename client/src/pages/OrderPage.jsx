@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import useCartStore from '@/store/cartStore'
 import { formatKRWFull, getShippingOptionsForPrice, getShippingTier, SHIPPING_TIER } from '@/api/cards'
 import api from '@/api/axios'
-import Button from '@/components/common/Button'
 import Icon from '@/components/common/Icon'
+import Eyebrow from '@/components/common/Eyebrow'
 
 const STORE_ID = 'store-43aecd40-673f-4953-8fd3-6aa4882eff27'
 
@@ -20,7 +20,6 @@ export default function OrderPage() {
   const { items, total, clear } = useCartStore()
   const navigate = useNavigate()
 
-  // 카트 상품 중 가장 비싼 가격으로 배송 등급 결정
   const maxPrice = useMemo(() => Math.max(0, ...items.map((c) => c.price || c.currentBid || 0)), [items])
   const isAllPacks = items.length > 0 && items.every((i) => i.type === 'pack' || i.type === 'box')
   const tier = getShippingTier(maxPrice)
@@ -35,7 +34,6 @@ export default function OrderPage() {
   })
   const [paying, setPaying] = useState(false)
 
-  // Brink's 강제 시 자동 설정
   useEffect(() => {
     if (requireBrinks && form.shipping !== 'brinks') {
       setForm((f) => ({ ...f, shipping: 'brinks' }))
@@ -44,9 +42,12 @@ export default function OrderPage() {
 
   if (items.length === 0) {
     return (
-      <div className="p-20 text-center text-mute">
-        주문할 상품이 없습니다.
-        <div className="mt-6"><Button variant="primary" onClick={() => navigate('/products')}>카탈로그</Button></div>
+      <div className="p-20 text-center">
+        <div className="text-mute font-bold mb-6">주문할 상품이 없어요.</div>
+        <button onClick={() => navigate('/products')}
+          className="btn-pop px-6 py-3 rounded-xl inline-flex items-center gap-2 font-bold">
+          카탈로그 둘러보기 <Icon name="arrow" size={14} strokeWidth={2.4} />
+        </button>
       </div>
     )
   }
@@ -58,7 +59,7 @@ export default function OrderPage() {
 
   const submit = async (e) => {
     e.preventDefault()
-    if (!window.PortOne) return alert('결제 모듈을 불러오는 중입니다. 잠시 후 다시 시도해주세요.')
+    if (!window.PortOne) return alert('결제 모듈을 불러오는 중이에요. 잠시 후 다시 시도해주세요.')
 
     const payInfo = PAY_METHODS.find((m) => m.id === form.method) || PAY_METHODS[0]
     const paymentId = 'PV-' + Date.now().toString(36).toUpperCase()
@@ -92,7 +93,7 @@ export default function OrderPage() {
 
       if (rsp?.code) {
         setPaying(false)
-        alert(rsp.message || '결제가 취소되었습니다.')
+        alert(rsp.message || '결제가 취소되었어요.')
         return
       }
 
@@ -134,23 +135,28 @@ export default function OrderPage() {
   return (
     <div className="max-w-6xl mx-auto px-6 py-12">
       <div className="mb-10">
-        <div className="pixel-label text-mute mb-3">Order</div>
-        <h1 className="font-display text-4xl font-bold text-ink tracking-tight">주문 정보</h1>
+        <Eyebrow tone="water" led="blue" pulse>ORDER · 거의 다 왔어요</Eyebrow>
+        <h1 className="mt-4 font-display text-4xl lg:text-5xl font-bold text-ink tracking-tight leading-[1.1]">
+          배송 정보
+          <span className="relative inline-block ml-3">
+            <span className="relative z-10 text-water">어디로 보낼까요?</span>
+            <span className="absolute left-0 right-0 bottom-1 h-3 bg-electric/60 -z-0 rounded-sm" aria-hidden />
+          </span>
+        </h1>
       </div>
 
-      {/* Mandatory Brink's banner */}
       {requireBrinks && (
-        <div className="bg-gradient-to-br from-rose-50 to-red-50 border-2 border-dex/40 rounded-xl p-5 mb-6 flex items-start gap-4 elev-1">
-          <div className="w-12 h-12 rounded-full bg-dex text-paper flex items-center justify-center flex-shrink-0">
-            <Icon name="shield" size={24} strokeWidth={2} />
+        <div className="surface-pop bg-rose-50 p-5 mb-6 flex items-start gap-4">
+          <div className="w-12 h-12 rounded-full bg-dex text-paper flex items-center justify-center flex-shrink-0 border-2 border-ink shadow-[0_3px_0_#1a1a1a]">
+            <Icon name="shield" size={24} strokeWidth={2.4} />
           </div>
           <div className="flex-1">
             <div className="font-bold text-dex inline-flex items-center gap-2">
               Brink's Armored Transport 자동 적용
-              <span className="pixel-label bg-dex text-paper px-2 py-0.5 rounded-full text-[9px]">MANDATORY</span>
+              <span className="text-[9px] font-bold bg-dex text-paper px-2 py-0.5 rounded-full tracking-wider border border-ink">MANDATORY</span>
             </div>
-            <div className="text-sm text-ink/85 mt-1.5 leading-relaxed">
-              1억원 이상 거래는 <strong>Brink's Global Services</strong>의 보안 호송이 의무입니다.
+            <div className="text-sm text-ink/85 mt-1.5 leading-relaxed font-medium">
+              1억원 이상 거래는 <strong>Brink's Global Services</strong>의 보안 호송이 의무예요.
               무장 운송 차량 + 호송 인력 2인 + 전액 보험 + 실시간 추적.
               운송 비용 ₩1,500,000.
             </div>
@@ -160,7 +166,7 @@ export default function OrderPage() {
 
       <form onSubmit={submit} className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
-          <Section title="배송지">
+          <Section title="🚚 배송지">
             <div className="grid grid-cols-2 gap-4">
               <Field label="수령인" value={form.name} onChange={(v) => setForm({...form, name: v})} required />
               <Field label="이메일" value={form.email} onChange={(v) => setForm({...form, email: v})} required placeholder="example@email.com" type="email" />
@@ -172,7 +178,7 @@ export default function OrderPage() {
             </div>
           </Section>
 
-          <Section title="배송 방법">
+          <Section title="📦 배송 방법">
             <div className="space-y-2.5">
               {shippingOpts.map((opt) => (
                 <ShipOpt
@@ -186,58 +192,63 @@ export default function OrderPage() {
             </div>
           </Section>
 
-          <Section title="결제 수단">
+          <Section title="💳 결제 수단">
             <div className="space-y-2">
-              {PAY_METHODS.map((m) => (
-                <label key={m.id}
-                  className={`block p-4 rounded-xl border cursor-pointer transition-all ${
-                    form.method === m.id ? 'border-ink bg-ink/[0.03] elev-1' : 'border-line hover:border-ink/30'
-                  }`}>
-                  <div className="flex items-center gap-4">
-                    <input type="radio" checked={form.method === m.id} onChange={() => setForm({...form, method: m.id})} className="accent-ink" />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-ink text-sm">{m.label}</span>
-                        {m.recommended && (
-                          <span className="text-[10px] font-bold bg-gold text-ink px-2 py-0.5 rounded-full tracking-wider">추천</span>
-                        )}
+              {PAY_METHODS.map((m) => {
+                const active = form.method === m.id
+                return (
+                  <label key={m.id}
+                    className={`block p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                      active
+                        ? 'border-ink bg-electric/20 shadow-[0_3px_0_#1a1a1a] -translate-y-0.5'
+                        : 'border-ink/15 hover:border-ink hover:-translate-y-0.5 hover:shadow-[0_3px_0_#1a1a1a]'
+                    }`}>
+                    <div className="flex items-center gap-4">
+                      <input type="radio" checked={active} onChange={() => setForm({...form, method: m.id})} className="accent-ink w-4 h-4" />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-ink text-sm">{m.label}</span>
+                          {m.recommended && (
+                            <span className="text-[10px] font-bold bg-electric text-ink border border-ink px-2 py-0.5 rounded-full tracking-wider shadow-[0_1px_0_#1a1a1a]">⭐ 추천</span>
+                          )}
+                        </div>
+                        <div className="text-xs text-mute mt-0.5 font-medium">{m.desc}</div>
                       </div>
-                      <div className="text-xs text-mute mt-0.5">{m.desc}</div>
                     </div>
-                  </div>
-                </label>
-              ))}
+                  </label>
+                )
+              })}
             </div>
           </Section>
 
-          <Section title="옵션">
+          <Section title="✓ 옵션">
             <Check v={form.signature} onChange={(x) => setForm({...form, signature: x})} label="수령인 서명 필수 (권장)" />
             <Check v={form.insurance} onChange={(x) => setForm({...form, insurance: x})} label="추가 보험 가입 (거래금액의 0.5%)" />
           </Section>
 
-          <Section title="요청 메모">
+          <Section title="📝 요청 메모">
             <textarea value={form.memo} onChange={(e) => setForm({...form, memo: e.target.value})} rows={3}
-              placeholder="배송 시 요청사항"
-              className="w-full bg-bone-2 border border-line rounded-lg px-4 py-3 text-sm text-ink focus:border-ink focus:bg-paper outline-none transition-colors" />
+              placeholder="배송 시 요청사항을 적어주세요"
+              className="w-full bg-bone-2 border-2 border-ink/20 rounded-lg px-4 py-3 text-sm text-ink focus:border-ink focus:bg-paper outline-none transition-colors font-medium" />
           </Section>
         </div>
 
         <aside>
-          <div className="surface-soft p-6 elev-2 sticky top-32">
-            <div className="pixel-label text-mute mb-5">Summary</div>
-            <div className="space-y-3 pb-4 border-b border-line">
+          <div className="surface-pop p-6 sticky top-32">
+            <Eyebrow tone="electric" led="yellow">FINAL · 결제 요약</Eyebrow>
+            <div className="space-y-3 pb-4 mt-4 border-b-2 border-ink/15">
               {items.map((c) => {
                 const img = Array.isArray(c.images) ? c.images[0] : c.images
                 return (
                   <div key={c.id || c._id} className="flex items-center gap-3">
                     {img ? (
-                      <img src={img} alt={c.name} className="w-12 h-16 object-contain rounded-md bg-bone-2 flex-shrink-0" />
+                      <img src={img} alt={c.name} className="w-12 h-16 object-contain rounded-md bg-bone-2 border border-ink/15 flex-shrink-0" />
                     ) : (
-                      <div className="w-12 h-16 rounded-md bg-bone-2 flex-shrink-0" />
+                      <div className="w-12 h-16 rounded-md bg-bone-2 border border-ink/15 flex-shrink-0" />
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-bold text-ink truncate">{c.nameKo || c.name}</div>
-                      <div className="text-xs text-mute mt-0.5">× {c.qty || 1}</div>
+                      <div className="text-xs text-mute mt-0.5 font-mono">× {c.qty || 1}</div>
                     </div>
                     <span className="font-mono text-xs font-bold text-ink tabular-nums flex-shrink-0">
                       {formatKRWFull((c.priceSnapshot || c.price || c.currentBid || 0) * (c.qty || 1))}
@@ -251,14 +262,15 @@ export default function OrderPage() {
               <Row label={shipOpt?.label || '배송'} value={shipping > 0 ? formatKRWFull(shipping) : '무료'} highlight={shipOpt?.premium} />
               {insurance > 0 && <Row label="보험" value={formatKRWFull(insurance)} />}
             </div>
-            <div className="my-4 border-t border-line" />
+            <div className="my-4 border-t-2 border-ink/15" />
             <div className="flex justify-between items-baseline mb-6">
-              <span className="text-mute font-bold text-sm">총 결제</span>
-              <span className="font-display text-3xl font-bold text-ink tabular-nums">{formatKRWFull(grand)}</span>
+              <span className="text-ink font-bold text-sm">총 결제</span>
+              <span className="font-display text-3xl font-bold text-dex tabular-nums">{formatKRWFull(grand)}</span>
             </div>
-            <Button variant="accent" size="lg" className="w-full" type="submit" disabled={paying}>
-              {paying ? '결제 처리중...' : <>결제하기 <Icon name="arrow" size={14} strokeWidth={2.2} /></>}
-            </Button>
+            <button type="submit" disabled={paying}
+              className="btn-pop w-full py-3 rounded-xl font-bold inline-flex items-center justify-center gap-2 disabled:opacity-60">
+              {paying ? '결제 처리중...' : <>결제하기! <Icon name="arrow" size={14} strokeWidth={2.4} /></>}
+            </button>
           </div>
         </aside>
       </form>
@@ -268,7 +280,7 @@ export default function OrderPage() {
 
 function Section({ title, children }) {
   return (
-    <div className="surface-soft p-6">
+    <div className="surface-pop p-6">
       <h3 className="font-display text-xl font-bold text-ink mb-5">{title}</h3>
       <div className="space-y-3">{children}</div>
     </div>
@@ -277,32 +289,36 @@ function Section({ title, children }) {
 function Field({ label, value, onChange, ...rest }) {
   return (
     <label className="block">
-      <div className="text-[11px] text-mute font-bold mb-1.5 tracking-wide">{label}</div>
+      <div className="text-[11px] text-ink font-bold mb-1.5 tracking-wide">{label}</div>
       <input value={value} onChange={(e) => onChange(e.target.value)} {...rest}
-        className="w-full bg-bone-2 border border-line rounded-lg px-4 py-2.5 text-sm text-ink focus:border-ink focus:bg-paper outline-none transition-colors" />
+        className="w-full bg-bone-2 border-2 border-ink/20 rounded-lg px-4 py-2.5 text-sm text-ink focus:border-ink focus:bg-paper outline-none transition-colors font-medium" />
     </label>
   )
 }
 function ShipOpt({ opt, active, disabled, onChange }) {
   return (
-    <label className={`block p-4 rounded-xl border cursor-pointer transition-all ${
+    <label className={`block p-4 rounded-xl border-2 cursor-pointer transition-all ${
       disabled ? 'opacity-40 cursor-not-allowed' : ''
     } ${
-      active ? (opt.premium ? 'border-dex bg-dex/5 elev-2' : 'border-ink bg-ink/[0.03] elev-1') : 'border-line hover:border-ink/30'
+      active
+        ? (opt.premium
+            ? 'border-ink bg-dex/10 shadow-[0_3px_0_#1a1a1a] -translate-y-0.5'
+            : 'border-ink bg-electric/20 shadow-[0_3px_0_#1a1a1a] -translate-y-0.5')
+        : 'border-ink/15 hover:border-ink hover:-translate-y-0.5 hover:shadow-[0_3px_0_#1a1a1a]'
     }`}>
       <div className="flex items-center gap-3">
-        <input type="radio" checked={active} onChange={onChange} disabled={disabled} className="accent-ink" />
+        <input type="radio" checked={active} onChange={onChange} disabled={disabled} className="accent-ink w-4 h-4" />
         <span className={`led led-${opt.led}`} style={{ width: 8, height: 8 }} />
-        <Icon name={opt.icon} size={16} strokeWidth={1.8} className={opt.premium ? 'text-dex' : 'text-ink/60'} />
+        <Icon name={opt.icon} size={16} strokeWidth={2} className={opt.premium ? 'text-dex' : 'text-ink'} />
         <div className="flex-1">
           <div className={`font-bold ${opt.premium ? 'text-dex' : 'text-ink'} inline-flex items-center gap-2`}>
             {opt.label}
-            {opt.premium && <span className="pixel-label bg-dex text-paper px-1.5 py-0.5 rounded-full text-[8px]">SECURE</span>}
-            {opt.forPacks && <span className="pixel-label bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded-full text-[8px]">QUICK</span>}
+            {opt.premium && <span className="text-[8px] font-bold bg-dex text-paper px-1.5 py-0.5 rounded-full tracking-wider border border-ink">SECURE</span>}
+            {opt.forPacks && <span className="text-[8px] font-bold bg-electric text-ink px-1.5 py-0.5 rounded-full tracking-wider border border-ink">QUICK</span>}
           </div>
-          <div className="text-xs text-mute mt-0.5">{opt.desc}</div>
+          <div className="text-xs text-mute mt-0.5 font-medium">{opt.desc}</div>
         </div>
-        <div className={`font-mono text-sm font-bold ${opt.premium ? 'text-dex' : 'text-ink'}`}>
+        <div className={`font-mono text-sm font-bold tabular-nums ${opt.premium ? 'text-dex' : 'text-ink'}`}>
           {opt.price > 0 ? `₩${opt.price.toLocaleString()}` : '무료'}
         </div>
       </div>
@@ -320,7 +336,7 @@ function Check({ v, onChange, label }) {
 function Row({ label, value, highlight }) {
   return (
     <div className="flex justify-between text-sm">
-      <span className="text-mute truncate">{label}</span>
+      <span className="text-mute font-medium truncate">{label}</span>
       <span className={`font-mono font-bold tabular-nums ${highlight ? 'text-dex' : 'text-ink'}`}>{value}</span>
     </div>
   )

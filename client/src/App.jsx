@@ -21,6 +21,7 @@ import NotFoundPage from '@/pages/NotFoundPage'
 import PacksPage from '@/pages/PacksPage'
 import PackDetailPage from '@/pages/PackDetailPage'
 import SellPage from '@/pages/SellPage'
+import DexPage from '@/pages/DexPage'
 
 import AdminDashboard from '@/pages/admin/AdminDashboard'
 import AdminProducts from '@/pages/admin/AdminProducts'
@@ -32,6 +33,8 @@ import AdminUsers from '@/pages/admin/AdminUsers'
 import AdminAuctions from '@/pages/admin/AdminAuctions'
 import AdminProductEdit from '@/pages/admin/AdminProductEdit'
 import AdminPackEdit from '@/pages/admin/AdminPackEdit'
+import AdminAuditLog from '@/pages/admin/AdminAuditLog'
+import AdminAuctionReview from '@/pages/admin/AdminAuctionReview'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 1000 * 60 * 5, retry: 1 } },
@@ -47,7 +50,7 @@ export default function App() {
             <Route index element={<HomePage />} />
             <Route path="auctions" element={<ProductsPage />} />
             <Route path="products" element={<ProductsPage />} />
-            <Route path="market" element={<ProductsPage />} />
+            <Route path="dex" element={<DexPage />} />
             <Route path="products/:id" element={<ProductDetailPage />} />
             <Route path="packs" element={<PacksPage />} />
             <Route path="packs/:id" element={<PackDetailPage />} />
@@ -72,8 +75,10 @@ export default function App() {
             <Route path="packs/new" element={<AdminPackNew />} />
             <Route path="packs/:id/edit" element={<AdminPackEdit />} />
             <Route path="auctions" element={<AdminAuctions />} />
+            <Route path="auctions/review" element={<AdminAuctionReview />} />
             <Route path="orders" element={<AdminOrders />} />
             <Route path="users" element={<AdminUsers />} />
+            <Route path="audit" element={<AdminAuditLog />} />
           </Route>
 
           <Route path="*" element={<NotFoundPage />} />
