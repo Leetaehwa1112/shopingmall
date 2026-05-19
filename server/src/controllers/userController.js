@@ -1,6 +1,17 @@
 const bcrypt = require("bcrypt");
+const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const { sendVerifyEmail, sendPasswordReset } = require("../utils/mailer");
+
+// ─── 토큰 헬퍼 ─────────────────────────────────────────────
+// 32바이트 랜덤 → URL-safe base64 (사용자 토큰). DB엔 SHA256 해시만 저장 (탈취 방어).
+function generateToken() {
+  return crypto.randomBytes(32).toString("base64url");
+}
+function hashToken(t) {
+  return crypto.createHash("sha256").update(t).digest("hex");
+}
 
 const SALT_ROUNDS = 10;
 
@@ -107,6 +118,11 @@ const createUser = async (req, res) => {
     // 비밀번호 암호화
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
+    // 이메일 인증 토큰 생성 (24시간)
+    const verifyToken = generateToken();
+    const verifyTokenHash = hashToken(verifyToken);
+    const verifyTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
     // user_type은 클라이언트 입력 무시 → 항상 'customer'로 강제 (권한 상승 방어)
     const user = await User.create({
       email: normalizedEmail,
@@ -116,16 +132,29 @@ const createUser = async (req, res) => {
       profile_image,
       phone: trimStr(phone, 30),
       address,
+      verifyTokenHash,
+      verifyTokenExpires,
     });
 
-    // 토큰 발급 + 비밀번호 제외
+    // 인증 메일 발송 (실패해도 가입은 진행 — 사용자가 재발송 가능)
+    const clientUrl = (process.env.CLIENT_ORIGIN || "http://localhost:3000").split(",")[0];
+    sendVerifyEmail(normalizedEmail, verifyToken, clientUrl).catch((err) =>
+      console.error("[mailer] sendVerifyEmail 실패:", err.message),
+    );
+
+    // 토큰 발급 + 민감 필드 제거 (verifyTokenHash, resetTokenHash 등)
     const token = jwt.sign(
       { id: user._id, user_type: user.user_type },
       process.env.JWT_SECRET,
       { expiresIn: '30d' }
     );
-    const { password: _, ...userData } = user.toObject();
-    res.status(201).json({ success: true, token, data: userData });
+    const obj = user.toObject();
+    delete obj.password;
+    delete obj.verifyTokenHash;
+    delete obj.verifyTokenExpires;
+    delete obj.resetTokenHash;
+    delete obj.resetTokenExpires;
+    res.status(201).json({ success: true, token, data: obj });
   } catch (error) {
     if (error.name === "ValidationError") {
       const messages = Object.values(error.errors).map((e) => e.message);
@@ -285,13 +314,18 @@ const loginUser = async (req, res) => {
       { expiresIn: "30d" }
     );
 
-    // 응답에서 비밀번호 제외
-    const { password: _, ...userData } = user.toObject();
+    // 응답에서 비밀번호 + 모든 토큰 해시 제거
+    const obj = user.toObject();
+    delete obj.password;
+    delete obj.verifyTokenHash;
+    delete obj.verifyTokenExpires;
+    delete obj.resetTokenHash;
+    delete obj.resetTokenExpires;
 
-    res.status(200).json({ 
-      success: true, 
+    res.status(200).json({
+      success: true,
       token,
-      data: userData 
+      data: obj,
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -301,8 +335,13 @@ const loginUser = async (req, res) => {
 // [GET] /api/users/me - 내 정보 조회 (토큰 필요)
 const getMe = async (req, res) => {
   try {
-    const { password: _, ...userData } = req.user.toObject();
-    res.status(200).json({ success: true, data: userData });
+    const obj = req.user.toObject();
+    delete obj.password;
+    delete obj.verifyTokenHash;
+    delete obj.verifyTokenExpires;
+    delete obj.resetTokenHash;
+    delete obj.resetTokenExpires;
+    res.status(200).json({ success: true, data: obj });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -320,6 +359,107 @@ const checkEmail = async (req, res) => {
   }
 };
 
+// ─── 이메일 인증 ────────────────────────────────────────────
+
+// [POST] /api/users/verify-email - body: { token } — 이메일 인증 완료 처리
+const verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.body || {};
+    if (!token || typeof token !== "string") {
+      return res.status(400).json({ success: false, message: "토큰이 필요합니다." });
+    }
+    const tokenHash = hashToken(token);
+    const user = await User.findOne({
+      verifyTokenHash: tokenHash,
+      verifyTokenExpires: { $gt: new Date() },
+    }).select("+verifyTokenHash +verifyTokenExpires");
+
+    if (!user) {
+      return res.status(400).json({ success: false, message: "토큰이 유효하지 않거나 만료되었어요." });
+    }
+    user.emailVerified = true;
+    user.verifyTokenHash = null;
+    user.verifyTokenExpires = null;
+    await user.save();
+    res.status(200).json({ success: true, message: "이메일이 인증되었습니다." });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// [POST] /api/users/resend-verification - 로그인 유저 본인 이메일 재발송
+const resendVerification = async (req, res) => {
+  try {
+    if (req.user.emailVerified) {
+      return res.status(400).json({ success: false, message: "이미 인증된 계정입니다." });
+    }
+    const token = generateToken();
+    req.user.verifyTokenHash = hashToken(token);
+    req.user.verifyTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await req.user.save();
+
+    const clientUrl = (process.env.CLIENT_ORIGIN || "http://localhost:3000").split(",")[0];
+    sendVerifyEmail(req.user.email, token, clientUrl).catch(() => {});
+    res.status(200).json({ success: true, message: "인증 메일이 재발송됐어요." });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ─── 비밀번호 재설정 ────────────────────────────────────────
+
+// [POST] /api/users/request-password-reset - body: { email }
+// 보안: 이메일 존재 여부 노출 방지 위해 항상 200 응답.
+const requestPasswordReset = async (req, res) => {
+  try {
+    const email = (req.body?.email || "").toLowerCase().trim();
+    if (!email) return res.status(400).json({ success: false, message: "이메일이 필요합니다." });
+
+    const user = await User.findOne({ email });
+    // 이메일 enumeration 방어 — 존재하든 안 하든 동일 응답
+    if (user) {
+      const token = generateToken();
+      user.resetTokenHash = hashToken(token);
+      user.resetTokenExpires = new Date(Date.now() + 30 * 60 * 1000); // 30분
+      await user.save();
+
+      const clientUrl = (process.env.CLIENT_ORIGIN || "http://localhost:3000").split(",")[0];
+      sendPasswordReset(email, token, clientUrl).catch(() => {});
+    }
+
+    res.status(200).json({ success: true, message: "이메일이 가입되어 있다면 재설정 링크가 발송됩니다." });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// [POST] /api/users/reset-password - body: { token, password }
+const resetPassword = async (req, res) => {
+  try {
+    const { token, password } = req.body || {};
+    if (!token) return res.status(400).json({ success: false, message: "토큰이 필요합니다." });
+    const pwErr = validatePassword(password);
+    if (pwErr) return res.status(400).json({ success: false, message: pwErr });
+
+    const tokenHash = hashToken(token);
+    const user = await User.findOne({
+      resetTokenHash: tokenHash,
+      resetTokenExpires: { $gt: new Date() },
+    }).select("+resetTokenHash +resetTokenExpires");
+
+    if (!user) {
+      return res.status(400).json({ success: false, message: "토큰이 유효하지 않거나 만료되었어요." });
+    }
+    user.password = await bcrypt.hash(password, SALT_ROUNDS);
+    user.resetTokenHash = null;
+    user.resetTokenExpires = null;
+    await user.save();
+    res.status(200).json({ success: true, message: "비밀번호가 변경되었습니다." });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
@@ -331,4 +471,8 @@ module.exports = {
   loginUser,
   getMe,
   checkEmail,
+  verifyEmail,
+  resendVerification,
+  requestPasswordReset,
+  resetPassword,
 };

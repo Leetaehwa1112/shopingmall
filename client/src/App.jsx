@@ -24,6 +24,8 @@ const PackDetailPage = lazy(() => import('@/pages/PackDetailPage'))
 const SellPage = lazy(() => import('@/pages/SellPage'))
 const DexPage = lazy(() => import('@/pages/DexPage'))
 const InfoPage = lazy(() => import('@/pages/InfoPage'))
+const PasswordResetPage = lazy(() => import('@/pages/PasswordResetPage'))
+const VerifyEmailPage = lazy(() => import('@/pages/VerifyEmailPage'))
 
 // ─── Admin 전체: 비-admin 사용자는 다운로드 안 함 ───────────
 const AdminLayout = lazy(() => import('@/components/layout/AdminLayout'))
@@ -86,6 +88,9 @@ export default function App() {
               <Route path="my-orders" element={<MyOrdersPage />} />
               {/* 정적 정보 페이지 — 단일 컴포넌트가 슬러그로 분기 */}
               <Route path="info/:slug" element={<InfoPage />} />
+              {/* 인증 / 비밀번호 재설정 — 토큰 링크 진입점 */}
+              <Route path="reset-password" element={<PasswordResetPage />} />
+              <Route path="verify-email" element={<VerifyEmailPage />} />
             </Route>
 
             {/* admin 로그인은 Layout(일반 헤더/푸터) 밖에서 풀스크린 */}

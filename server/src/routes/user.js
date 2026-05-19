@@ -11,8 +11,22 @@ const {
   loginUser,
   getMe,
   checkEmail,
+  verifyEmail,
+  resendVerification,
+  requestPasswordReset,
+  resetPassword,
 } = require("../controllers/userController");
 const { protect, admin } = require("../middlewares/auth");
+const rateLimit = require("express-rate-limit");
+
+// 비밀번호 재설정 요청 / 이메일 인증 — 남용 방어 (분당 3건 / IP)
+const tokenLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "요청이 너무 잦아요. 잠시 후 다시 시도해주세요." },
+});
 
 // IDOR 방어 — :id 파라미터가 본인이 아니면 거부 (admin은 통과)
 const requireSelfOrAdmin = (req, res, next) => {
@@ -33,6 +47,12 @@ router.post("/", createUser);
 
 // GET    /api/users/me     - 내 정보 조회
 router.get("/me", protect, getMe);
+
+// ─── 이메일 인증 / 비밀번호 재설정 ──────────────────────
+router.post("/verify-email", tokenLimiter, verifyEmail);
+router.post("/resend-verification", tokenLimiter, protect, resendVerification);
+router.post("/request-password-reset", tokenLimiter, requestPasswordReset);
+router.post("/reset-password", tokenLimiter, resetPassword);
 
 // 위시리스트 — 본인만 (IDOR 방어)
 router.route("/:id/wishlist/:cardId")

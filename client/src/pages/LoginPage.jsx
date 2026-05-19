@@ -72,7 +72,7 @@ export default function LoginPage() {
             <label className="flex items-center gap-2 text-ink font-bold cursor-pointer">
               <input type="checkbox" className="accent-ink w-4 h-4" /> 로그인 유지
             </label>
-            <Link to="#" className="text-mute hover:text-dex font-bold transition-colors">비밀번호 찾기</Link>
+            <Link to="/reset-password" className="text-mute hover:text-dex font-bold transition-colors">비밀번호 찾기</Link>
           </div>
 
           <button type="submit" disabled={loading}

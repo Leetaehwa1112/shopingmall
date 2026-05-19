@@ -57,6 +57,15 @@ const userSchema = new mongoose.Schema(
         ref: "Auction",
       },
     ],
+
+    // ─── 이메일 인증 ──────────────────────────────────────────
+    emailVerified: { type: Boolean, default: false },
+    verifyTokenHash: { type: String, default: null, select: false },
+    verifyTokenExpires: { type: Date, default: null, select: false },
+
+    // ─── 비밀번호 재설정 ─────────────────────────────────────
+    resetTokenHash: { type: String, default: null, select: false },
+    resetTokenExpires: { type: Date, default: null, select: false },
   },
   {
     timestamps: true, // createdAt, updatedAt 자동 생성
