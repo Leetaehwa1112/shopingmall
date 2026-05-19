@@ -116,8 +116,8 @@ export default function HomePage() {
             </h1>
 
             <p className="text-base lg:text-[18px] text-mute leading-relaxed max-w-xl mb-8 font-medium">
-              PSA·BGS·CGC 인증 카드만 모았어요. 100% 정품 보증, 가품이면 전액 환불.
-              <span className="text-ink font-bold"> 트레이너의 마당에 오신 걸 환영해요.</span>
+              PSA·BGS·CGC 인증 카드만 모았어요. 100% 정품 보증, 가품이면 전액 환불.<br />
+              <span className="text-ink font-bold">트레이너의 마당에 오신 걸 환영해요.</span>
             </p>
 
             <div className="flex flex-wrap gap-3 mb-8">
