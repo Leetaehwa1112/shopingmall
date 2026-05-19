@@ -89,15 +89,33 @@ const useCartStore = create(
         }
       },
 
-      updateQty: (productId, qty) => {
+      updateQty: async (productId, qty) => {
+        // 이전 수량 보관 — 서버 거부 시 롤백용
+        const prev = get().items.find((i) => (i.id || i._id) === productId)
+        const prevQty = prev?.qty
         set({
           items: get().items.map((i) =>
             (i.id || i._id) === productId ? { ...i, qty } : i
           ),
         })
         if (isLoggedIn()) {
-          const it = get().items.find((i) => (i.id || i._id) === productId)
-          api.put(`/cart/${productId}`, { qty, itemType: it?.itemType }).catch(() => {})
+          try {
+            await api.put(`/cart/${productId}`, { qty, itemType: prev?.itemType })
+          } catch (err) {
+            // 서버 거부(재고 부족 등) → 낙관적 업데이트 되돌리고 토스트
+            if (prevQty !== undefined) {
+              set({
+                items: get().items.map((i) =>
+                  (i.id || i._id) === productId ? { ...i, qty: prevQty } : i
+                ),
+              })
+            }
+            const msg = err?.response?.data?.message || '수량 변경에 실패했어요.'
+            try {
+              const mod = await import('@/store/toastStore')
+              mod.default.getState().push({ type: 'error', message: msg })
+            } catch { console.warn(msg) }
+          }
         }
       },
 
