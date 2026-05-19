@@ -7,8 +7,10 @@ const getPacks = async (req, res) => {
     if (type) filter.type = type;
     if (status) filter.status = status;
     const skip = (Number(page) - 1) * Number(limit);
+    // lean() — list는 read-only, Mongoose 문서 hydration 불필요.
+    // Pack 스키마는 큰 sub-doc/배열이 없어 select 생략 (전 필드 응답 크기 ~1KB/doc).
     const [packs, total] = await Promise.all([
-      Pack.find(filter).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
+      Pack.find(filter).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)).lean(),
       Pack.countDocuments(filter),
     ]);
     res.json({ success: true, total, data: packs });
@@ -17,7 +19,7 @@ const getPacks = async (req, res) => {
 
 const getPackById = async (req, res) => {
   try {
-    const pack = await Pack.findById(req.params.id);
+    const pack = await Pack.findById(req.params.id).lean();
     if (!pack) return res.status(404).json({ success: false, message: "팩을 찾을 수 없습니다." });
     res.json({ success: true, data: pack });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }

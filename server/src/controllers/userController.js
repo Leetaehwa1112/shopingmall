@@ -15,8 +15,9 @@ const getAllUsers = async (req, res) => {
       filter.$or = [{ name: rx }, { email: rx }, { phone: rx }];
     }
     const skip = (Number(page) - 1) * Number(limit);
+    // lean() — admin 목록은 read-only, hydration 불필요. password 제외 유지.
     const [users, total] = await Promise.all([
-      User.find(filter).select("-password").sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
+      User.find(filter).select("-password").sort({ createdAt: -1 }).skip(skip).limit(Number(limit)).lean(),
       User.countDocuments(filter),
     ]);
     res.status(200).json({

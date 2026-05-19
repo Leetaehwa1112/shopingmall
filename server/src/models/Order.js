@@ -157,6 +157,13 @@ orderSchema.index({ user: 1, createdAt: -1 })
 orderSchema.index({ status: 1, createdAt: -1 })
 // 송장/검색 — orderNumber는 이미 unique 인덱스, 추가 불필요
 
+// 대시보드 shippingDue 카운트 — status='paid' AND shipping.trackingNumber=null.
+// partialFilterExpression으로 status='paid' 문서만 인덱싱 → 인덱스 크기 최소화.
+orderSchema.index(
+  { 'shipping.trackingNumber': 1, status: 1 },
+  { partialFilterExpression: { status: 'paid' } },
+)
+
 const Order = mongoose.model('Order', orderSchema)
 
 module.exports = Order

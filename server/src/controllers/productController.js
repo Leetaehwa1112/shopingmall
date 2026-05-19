@@ -1,5 +1,12 @@
 const Product = require("../models/Product");
 
+// 목록 응답용 projection — UI가 실제 사용하는 필드만.
+// 제외: bidHistory(최대 50개 sub-doc), description(긴 본문), created_by populate.
+const LIST_FIELDS =
+  "sku name nameKo set setShort year number accent rarity isHolo grade " +
+  "price currentBid bidCount watchers endsAt population category " +
+  "sale_type status images stock createdAt";
+
 // [GET] /api/products - 상품 목록 조회
 const getProducts = async (req, res) => {
   try {
@@ -12,12 +19,16 @@ const getProducts = async (req, res) => {
 
     const skip = (Number(page) - 1) * Number(limit);
 
+    // lean() — Mongoose hydration 스킵, plain object 반환 (list는 read-only)
+    // select(LIST_FIELDS) — bidHistory/description 등 list 미사용 필드 제외
+    // populate 제거 — created_by는 list UI에서 미사용
     const [products, total] = await Promise.all([
       Product.find(filter)
+        .select(LIST_FIELDS)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(Number(limit))
-        .populate("created_by", "name email"),
+        .lean(),
       Product.countDocuments(filter),
     ]);
 
@@ -36,7 +47,9 @@ const getProducts = async (req, res) => {
 // [GET] /api/products/:id - 상품 단건 조회
 const getProductById = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id).populate("created_by", "name email");
+    // 단건 상세 — bidHistory/description 포함 풀필드. lean()으로 hydration 생략.
+    // created_by populate는 ProductDetailPage UI 미사용 → 제거.
+    const product = await Product.findById(req.params.id).lean();
 
     if (!product) {
       return res.status(404).json({ success: false, message: "상품을 찾을 수 없습니다." });
@@ -51,7 +64,7 @@ const getProductById = async (req, res) => {
 // [GET] /api/products/sku/:sku - SKU로 상품 조회
 const getProductBySku = async (req, res) => {
   try {
-    const product = await Product.findOne({ sku: req.params.sku.toUpperCase() });
+    const product = await Product.findOne({ sku: req.params.sku.toUpperCase() }).lean();
 
     if (!product) {
       return res.status(404).json({ success: false, message: "해당 SKU의 상품이 없습니다." });

@@ -36,8 +36,10 @@ const createApplication = async (req, res) => {
 // [GET] /api/auctions/me - 내 신청 목록
 const getMyApplications = async (req, res) => {
   try {
+    // 인덱스 { user: 1 } 활용 (모델 정의). lean()으로 hydration 생략.
     const applications = await AuctionApplication.find({ user: req.user._id })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     res.status(200).json({ success: true, data: applications });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -52,12 +54,15 @@ const getApplications = async (req, res) => {
     if (status) filter.status = status;
 
     const skip = (Number(page) - 1) * Number(limit);
+    // 인덱스 { status: 1, createdAt: -1 } 활용 (모델 정의).
+    // lean()으로 hydration 생략, populate된 user도 plain object로 함께 lean.
     const [applications, total] = await Promise.all([
       AuctionApplication.find(filter)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(Number(limit))
-        .populate("user", "name email phone"),
+        .populate("user", "name email phone")
+        .lean(),
       AuctionApplication.countDocuments(filter),
     ]);
 

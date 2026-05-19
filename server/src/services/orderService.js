@@ -137,12 +137,14 @@ const createOrder = async (userId, payload) => {
   return order
 }
 
-/** 페이지네이션 헬퍼 */
+/** 페이지네이션 헬퍼
+ *  - lean() — list 응답은 JSON 직렬화만 필요. populate된 sub-doc도 plain object로 함께 lean됨.
+ *  - 인덱스: { user:1, createdAt:-1 }, { status:1, createdAt:-1 } (Order model 정의) 활용. */
 const paginate = async (filter, { page = 1, limit = 10, populates = [] } = {}) => {
   const skip = (Number(page) - 1) * Number(limit)
   let query = Order.find(filter).sort({ createdAt: -1 }).skip(skip).limit(Number(limit))
   for (const p of populates) query = query.populate(...p)
-  const [data, total] = await Promise.all([query, Order.countDocuments(filter)])
+  const [data, total] = await Promise.all([query.lean(), Order.countDocuments(filter)])
   return {
     data,
     total,
