@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import useAuthStore from '@/store/authStore'
 import useToastStore from '@/store/toastStore'
@@ -6,6 +6,8 @@ import Icon from '@/components/common/Icon'
 import Sparkles from '@/components/common/Sparkles'
 import Eyebrow from '@/components/common/Eyebrow'
 import api from '@/api/axios'
+
+const PHOTO_SLOTS = ['앞면', '뒷면', '인증 라벨', '디테일']
 
 const STEPS = [
   { id: 'info',   label: '카드 정보' },
@@ -25,8 +27,16 @@ export default function SellPage() {
     company: 'PSA', score: '10', cert: '', country: 'USA',
     type: 'auction', startPrice: '', buyNowPrice: '', endsAt: '', minIncrement: '1000000',
     description: '',
+    photos: ['', '', '', ''], // 슬롯 인덱스별 URL (PHOTO_SLOTS와 매칭)
   })
   const [submitting, setSubmitting] = useState(false)
+
+  const setPhoto = (idx, url) => {
+    setForm((f) => {
+      const next = [...f.photos]; next[idx] = url
+      return { ...f, photos: next }
+    })
+  }
 
   if (!isAuthenticated) {
     return (
@@ -68,6 +78,7 @@ export default function SellPage() {
         endsAt: form.endsAt || null,
         minIncrement: Number(form.minIncrement),
         description: form.description || '',
+        photos: form.photos.filter(Boolean), // 비어있는 슬롯 제외
       })
       toast({ type: 'success', title: '출품 요청 접수됐어요!', message: '검수 후 1-2일 내 등록 완료돼요.' })
       setTimeout(() => navigate('/mypage'), 1500)
@@ -244,14 +255,20 @@ export default function SellPage() {
         {step === 3 && (
           <Section title="사진 업로드">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {['앞면', '뒷면', '인증 라벨', '디테일'].map((label) => (
-                <div key={label} className="aspect-square border-2 border-dashed border-ink/30 hover:border-ink rounded-xl bg-bone-2/40 flex flex-col items-center justify-center cursor-pointer transition-colors">
-                  <Icon name="package" size={28} strokeWidth={2} className="text-mute mb-2" />
-                  <div className="text-xs text-ink font-bold">{label}</div>
-                </div>
+              {PHOTO_SLOTS.map((label, idx) => (
+                <PhotoSlot
+                  key={label}
+                  label={label}
+                  value={form.photos[idx]}
+                  onChange={(url) => setPhoto(idx, url)}
+                  toast={toast}
+                />
               ))}
             </div>
-            <p className="text-xs text-mute mt-3 font-medium">고해상도 사진 4장 필수 · 인증 라벨이 명확히 보여야 해요.</p>
+            <p className="text-xs text-mute mt-3 font-medium">
+              고해상도 사진 4장 필수 · 인증 라벨이 명확히 보여야 해요.<br/>
+              <span className="text-mute/70">클릭해서 업로드하거나 파일을 드래그&드롭하세요. (최대 10MB · JPG/PNG)</span>
+            </p>
           </Section>
         )}
 
@@ -329,6 +346,102 @@ function Row({ k, v, highlight }) {
     <div className="flex justify-between py-2 border-b-2 border-ink/10 text-sm">
       <span className="text-mute font-bold">{k}</span>
       <span className={`font-mono font-bold ${highlight ? 'text-dex' : 'text-ink'}`}>{v}</span>
+    </div>
+  )
+}
+
+// ─── 사진 슬롯 (클릭 + 드래그앤드롭 + Cloudinary) ──────────
+function PhotoSlot({ label, value, onChange, toast }) {
+  const inputRef = useRef(null)
+  const [uploading, setUploading] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
+
+  const uploadFile = async (file) => {
+    if (!file) return
+    if (!file.type?.startsWith('image/')) {
+      toast?.({ type: 'error', message: '이미지 파일만 업로드 가능해요.' })
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast?.({ type: 'error', message: '파일 크기는 10MB 이하여야 해요.' })
+      return
+    }
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const { data } = await api.post('/upload?folder=pokevault/auctions', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      onChange(data.url)
+    } catch (err) {
+      const msg = err?.response?.data?.message || '업로드 실패. 잠시 후 다시 시도해주세요.'
+      toast?.({ type: 'error', title: '업로드 실패', message: msg })
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const onPick = (e) => uploadFile(e.target.files?.[0])
+  const onDrop = (e) => {
+    e.preventDefault()
+    setDragOver(false)
+    uploadFile(e.dataTransfer.files?.[0])
+  }
+
+  // 업로드 완료 시: 썸네일 + 변경/삭제
+  if (value) {
+    return (
+      <div className="relative aspect-square rounded-xl overflow-hidden border-2 border-ink shadow-[0_3px_0_#1a1a1a]">
+        <img src={value} alt={label} className="w-full h-full object-cover" />
+        <div className="absolute inset-x-0 bottom-0 bg-ink/85 backdrop-blur-sm px-2 py-1.5 flex items-center justify-between">
+          <span className="text-[10px] font-bold text-electric tracking-wide">{label}</span>
+          <div className="flex gap-1">
+            <button type="button" onClick={() => inputRef.current?.click()}
+              className="text-[10px] font-bold text-white/90 hover:text-electric">변경</button>
+            <span className="text-white/30">·</span>
+            <button type="button" onClick={() => onChange('')}
+              className="text-[10px] font-bold text-rose-300 hover:text-rose-200">삭제</button>
+          </div>
+        </div>
+        <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={onPick} />
+      </div>
+    )
+  }
+
+  // 빈 슬롯: 클릭/드래그앤드롭
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      aria-label={`${label} 사진 업로드`}
+      onClick={() => !uploading && inputRef.current?.click()}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inputRef.current?.click() } }}
+      onDrop={onDrop}
+      onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+      onDragLeave={() => setDragOver(false)}
+      className={
+        `aspect-square border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all text-center px-2 ` +
+        (uploading
+          ? 'border-ink bg-electric/30'
+          : dragOver
+            ? 'border-ink bg-electric/40 -translate-y-0.5 shadow-[0_3px_0_#1a1a1a]'
+            : 'border-ink/30 bg-bone-2/40 hover:border-ink hover:bg-electric/15 hover:-translate-y-0.5 hover:shadow-[0_3px_0_#1a1a1a]')
+      }
+    >
+      {uploading ? (
+        <>
+          <span className="led led-yellow led-pulse mb-2" style={{ width: 9, height: 9 }} />
+          <div className="text-[11px] text-ink font-bold">업로드 중...</div>
+        </>
+      ) : (
+        <>
+          <Icon name="package" size={26} strokeWidth={2} className="text-mute mb-1.5" />
+          <div className="text-xs text-ink font-bold">{label}</div>
+          <div className="text-[9px] text-mute/70 font-mono mt-1 tracking-wider">CLICK / DROP</div>
+        </>
+      )}
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={onPick} />
     </div>
   )
 }
