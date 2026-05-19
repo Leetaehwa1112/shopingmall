@@ -6,7 +6,7 @@ const app = express();
 
 app.use(cors({
   origin: 'http://localhost:3000', // 프론트엔드 주소
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   credentials: true,
 }));
 app.use(express.json());

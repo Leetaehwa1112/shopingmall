@@ -41,7 +41,16 @@ const AdminAuditLog = lazy(() => import('@/pages/admin/AdminAuditLog'))
 const AdminAuctionReview = lazy(() => import('@/pages/admin/AdminAuctionReview'))
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { staleTime: 1000 * 60 * 5, retry: 1 } },
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5,
+      retry: 1,
+      // 탭 포커스 시 refetch 비활성 — 페이지 복귀할 때마다 깜빡거림 방지
+      refetchOnWindowFocus: false,
+      // 네트워크 재연결 시 refetch도 비활성 (모바일 환경 흔들림 방지)
+      refetchOnReconnect: false,
+    },
+  },
 })
 
 // 라우트 전환 중 폴백 — 최소·정적 (FOUC 방지)
