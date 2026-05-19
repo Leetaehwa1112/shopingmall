@@ -6,7 +6,12 @@ import Pokeball from '@/components/common/Pokeball'
 import Icon from '@/components/common/Icon'
 
 export default function Header() {
-  const { isAuthenticated, isAdmin, user, logout } = useAuthStore()
+  // 개별 selector — 각각 primitive/함수 참조 반환. 미사용 필드(verified 등) 변경 시 재렌더 안 함.
+  // 전체 destructure (useAuthStore())는 어떤 필드든 바뀌면 재렌더 → Layout 하위 모든 페이지에 비용.
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const isAdmin = useAuthStore((s) => s.isAdmin)
+  const user = useAuthStore((s) => s.user)
+  const logout = useAuthStore((s) => s.logout)
   const cartCount = useCartStore((s) => (s.items || []).reduce((sum, i) => sum + (i.qty || 1), 0))
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')

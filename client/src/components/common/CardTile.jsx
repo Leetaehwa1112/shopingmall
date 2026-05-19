@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo } from 'react'
 import { Link } from 'react-router-dom'
 import PokeCard from './PokeCard'
 import GradeBadge from './GradeBadge'
@@ -9,7 +9,7 @@ import useWishlistStore from '@/store/wishlistStore'
 import useAuthStore from '@/store/authStore'
 import useToastStore from '@/store/toastStore'
 
-export default function CardTile({ card }) {
+function CardTile({ card }) {
   const cardId = card.id || card._id
   const wished = useWishlistStore((s) => s.has(cardId))
   const toggle = useWishlistStore((s) => s.toggle)
@@ -193,3 +193,7 @@ function BuyNowFooter({ card }) {
     </div>
   )
 }
+
+// React.memo — sort/filter 변경으로 부모(ProductsPage/HomePage) 재렌더 시
+// card prop 동일하면 (useQuery cache 안정) 카드 그리드 전체 bail-out
+export default memo(CardTile)

@@ -1,3 +1,5 @@
+import { memo } from 'react'
+
 const FLAG = { USA: '🇺🇸', JPN: '🇯🇵', KOR: '🇰🇷' }
 
 const styleByScore = (score) => {
@@ -7,7 +9,7 @@ const styleByScore = (score) => {
   return { bg: '#2a4480', text: '#fbf7ec', label: '#0d1730', labelTxt: '#fbf7ec' }
 }
 
-export default function GradeBadge({ grade, size = 'md' }) {
+function GradeBadge({ grade, size = 'md' }) {
   if (!grade || grade.score == null) return null
   const s = styleByScore(grade.score)
   const pad = size === 'lg' ? 'px-3 py-2' : size === 'sm' ? 'px-2 py-1' : 'px-2.5 py-1.5'
@@ -31,3 +33,5 @@ export default function GradeBadge({ grade, size = 'md' }) {
     </div>
   )
 }
+
+export default memo(GradeBadge)

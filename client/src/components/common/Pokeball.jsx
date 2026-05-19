@@ -1,5 +1,7 @@
-// 클래식 포켓볼 — Pokédex 톤
-export default function Pokeball({ size = 32, className = '', spin = false }) {
+import { memo } from 'react'
+
+// 클래식 포켓볼 — Pokédex 톤 (Header 등 모든 페이지 마운트, memo로 부모 재렌더 격리)
+function Pokeball({ size = 32, className = '', spin = false }) {
   return (
     <svg
       width={size} height={size} viewBox="0 0 64 64"
@@ -14,3 +16,5 @@ export default function Pokeball({ size = 32, className = '', spin = false }) {
     </svg>
   )
 }
+
+export default memo(Pokeball)

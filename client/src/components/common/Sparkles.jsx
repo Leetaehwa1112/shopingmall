@@ -1,10 +1,10 @@
+import { memo } from 'react'
+
 /**
  * Sparkles — 5-star twinkle layer.
- * Wrap a relatively-positioned host (or pass `host=true` to add it).
- * Pair with `.sparkle-host` class on parent for hover-trigger,
- * or pass `always` to twinkle constantly.
+ * Pure presentational, props는 primitive. memo로 부모 재렌더 격리.
  */
-export default function Sparkles({ always = false, className = '' }) {
+function Sparkles({ always = false, className = '' }) {
   return (
     <span aria-hidden="true" className={`${always ? 'is-on' : ''} ${className}`}>
       <span className="sparkle s1" />
@@ -15,3 +15,5 @@ export default function Sparkles({ always = false, className = '' }) {
     </span>
   )
 }
+
+export default memo(Sparkles)

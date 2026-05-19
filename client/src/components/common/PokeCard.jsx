@@ -1,6 +1,6 @@
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, memo } from 'react'
 
-export default function PokeCard({ card, size = 'md', interactive = true, showShine = true }) {
+function PokeCard({ card, size = 'md', interactive = true, showShine = true }) {
   const ref = useRef(null)
   const rafRef = useRef(0)
   const pendingRef = useRef(null)
@@ -94,3 +94,6 @@ export default function PokeCard({ card, size = 'md', interactive = true, showSh
     </div>
   )
 }
+
+// memo — 카드 그리드/상세 페이지에서 부모 재렌더 시 props 동일하면 bail-out
+export default memo(PokeCard)

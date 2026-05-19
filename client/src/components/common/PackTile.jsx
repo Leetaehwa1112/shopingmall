@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Link } from 'react-router-dom'
 import PackVisual from './PackVisual'
 import Icon from './Icon'
@@ -6,7 +7,7 @@ import useWishlistStore from '@/store/wishlistStore'
 import useAuthStore from '@/store/authStore'
 import useToastStore from '@/store/toastStore'
 
-export default function PackTile({ pack }) {
+function PackTile({ pack }) {
   const packId = pack.id || pack._id
   const wished = useWishlistStore((s) => s.has(packId))
   const toggle = useWishlistStore((s) => s.toggle)
@@ -76,3 +77,6 @@ export default function PackTile({ pack }) {
     </Link>
   )
 }
+
+// React.memo — 팩 그리드 부모 재렌더 시 pack prop 동일하면 bail-out
+export default memo(PackTile)
