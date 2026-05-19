@@ -178,7 +178,8 @@ export default function AdminProducts() {
 
       <button
         onClick={() => navigate('/admin/products/new')}
-        className="group w-full flex items-center justify-between gap-4 bg-dex text-white rounded-xl px-5 py-4 hover:bg-dex-d transition-colors shadow-[0_3px_0_#7f1d1d] hover:shadow-[0_5px_0_#7f1d1d] hover:-translate-y-0.5 transform border-2 border-dex-dd"
+        style={{ backgroundColor: '#dc2626', color: '#ffffff', borderColor: '#7f1d1d' }}
+        className="group w-full flex items-center justify-between gap-4 rounded-xl px-5 py-4 hover:opacity-90 transition-all shadow-[0_3px_0_#7f1d1d] hover:shadow-[0_5px_0_#7f1d1d] hover:-translate-y-0.5 transform border-2"
       >
         <div className="flex items-center gap-3 min-w-0">
           <span className="w-11 h-11 rounded-lg bg-white/20 border-2 border-white/40 flex items-center justify-center flex-shrink-0">
