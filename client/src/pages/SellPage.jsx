@@ -6,6 +6,10 @@ import Icon from '@/components/common/Icon'
 import Sparkles from '@/components/common/Sparkles'
 import Eyebrow from '@/components/common/Eyebrow'
 import api from '@/api/axios'
+import {
+  POKEMON_SETS, RELEASE_YEARS,
+  GRADE_SCORES, GRADE_RUBRIC, BGS_SUBGRADE_FIELDS,
+} from '@/constants/pokemonSets'
 
 const PHOTO_SLOTS = ['앞면', '뒷면', '인증 라벨', '디테일']
 
@@ -25,9 +29,12 @@ export default function SellPage() {
   const [form, setForm] = useState({
     name: '', nameKo: '', set: '', year: '', number: '',
     company: 'PSA', score: '10', cert: '', country: 'USA',
+    // BGS/CGC 서브그레이드 (선택). PSA는 미사용.
+    sub: { centering: '', corners: '', edges: '', surface: '' },
+    gradeDate: '', // 평가일 (선택)
     type: 'auction', startPrice: '', buyNowPrice: '', endsAt: '', minIncrement: '1000000',
     description: '',
-    photos: ['', '', '', ''], // 슬롯 인덱스별 URL (PHOTO_SLOTS와 매칭)
+    photos: ['', '', '', ''],
   })
   const [submitting, setSubmitting] = useState(false)
 
@@ -61,6 +68,15 @@ export default function SellPage() {
 
   const submit = async () => {
     setSubmitting(true)
+    // 서브그레이드/평가일을 description 앞에 메타 블록으로 합성 (스키마 무변경 호환)
+    const subParts = BGS_SUBGRADE_FIELDS
+      .filter(({ key }) => form.sub[key])
+      .map(({ key, label }) => `${label}: ${form.sub[key]}`)
+    const meta = []
+    if (form.gradeDate) meta.push(`평가일: ${form.gradeDate}`)
+    if (subParts.length) meta.push(`서브그레이드 — ${subParts.join(' / ')}`)
+    const description = [meta.join('\n'), form.description].filter(Boolean).join('\n\n')
+
     try {
       await api.post('/auctions', {
         name: form.name,
@@ -72,13 +88,15 @@ export default function SellPage() {
         gradeScore: form.score,
         gradeCert: form.cert,
         cardCountry: form.country,
+        // 서브그레이드/평가일은 description에 자유서식으로 합쳐 보냄 (AuctionApplication 스키마 무변경)
+        // — 어드민 검수 시 메모로 활용
         saleType: form.type,
         startPrice: Number(form.startPrice),
         buyNowPrice: form.buyNowPrice ? Number(form.buyNowPrice) : null,
         endsAt: form.endsAt || null,
         minIncrement: Number(form.minIncrement),
-        description: form.description || '',
-        photos: form.photos.filter(Boolean), // 비어있는 슬롯 제외
+        description,
+        photos: form.photos.filter(Boolean),
       })
       toast({ type: 'success', title: '출품 요청 접수됐어요!', message: '검수 후 1-2일 내 등록 완료돼요.' })
       setTimeout(() => navigate('/mypage'), 1500)
@@ -151,8 +169,37 @@ export default function SellPage() {
             <div className="grid grid-cols-2 gap-4">
               <Field label="카드명 (영문)" value={form.name} onChange={(v) => setForm({...form, name: v})} placeholder="Charizard" />
               <Field label="카드명 (한글)" value={form.nameKo} onChange={(v) => setForm({...form, nameKo: v})} placeholder="리자몽" />
-              <Field label="세트" value={form.set} onChange={(v) => setForm({...form, set: v})} placeholder="Base Set 1st Edition" />
-              <Field label="발매년도" type="number" value={form.year} onChange={(v) => setForm({...form, year: v})} placeholder="1999" />
+
+              {/* 세트 — 시대별 그룹 드롭다운 */}
+              <div>
+                <Lbl>세트</Lbl>
+                <select
+                  value={form.set}
+                  onChange={(e) => setForm({...form, set: e.target.value})}
+                  className="w-full bg-bone-2 border-2 border-ink/20 rounded-lg px-4 py-2.5 text-sm text-ink font-bold focus:border-ink outline-none cursor-pointer"
+                >
+                  <option value="">— 세트 선택 —</option>
+                  {Object.entries(POKEMON_SETS).map(([group, sets]) => (
+                    <optgroup key={group} label={group}>
+                      {sets.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+
+              {/* 발매년도 — 1996~현재 내림차순 드롭다운 */}
+              <div>
+                <Lbl>발매년도</Lbl>
+                <select
+                  value={form.year}
+                  onChange={(e) => setForm({...form, year: e.target.value})}
+                  className="w-full bg-bone-2 border-2 border-ink/20 rounded-lg px-4 py-2.5 text-sm text-ink font-bold focus:border-ink outline-none cursor-pointer"
+                >
+                  <option value="">— 연도 선택 —</option>
+                  {RELEASE_YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+
               <Field label="카드 번호" value={form.number} onChange={(v) => setForm({...form, number: v})} placeholder="4/102" />
             </div>
           </Section>
@@ -160,43 +207,122 @@ export default function SellPage() {
 
         {step === 1 && (
           <Section title="등급 정보">
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Lbl>등급사</Lbl>
-                <select value={form.company} onChange={(e) => setForm({...form, company: e.target.value})}
-                  className="w-full bg-bone-2 border-2 border-ink/20 rounded-lg px-4 py-2.5 text-sm text-ink font-bold focus:border-ink outline-none">
-                  <option>PSA</option><option>BGS</option><option>CGC</option>
-                </select>
-              </div>
-              <Field label="점수" value={form.score} onChange={(v) => setForm({...form, score: v})} placeholder="10" />
-              <Field label="인증서 번호" value={form.cert} onChange={(v) => setForm({...form, cert: v})} placeholder="52819374" />
-            </div>
-            <div className="mt-4">
-              <Lbl>카드 언어판</Lbl>
-              <div className="flex gap-3">
-                {[['USA', '🇺🇸', 'US판'], ['JPN', '🇯🇵', 'JP판'], ['KOR', '🇰🇷', 'KR판']].map(([val, flag, label]) => {
-                  const active = form.country === val
+            {/* 등급사 — 칩 토글 */}
+            <div className="mb-5">
+              <Lbl>등급사</Lbl>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { v: 'PSA', label: 'PSA',  desc: 'Professional Sports Authenticator · 미국 최대' },
+                  { v: 'BGS', label: 'BGS',  desc: 'Beckett · 서브그레이드 제공' },
+                  { v: 'CGC', label: 'CGC',  desc: 'Certified Guaranty Company' },
+                ].map(({ v, label, desc }) => {
+                  const active = form.company === v
                   return (
-                    <button key={val} type="button" onClick={() => setForm({...form, country: val})}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${
+                    <button key={v} type="button" onClick={() => setForm({...form, company: v})}
+                      className={`px-3 py-3 rounded-xl border-2 text-left transition-all ${
                         active
                           ? 'bg-ink text-electric border-ink shadow-[0_3px_0_#1a1a1a] -translate-y-0.5'
                           : 'bg-paper border-ink/20 text-ink hover:border-ink hover:-translate-y-0.5 hover:shadow-[0_3px_0_#1a1a1a]'
                       }`}>
-                      <span className="text-xl">{flag}</span> {label}
+                      <div className="font-display font-bold text-base leading-none">{label}</div>
+                      <div className={`text-[10px] mt-1.5 font-medium ${active ? 'text-electric/80' : 'text-mute'}`}>{desc}</div>
                     </button>
                   )
                 })}
               </div>
             </div>
-            <div className="mt-5 p-4 bg-electric/15 border-2 border-ink/15 rounded-xl">
-              <div className="text-sm font-bold text-ink mb-2">📋 위탁 조건</div>
-              <ul className="text-xs text-ink/80 space-y-1.5 font-medium">
-                <li>· PSA 6 이상 등급만 위탁 가능해요</li>
-                <li>· 인증서 번호 검증 후 등록돼요</li>
-                <li>· 위탁 수수료: 낙찰가의 10%</li>
-                <li>· 미낙찰 시 무료 보관 후 반송해드려요</li>
-              </ul>
+
+            {/* 점수 — 드롭다운 + 옆에 등급 의미 자동 표시 */}
+            <div className="grid grid-cols-2 gap-4 mb-5">
+              <div>
+                <Lbl>점수</Lbl>
+                <select value={form.score} onChange={(e) => setForm({...form, score: e.target.value})}
+                  className="w-full bg-bone-2 border-2 border-ink/20 rounded-lg px-4 py-2.5 text-sm text-ink font-bold focus:border-ink outline-none cursor-pointer">
+                  {GRADE_SCORES.map((s) => (
+                    <option key={s} value={s}>
+                      {s}{GRADE_RUBRIC[s] ? ` — ${GRADE_RUBRIC[s].label}` : ''}
+                    </option>
+                  ))}
+                </select>
+                {GRADE_RUBRIC[form.score] && (
+                  <p className="text-[11px] text-mute mt-1.5 font-medium leading-relaxed">
+                    {GRADE_RUBRIC[form.score].desc}
+                  </p>
+                )}
+              </div>
+              <Field label="인증서 번호" value={form.cert} onChange={(v) => setForm({...form, cert: v})} placeholder="52819374" />
+            </div>
+
+            {/* 평가일 (선택) */}
+            <div className="grid grid-cols-2 gap-4 mb-5">
+              <Field label="평가일 (선택)" type="date" value={form.gradeDate} onChange={(v) => setForm({...form, gradeDate: v})} />
+              <div>
+                <Lbl>카드 언어판</Lbl>
+                <div className="flex gap-2">
+                  {[['USA', '🇺🇸', 'US'], ['JPN', '🇯🇵', 'JP'], ['KOR', '🇰🇷', 'KR']].map(([val, flag, lbl]) => {
+                    const active = form.country === val
+                    return (
+                      <button key={val} type="button" onClick={() => setForm({...form, country: val})}
+                        className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${
+                          active
+                            ? 'bg-ink text-electric border-ink shadow-[0_3px_0_#1a1a1a] -translate-y-0.5'
+                            : 'bg-paper border-ink/20 text-ink hover:border-ink hover:-translate-y-0.5 hover:shadow-[0_3px_0_#1a1a1a]'
+                        }`}>
+                        <span className="text-base">{flag}</span> {lbl}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* BGS/CGC 서브그레이드 — 4면 평가 (선택) */}
+            {(form.company === 'BGS' || form.company === 'CGC') && (
+              <div className="p-4 bg-bone-2/40 border-2 border-ink/15 rounded-xl mb-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-sm font-bold text-ink">서브그레이드 (선택)</div>
+                  <span className="text-[10px] text-mute font-mono tracking-wider">CENTERING · CORNERS · EDGES · SURFACE</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {BGS_SUBGRADE_FIELDS.map(({ key, label, desc }) => (
+                    <div key={key}>
+                      <Lbl>{label}</Lbl>
+                      <select
+                        value={form.sub[key]}
+                        onChange={(e) => setForm({...form, sub: { ...form.sub, [key]: e.target.value }})}
+                        className="w-full bg-paper border-2 border-ink/15 rounded-md px-2 py-2 text-xs text-ink font-bold focus:border-ink outline-none cursor-pointer"
+                      >
+                        <option value="">—</option>
+                        {GRADE_SCORES.map((s) => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                      <p className="text-[9px] text-mute mt-1 leading-tight">{desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 위탁 조건 + 등급 척도 안내 */}
+            <div className="grid md:grid-cols-2 gap-3">
+              <div className="p-4 bg-electric/15 border-2 border-ink/15 rounded-xl">
+                <div className="text-sm font-bold text-ink mb-2">📋 위탁 조건</div>
+                <ul className="text-xs text-ink/80 space-y-1.5 font-medium">
+                  <li>· PSA/BGS/CGC 6 이상 등급만 위탁 가능</li>
+                  <li>· 인증서 번호로 진위/등급 자동 검증</li>
+                  <li>· 위탁 수수료: 낙찰가의 10%</li>
+                  <li>· 미낙찰 시 무료 보관 후 반송</li>
+                </ul>
+              </div>
+              <div className="p-4 bg-paper border-2 border-ink/15 rounded-xl">
+                <div className="text-sm font-bold text-ink mb-2">🎯 등급 척도 (요약)</div>
+                <ul className="text-[11px] text-ink/85 space-y-1 font-medium">
+                  <li><span className="font-mono font-bold text-dex">10</span> Gem Mint · 근접 완벽</li>
+                  <li><span className="font-mono font-bold text-ink">9</span> Mint · 미세 결점 1-2개</li>
+                  <li><span className="font-mono font-bold text-ink">8</span> NM-MT · 가벼운 마모</li>
+                  <li><span className="font-mono font-bold text-mute">7</span> NM · 눈에 띄는 흠 1-2개</li>
+                  <li><span className="font-mono font-bold text-mute">6</span> EX-MT · 컬렉터블 하한</li>
+                </ul>
+              </div>
             </div>
           </Section>
         )}
