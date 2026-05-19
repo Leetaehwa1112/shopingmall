@@ -78,15 +78,49 @@ const calculateAmount = (orderItems, shippingMethod, insuranceEnabled) => {
   return { subtotal, shippingFee, insuranceFee, totalAmount }
 }
 
-/** 재고 일괄 차감/복구 (Product / Pack 모두) */
-const adjustStock = (items, delta) =>
-  Promise.all(items.map((item) => {
-    const ent = itemEntity(item)
-    const id = ent?._id || ent
-    if (!id) return null
-    const Model = item.itemType === 'pack' ? Pack : Product
-    return Model.findByIdAndUpdate(id, { $inc: { stock: delta * item.qty } })
-  }))
+/** 재고 일괄 차감/복구 (Product / Pack 모두)
+ *  delta < 0 (차감) — 원자적 조건부 update로 race 방어:
+ *    {stock: {$gte: qty}} 만족 시에만 $inc, 실패하면 AppError throw + 이전 항목 롤백.
+ *  delta > 0 (복구) — 무조건 $inc (취소/환불 복원). */
+const adjustStock = async (items, delta) => {
+  const Models = items.map((it) => it.itemType === 'pack' ? Pack : Product)
+  const ids = items.map((it) => {
+    const ent = itemEntity(it)
+    return ent?._id || ent
+  })
+
+  if (delta >= 0) {
+    // 복구 — 단순 일괄 $inc
+    await Promise.all(items.map((it, i) => {
+      if (!ids[i]) return null
+      return Models[i].findByIdAndUpdate(ids[i], { $inc: { stock: delta * it.qty } })
+    }))
+    return
+  }
+
+  // 차감 — 조건부 atomic update, 실패 시 롤백 후 throw
+  const applied = []
+  for (let i = 0; i < items.length; i++) {
+    const id = ids[i]
+    const qty = items[i].qty
+    if (!id) continue
+    const Model = Models[i]
+    const result = await Model.findOneAndUpdate(
+      { _id: id, stock: { $gte: qty } },
+      { $inc: { stock: -qty } },
+      { new: true },
+    )
+    if (!result) {
+      // 이미 차감된 것 롤백
+      await Promise.all(applied.map(({ Model: M, id: aid, qty: aqty }) =>
+        M.findByIdAndUpdate(aid, { $inc: { stock: aqty } })
+      ))
+      const ent = itemEntity(items[i])
+      throw new AppError(`"${ent?.name || ent?.nameKo || '상품'}" 재고가 부족합니다. (다른 주문이 먼저 처리된 것 같아요)`)
+    }
+    applied.push({ Model, id, qty })
+  }
+}
 
 // ─── 공개 서비스 함수 ──────────────────────────────────────
 

@@ -4,6 +4,37 @@ const User = require("../models/User");
 
 const SALT_ROUNDS = 10;
 
+// ─── 입력 검증 ──────────────────────────────────────────────
+const EMAIL_RX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PASSWORD_MIN = 8;
+const PASSWORD_MAX = 128;
+
+/** 비밀번호 정책 — 최소 8자, 영문/숫자/특수 중 2가지 이상 */
+function validatePassword(pw) {
+  if (typeof pw !== "string") return "비밀번호가 필요합니다.";
+  if (pw.length < PASSWORD_MIN) return `비밀번호는 ${PASSWORD_MIN}자 이상이어야 해요.`;
+  if (pw.length > PASSWORD_MAX) return `비밀번호는 ${PASSWORD_MAX}자 이하여야 해요.`;
+  let kinds = 0;
+  if (/[a-zA-Z]/.test(pw)) kinds++;
+  if (/[0-9]/.test(pw)) kinds++;
+  if (/[^a-zA-Z0-9]/.test(pw)) kinds++;
+  if (kinds < 2) return "비밀번호는 영문/숫자/특수문자 중 2가지 이상을 포함해주세요.";
+  return null;
+}
+
+function validateEmail(email) {
+  if (typeof email !== "string" || !email.trim()) return "이메일이 필요합니다.";
+  if (!EMAIL_RX.test(email.trim())) return "올바른 이메일 형식이 아닙니다.";
+  if (email.length > 254) return "이메일이 너무 깁니다.";
+  return null;
+}
+
+function trimStr(v, max) {
+  if (typeof v !== "string") return v;
+  const t = v.trim();
+  return max && t.length > max ? t.slice(0, max) : t;
+}
+
 // [GET] /api/users - 전체 유저 조회 (페이징 + 검색)
 const getAllUsers = async (req, res) => {
   try {
@@ -52,32 +83,38 @@ const getUserById = async (req, res) => {
 // [POST] /api/users - 유저 생성
 const createUser = async (req, res) => {
   try {
-    const { email, name, password, user_type, profile_image, phone, address } =
-      req.body;
+    const { email, name, password, profile_image, phone, address } = req.body;
 
-    if (!email) {
-      return res.status(400).json({ success: false, message: "이메일은 필수입니다." });
+    // ─── 입력 검증 ───
+    const emailErr = validateEmail(email);
+    if (emailErr) return res.status(400).json({ success: false, message: emailErr });
+    if (!name || typeof name !== "string" || !name.trim()) {
+      return res.status(400).json({ success: false, message: "이름이 필요합니다." });
     }
+    if (name.length > 50) {
+      return res.status(400).json({ success: false, message: "이름은 50자 이하로 입력해주세요." });
+    }
+    const pwErr = validatePassword(password);
+    if (pwErr) return res.status(400).json({ success: false, message: pwErr });
 
     // 이메일 중복 체크 (소문자로 정규화 후 비교)
     const normalizedEmail = email.toLowerCase().trim();
     const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
-      return res
-        .status(400)
-        .json({ success: false, message: "이미 사용 중인 이메일입니다." });
+      return res.status(400).json({ success: false, message: "이미 사용 중인 이메일입니다." });
     }
 
     // 비밀번호 암호화
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
+    // user_type은 클라이언트 입력 무시 → 항상 'customer'로 강제 (권한 상승 방어)
     const user = await User.create({
-      email,
-      name,
+      email: normalizedEmail,
+      name: trimStr(name, 50),
       password: hashedPassword,
-      user_type,
+      user_type: "customer",
       profile_image,
-      phone,
+      phone: trimStr(phone, 30),
       address,
     });
 
@@ -112,16 +149,25 @@ const updateUser = async (req, res) => {
 
     // undefined 필드는 set하지 않도록 명시적으로 추출 (덮어쓰기 방지)
     const updateData = {};
-    if (name !== undefined) updateData.name = name;
-    if (email !== undefined) updateData.email = email;
+    if (name !== undefined) {
+      if (!name || !name.trim()) return res.status(400).json({ success: false, message: "이름이 필요합니다." });
+      updateData.name = trimStr(name, 50);
+    }
+    if (email !== undefined) {
+      const e = validateEmail(email);
+      if (e) return res.status(400).json({ success: false, message: e });
+      updateData.email = email.toLowerCase().trim();
+    }
     if (profile_image !== undefined) updateData.profile_image = profile_image;
-    if (phone !== undefined) updateData.phone = phone;
+    if (phone !== undefined) updateData.phone = trimStr(phone, 30);
     if (address !== undefined) updateData.address = address;
-    // user_type 변경은 admin만 가능
+    // user_type 변경은 admin만 가능 (일반 유저가 보내면 무시)
     if (user_type !== undefined && isAdmin) updateData.user_type = user_type;
 
-    // 비밀번호가 전달된 경우에만 암호화해서 업데이트 객체에 추가
+    // 비밀번호가 전달된 경우만 정책 검증 + 암호화
     if (password) {
+      const pwErr = validatePassword(password);
+      if (pwErr) return res.status(400).json({ success: false, message: pwErr });
       updateData.password = await bcrypt.hash(password, SALT_ROUNDS);
     }
 
