@@ -115,6 +115,8 @@ const createOrder = async (userId, payload) => {
       }
     }),
     ...amount,
+    // 결제 완료(paymentId 있음) → 'paid', 아니면 default('pending_payment')
+    status: paymentId ? 'paid' : 'pending_payment',
     shipping: { method: shippingMethod, recipient, phone, address, requireSignature, memo },
     payment: {
       method: paymentMethod,
