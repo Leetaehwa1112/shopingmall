@@ -9,11 +9,13 @@ const isLoggedIn = () => {
   } catch { return false }
 }
 
-// 팩/박스 판별 (Pack 모델은 setShort/type 등 고유 필드)
+// 팩/박스 판별 — itemType 명시가 가장 신뢰도 높음.
+// type='pack'/'box'은 Pack 모델 전용 필드, heroArt는 Pack 전용 필드.
+// (setShort는 Product/Pack 양쪽에 존재 → 시그널로 사용 불가)
 const isPack = (item) =>
   item?.itemType === 'pack' ||
   item?.type === 'pack' || item?.type === 'box' ||
-  !!item?.setShort || !!item?.heroArt
+  !!item?.heroArt
 
 const normalizeServerItems = (items) =>
   items.map((it) => {
