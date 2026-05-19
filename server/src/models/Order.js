@@ -150,6 +150,13 @@ orderSchema.virtual('isRefundable').get(function () {
   return ['paid', 'delivered'].includes(this.status)
 })
 
+// ─── 인덱스 ─────────────────────────────────────────────────
+// getMyOrders: { user, status? } + sort by createdAt DESC
+orderSchema.index({ user: 1, createdAt: -1 })
+// getAllOrders (admin): { status? } + sort by createdAt DESC
+orderSchema.index({ status: 1, createdAt: -1 })
+// 송장/검색 — orderNumber는 이미 unique 인덱스, 추가 불필요
+
 const Order = mongoose.model('Order', orderSchema)
 
 module.exports = Order

@@ -194,7 +194,7 @@ function OrderCard({ order, expanded, onToggle, onCancel }) {
               const img = Array.isArray(it.product?.images) ? it.product.images[0] : it.product?.images
               return (
                 <div key={idx} className="w-14 h-20 rounded-md bg-bone-2 border-2 border-ink shadow-[0_2px_0_#1a1a1a] overflow-hidden flex-shrink-0">
-                  {img ? <img src={img} alt={it.product?.name} className="w-full h-full object-contain" /> : null}
+                  {img ? <img src={img} alt={it.product?.name} loading="lazy" decoding="async" className="w-full h-full object-contain" /> : null}
                 </div>
               )
             })}
@@ -283,7 +283,7 @@ function OrderCard({ order, expanded, onToggle, onCancel }) {
                 return (
                   <div key={idx} className="flex items-center gap-3 p-3 rounded-lg bg-paper border-2 border-ink/15">
                     <div className="w-10 h-14 rounded-md bg-bone-2 border border-ink/15 overflow-hidden flex-shrink-0">
-                      {img ? <img src={img} alt={it.product?.name} className="w-full h-full object-contain" /> : null}
+                      {img ? <img src={img} alt={it.product?.name} loading="lazy" decoding="async" className="w-full h-full object-contain" /> : null}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-bold text-ink text-sm truncate">{it.product?.nameKo || it.product?.name}</div>

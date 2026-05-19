@@ -248,7 +248,7 @@ export default function OrderPage() {
                 return (
                   <div key={c.id || c._id} className="flex items-center gap-3">
                     {img ? (
-                      <img src={img} alt={c.name} className="w-12 h-16 object-contain rounded-md bg-bone-2 border border-ink/15 flex-shrink-0" />
+                      <img src={img} alt={c.name} loading="lazy" decoding="async" className="w-12 h-16 object-contain rounded-md bg-bone-2 border border-ink/15 flex-shrink-0" />
                     ) : (
                       <div className="w-12 h-16 rounded-md bg-bone-2 border border-ink/15 flex-shrink-0" />
                     )}
