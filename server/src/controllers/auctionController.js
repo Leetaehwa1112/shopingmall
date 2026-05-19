@@ -5,20 +5,22 @@ const createApplication = async (req, res) => {
   try {
     const {
       name, nameKo, set, year, number,
-      gradeCompany, gradeScore, gradeCert,
+      gradeCompany, gradeScore, gradeCert, cardCountry,
       saleType, startPrice, buyNowPrice, endsAt, minIncrement,
-      photos,
+      photos, description,
     } = req.body;
 
     const application = await AuctionApplication.create({
       user: req.user._id,
       name, nameKo, set, year, number,
       gradeCompany, gradeScore, gradeCert,
+      cardCountry: cardCountry || "USA",
       saleType, startPrice,
       buyNowPrice: buyNowPrice || null,
       endsAt: endsAt || null,
       minIncrement: minIncrement || 1000000,
       photos: photos || [],
+      description: description || "",
     });
 
     res.status(201).json({ success: true, data: application });

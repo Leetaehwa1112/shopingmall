@@ -2,13 +2,25 @@ const mongoose = require('mongoose')
 
 const orderItemSchema = new mongoose.Schema(
   {
-    product:        { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+    itemType:       { type: String, enum: ['product', 'pack'], default: 'product', required: true },
+    product:        { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null },
+    pack:           { type: mongoose.Schema.Types.ObjectId, ref: 'Pack', default: null },
     qty:            { type: Number, required: true, min: 1 },
     unitPrice:      { type: Number, required: true },       // 주문 시점 가격 스냅샷
     shippingOption: { type: String, enum: ['standard', 'quick'], default: 'standard' },
   },
   { _id: false }
 )
+
+orderItemSchema.pre('validate', function (next) {
+  if (this.itemType === 'product' && !this.product) {
+    return next(new Error('주문 아이템(product)에 product id가 필요합니다.'))
+  }
+  if (this.itemType === 'pack' && !this.pack) {
+    return next(new Error('주문 아이템(pack)에 pack id가 필요합니다.'))
+  }
+  next()
+})
 
 const addressSchema = new mongoose.Schema(
   {

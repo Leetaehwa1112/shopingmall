@@ -41,7 +41,7 @@ export default function AdminAuctions() {
 
   const fetchList = useCallback(() => {
     setLoading(true)
-    const params = filter ? { status: filter } : {}
+    const params = filter ? { status: filter, limit: 500 } : { limit: 500 }
     api.get('/auctions', { params })
       .then(({ data }) => { setList(data.data || []); setTotal(data.total || 0) })
       .catch(() => toast({ type: 'error', title: '불러오기 실패', message: '경매 목록을 가져오지 못했습니다.' }))

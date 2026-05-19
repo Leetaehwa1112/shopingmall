@@ -67,6 +67,7 @@ export default function SellPage() {
         buyNowPrice: form.buyNowPrice ? Number(form.buyNowPrice) : null,
         endsAt: form.endsAt || null,
         minIncrement: Number(form.minIncrement),
+        description: form.description || '',
       })
       toast({ type: 'success', title: '출품 요청 접수됐어요!', message: '검수 후 1-2일 내 등록 완료돼요.' })
       setTimeout(() => navigate('/mypage'), 1500)

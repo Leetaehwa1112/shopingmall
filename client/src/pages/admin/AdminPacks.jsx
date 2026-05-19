@@ -113,9 +113,14 @@ export default function AdminPacks() {
   const handleBulkDelete = async () => {
     if (!selected.length) return
     if (!confirm(`${selected.length}개 팩을 삭제할까요?`)) return
-    for (const id of selected) { try { await api.delete(`/packs/${id}`) } catch {} }
-    logAudit({ actor: user?.name, action: 'pack.bulk.delete', entity: 'pack', entityId: `${selected.length}개`, meta: { ids: selected } })
-    toast({ type: 'success', title: `${selected.length}개 삭제` })
+    let ok = 0, fail = 0
+    for (const id of selected) {
+      try { await api.delete(`/packs/${id}`); ok++ } catch { fail++ }
+    }
+    logAudit({ actor: user?.name, action: 'pack.bulk.delete', entity: 'pack', entityId: `${ok}개`, meta: { ids: selected, fail } })
+    if (fail === 0)      toast({ type: 'success', title: `${ok}개 삭제 완료` })
+    else if (ok === 0)   toast({ type: 'error',   title: '삭제 실패', message: `${fail}건 모두 실패했습니다.` })
+    else                 toast({ type: 'warning', title: '부분 삭제', message: `성공 ${ok}건 · 실패 ${fail}건` })
     setSelected([])
     fetchList()
   }

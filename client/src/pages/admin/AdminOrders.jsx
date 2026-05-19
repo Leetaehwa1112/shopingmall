@@ -271,7 +271,7 @@ export default function AdminOrders() {
             <span className="text-[11px] text-mute font-bold">{getPaymentLabel(o.payment?.method)}</span>
           },
           { key: 'status', label: '상태', align: 'center', sortable: true, render: (o) => {
-            const st = STATUS[o.status] || STATUS.paid
+            const st = STATUS[o.status] || STATUS.unknown
             return (
               <InlineSelect
                 tone={statusTone(o.status)}
@@ -527,7 +527,7 @@ function OrderDrawer({ order, onClose, onStatusChange, onTrackingUpdate, actor }
   const [trackingNo, setTrackingNo] = useState(order.shipping?.trackingNumber || '')
   const [carrier, setCarrier] = useState(order.shipping?.carrier || 'FedEx')
   const [saving, setSaving] = useState(false)
-  const st = STATUS[order.status] || STATUS.paid
+  const st = STATUS[order.status] || STATUS.unknown
 
   const handleTrackingSave = async () => {
     setSaving(true)

@@ -21,7 +21,7 @@ export default function AdminUsers() {
 
   useEffect(() => {
     setLoading(true)
-    api.get('/users')
+    api.get('/users', { params: { limit: 500 } })
       .then(({ data }) => setUsers(data.data || []))
       .catch(() => setUsers([]))
       .finally(() => setLoading(false))

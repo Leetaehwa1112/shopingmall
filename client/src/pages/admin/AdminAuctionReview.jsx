@@ -53,8 +53,8 @@ export default function AdminAuctionReview() {
   const load = useCallback(() => {
     setLoading(true); setError(false)
     Promise.all([
-      api.get('/auctions', { params: { status: 'pending' } }),
-      api.get('/auctions'),
+      api.get('/auctions', { params: { status: 'pending', limit: 500 } }),
+      api.get('/auctions', { params: { limit: 500 } }),
     ])
       .then(([p, all]) => {
         setQueue(p.data.data || [])

@@ -4,11 +4,28 @@ const User = require("../models/User");
 
 const SALT_ROUNDS = 10;
 
-// [GET] /api/users - 전체 유저 조회
+// [GET] /api/users - 전체 유저 조회 (페이징 + 검색)
 const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select("-password");
-    res.status(200).json({ success: true, data: users });
+    const { page = 1, limit = 50, search = "", user_type } = req.query;
+    const filter = {};
+    if (user_type) filter.user_type = user_type;
+    if (search) {
+      const rx = new RegExp(search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      filter.$or = [{ name: rx }, { email: rx }, { phone: rx }];
+    }
+    const skip = (Number(page) - 1) * Number(limit);
+    const [users, total] = await Promise.all([
+      User.find(filter).select("-password").sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
+      User.countDocuments(filter),
+    ]);
+    res.status(200).json({
+      success: true,
+      total,
+      page: Number(page),
+      totalPages: Math.ceil(total / Number(limit)),
+      data: users,
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

@@ -88,7 +88,7 @@ export default function MyPage() {
   // ─── 통계 ─────────────────────────────────────────────
   const totalSpent = orders
     .filter((o) => o.status !== 'cancelled')
-    .reduce((s, o) => s + (o.total_amount || o.totalPrice || 0), 0)
+    .reduce((s, o) => s + (o.totalAmount || o.total_amount || o.totalPrice || 0), 0)
   const liveListings = listings.filter((l) => ['approved', 'live', 'pending'].includes(l.status)).length
 
   return (
@@ -356,16 +356,19 @@ function OrderRow({ order }) {
   const items = order.items || []
   const firstItem = items[0]
   const more = items.length - 1
-  const total = order.total_amount || order.totalPrice || 0
+  const total = order.totalAmount || order.total_amount || order.totalPrice || 0
   const status = order.status || 'paid'
   const date = order.createdAt || order.created_at
 
   const STATUS_LABEL = {
+    pending_payment: ['결제대기', 'mute'],
     paid: ['결제완료', 'gold'],
+    preparing: ['상품준비', 'gold'],
     ready: ['배송준비', 'gold'],
     shipped: ['배송중', 'gold'],
     delivered: ['배송완료', 'green'],
     cancelled: ['취소됨', 'mute'],
+    refunded: ['환불완료', 'mute'],
   }
   const [label, tone] = STATUS_LABEL[status] || [status, 'mute']
 

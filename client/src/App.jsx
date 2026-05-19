@@ -10,7 +10,6 @@ import ProductsPage from '@/pages/ProductsPage'
 import ProductDetailPage from '@/pages/ProductDetailPage'
 import CartPage from '@/pages/CartPage'
 import OrderPage from '@/pages/OrderPage'
-import CheckoutPage from '@/pages/CheckoutPage'
 import OrderCompletePage from '@/pages/OrderCompletePage'
 import LoginPage from '@/pages/LoginPage'
 import RegisterPage from '@/pages/RegisterPage'
@@ -57,7 +56,6 @@ export default function App() {
             <Route path="sell" element={<SellPage />} />
             <Route path="cart" element={<CartPage />} />
             <Route path="order" element={<OrderPage />} />
-            <Route path="checkout" element={<CheckoutPage />} />
             <Route path="order-complete" element={<OrderCompletePage />} />
             <Route path="login" element={<LoginPage />} />
             <Route path="register" element={<RegisterPage />} />

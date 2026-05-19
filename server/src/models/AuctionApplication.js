@@ -43,6 +43,9 @@ const auctionApplicationSchema = new mongoose.Schema(
     // 사진
     photos: { type: [String], default: [] },
 
+    // 신청자 설명 / 컨디션 노트
+    description: { type: String, trim: true, default: "" },
+
     // 신청 상태
     status: {
       type: String,

@@ -2,10 +2,22 @@ const mongoose = require('mongoose')
 
 const cartItemSchema = new mongoose.Schema(
   {
+    // 'product' (Card) | 'pack' (CardPack/Box)
+    itemType: {
+      type: String,
+      enum: ['product', 'pack'],
+      default: 'product',
+      required: true,
+    },
     product: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Product',
-      required: true,
+      default: null,
+    },
+    pack: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Pack',
+      default: null,
     },
     qty: {
       type: Number,
@@ -27,6 +39,16 @@ const cartItemSchema = new mongoose.Schema(
   { _id: false }
 )
 
+cartItemSchema.pre('validate', function (next) {
+  if (this.itemType === 'product' && !this.product) {
+    return next(new Error('product id가 필요합니다.'))
+  }
+  if (this.itemType === 'pack' && !this.pack) {
+    return next(new Error('pack id가 필요합니다.'))
+  }
+  next()
+})
+
 const cartSchema = new mongoose.Schema(
   {
     user: {
@@ -42,18 +64,12 @@ const cartSchema = new mongoose.Schema(
   }
 )
 
-// 총액 가상 필드
+// 총액 가상 필드 — 상품가만 (배송비는 주문 단계에서 한 번만 계산)
 cartSchema.virtual('totalPrice').get(function () {
   return this.items.reduce((sum, item) => {
-    const shipping = item.shippingOption === 'quick' ? 50000 : 0
-    return sum + item.priceSnapshot * item.qty + shipping
+    return sum + item.priceSnapshot * item.qty
   }, 0)
 })
-
-// 특정 상품이 이미 담겨 있는지 확인
-cartSchema.methods.hasProduct = function (productId) {
-  return this.items.some((item) => item.product.toString() === productId.toString())
-}
 
 const Cart = mongoose.model('Cart', cartSchema)
 

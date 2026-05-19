@@ -9,14 +9,24 @@ const isLoggedIn = () => {
   } catch { return false }
 }
 
+// 팩/박스 판별 (Pack 모델은 setShort/type 등 고유 필드)
+const isPack = (item) =>
+  item?.itemType === 'pack' ||
+  item?.type === 'pack' || item?.type === 'box' ||
+  !!item?.setShort || !!item?.heroArt
+
 const normalizeServerItems = (items) =>
-  items.map((item) => ({
-    ...item.product,
-    id: item.product._id,
-    qty: item.qty,
-    shippingOption: item.shippingOption,
-    priceSnapshot: item.priceSnapshot,
-  }))
+  items.map((it) => {
+    const entity = it.product || it.pack || {}
+    return {
+      ...entity,
+      id: entity._id,
+      itemType: it.itemType || (it.pack ? 'pack' : 'product'),
+      qty: it.qty,
+      shippingOption: it.shippingOption,
+      priceSnapshot: it.priceSnapshot,
+    }
+  })
 
 const mergeLocal = (prev, productId, qty, card) => {
   const existing = prev.find((i) => (i.id || i._id) === productId)
@@ -25,7 +35,7 @@ const mergeLocal = (prev, productId, qty, card) => {
       (i.id || i._id) === productId ? { ...i, qty: (i.qty || 1) + qty } : i
     )
   }
-  return [...prev, { ...card, id: productId, qty }]
+  return [...prev, { ...card, id: productId, itemType: isPack(card) ? 'pack' : 'product', qty }]
 }
 
 const useCartStore = create(
@@ -51,24 +61,27 @@ const useCartStore = create(
       },
 
       add: async (card) => {
-        const productId = card._id || card.id
+        const id = card._id || card.id
         const qty = card.qty || 1
+        const itemType = isPack(card) ? 'pack' : 'product'
 
-        // 1. 먼저 로컬 상태 업데이트 (옵티미스틱)
-        set({ items: mergeLocal(get().items, productId, qty, card) })
+        // 1. 옵티미스틱 로컬 업데이트
+        set({ items: mergeLocal(get().items, id, qty, { ...card, itemType }) })
 
-        // 2. 로그인 상태면 서버에도 동기화
+        // 2. 로그인 상태면 서버 동기화
         if (isLoggedIn()) {
           try {
-            const { data } = await api.post('/cart', {
-              productId,
+            const body = {
+              itemType,
               qty,
               shippingOption: card.shippingOption || 'standard',
-            })
-            // 서버 응답으로 최종 동기화
+            }
+            if (itemType === 'pack') body.packId = id
+            else body.productId = id
+
+            const { data } = await api.post('/cart', body)
             set({ items: normalizeServerItems(data.data.items) })
           } catch (err) {
-            // API 실패해도 옵티미스틱 상태 유지 (아이템 사라지지 않음)
             console.error('장바구니 서버 동기화 실패:', err)
           }
         }
@@ -81,7 +94,8 @@ const useCartStore = create(
           ),
         })
         if (isLoggedIn()) {
-          api.put(`/cart/${productId}`, { qty }).catch(() => {})
+          const it = get().items.find((i) => (i.id || i._id) === productId)
+          api.put(`/cart/${productId}`, { qty, itemType: it?.itemType }).catch(() => {})
         }
       },
 
@@ -99,11 +113,11 @@ const useCartStore = create(
         }
       },
 
+      // 상품가 합계만 (배송비는 주문 단계에서 한 번만 계산)
       total: () =>
         get().items.reduce((sum, i) => {
           const price = i.priceSnapshot || i.price || i.currentBid || 0
-          const shipping = i.shippingOption === 'quick' ? 50000 : 0
-          return sum + price * (i.qty || 1) + shipping
+          return sum + price * (i.qty || 1)
         }, 0),
     }),
     { name: 'vault-cart' }

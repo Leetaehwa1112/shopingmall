@@ -1,6 +1,7 @@
 const Order = require('../models/Order')
 const Cart = require('../models/Cart')
 const Product = require('../models/Product')
+const Pack = require('../models/Pack')
 
 // ─── 도메인 상수 ────────────────────────────────────────────
 const SHIPPING_FEES = { standard: 0, fedex: 30000, quick: 50000, brinks: 1500000, pickup: 0 }
@@ -16,14 +17,18 @@ class AppError extends Error {
 
 // ─── 내부 헬퍼 ─────────────────────────────────────────────
 
+/** 카트/Order 아이템 공통 정규화: { itemType, entity, qty, priceSnapshot, shippingOption } */
+const itemEntity = (item) => item.itemType === 'pack' ? item.pack : item.product
+
 /** 주문 아이템 검증 (재고/판매상태) */
 const validateOrderItems = (items) => {
   for (const item of items) {
-    if (!item.product || item.product.status !== 'active') {
-      throw new AppError(`"${item.product?.name || '상품'}"은 현재 판매 중이 아닙니다.`)
+    const ent = itemEntity(item)
+    if (!ent || ent.status !== 'active') {
+      throw new AppError(`"${ent?.name || ent?.nameKo || '상품'}"은 현재 판매 중이 아닙니다.`)
     }
-    if (item.product.stock < item.qty) {
-      throw new AppError(`"${item.product.name}" 재고가 부족합니다. (남은 재고: ${item.product.stock})`)
+    if (ent.stock !== undefined && ent.stock < item.qty) {
+      throw new AppError(`"${ent.name || ent.nameKo}" 재고가 부족합니다. (남은 재고: ${ent.stock})`)
     }
   }
 }
@@ -32,6 +37,7 @@ const validateOrderItems = (items) => {
 const resolveOrderItems = async (userId, clientItems) => {
   const cart = await Cart.findOne({ user: userId })
     .populate('items.product', 'name nameKo price stock status')
+    .populate('items.pack',    'name nameKo price stock status')
 
   if (cart && cart.items.length > 0) {
     validateOrderItems(cart.items)
@@ -42,10 +48,14 @@ const resolveOrderItems = async (userId, clientItems) => {
   }
   const populated = await Promise.all(
     clientItems.map(async (ci) => {
-      const product = await Product.findById(ci.id || ci._id)
-        .select('name nameKo price stock status')
+      const id = ci.id || ci._id
+      const itemType = ci.itemType === 'pack' ? 'pack' : 'product'
+      const Model = itemType === 'pack' ? Pack : Product
+      const ent = await Model.findById(id).select('name nameKo price stock status')
       return {
-        product,
+        itemType,
+        product: itemType === 'product' ? ent : null,
+        pack:    itemType === 'pack'    ? ent : null,
         qty: ci.qty || 1,
         priceSnapshot: ci.priceSnapshot || ci.price,
         shippingOption: ci.shippingOption,
@@ -58,20 +68,25 @@ const resolveOrderItems = async (userId, clientItems) => {
 
 /** 금액 계산 */
 const calculateAmount = (orderItems, shippingMethod, insuranceEnabled) => {
-  const subtotal = orderItems.reduce(
-    (sum, item) => sum + (item.priceSnapshot || item.product.price) * item.qty, 0
-  )
+  const subtotal = orderItems.reduce((sum, item) => {
+    const ent = itemEntity(item)
+    return sum + (item.priceSnapshot || ent?.price || 0) * item.qty
+  }, 0)
   const shippingFee  = SHIPPING_FEES[shippingMethod] ?? 0
   const insuranceFee = insuranceEnabled ? Math.floor(subtotal * 0.005) : 0
   const totalAmount  = subtotal + shippingFee + insuranceFee
   return { subtotal, shippingFee, insuranceFee, totalAmount }
 }
 
-/** 재고 일괄 차감/복구 */
+/** 재고 일괄 차감/복구 (Product / Pack 모두) */
 const adjustStock = (items, delta) =>
-  Promise.all(items.map((item) =>
-    Product.findByIdAndUpdate(item.product._id || item.product, { $inc: { stock: delta * item.qty } })
-  ))
+  Promise.all(items.map((item) => {
+    const ent = itemEntity(item)
+    const id = ent?._id || ent
+    if (!id) return null
+    const Model = item.itemType === 'pack' ? Pack : Product
+    return Model.findByIdAndUpdate(id, { $inc: { stock: delta * item.qty } })
+  }))
 
 // ─── 공개 서비스 함수 ──────────────────────────────────────
 
@@ -88,12 +103,17 @@ const createOrder = async (userId, payload) => {
 
   const order = await Order.create({
     user: userId,
-    items: orderItems.map((item) => ({
-      product:        item.product._id,
-      qty:            item.qty,
-      unitPrice:      item.priceSnapshot || item.product.price,
-      shippingOption: item.shippingOption || 'standard',
-    })),
+    items: orderItems.map((item) => {
+      const ent = itemEntity(item)
+      return {
+        itemType:       item.itemType || 'product',
+        product:        item.itemType === 'pack' ? null : (ent?._id || item.product),
+        pack:           item.itemType === 'pack' ? (ent?._id || item.pack) : null,
+        qty:            item.qty,
+        unitPrice:      item.priceSnapshot || ent?.price || 0,
+        shippingOption: item.shippingOption || 'standard',
+      }
+    }),
     ...amount,
     shipping: { method: shippingMethod, recipient, phone, address, requireSignature, memo },
     payment: {
@@ -108,7 +128,10 @@ const createOrder = async (userId, payload) => {
   await adjustStock(orderItems, -1)
   await Cart.findOneAndDelete({ user: userId })
 
-  await order.populate('items.product', 'name nameKo images sku')
+  await order.populate([
+    { path: 'items.product', select: 'name nameKo images sku' },
+    { path: 'items.pack',    select: 'name nameKo heroArt sku' },
+  ])
   return order
 }
 
@@ -119,121 +142,106 @@ const paginate = async (filter, { page = 1, limit = 10, populates = [] } = {}) =
   for (const p of populates) query = query.populate(...p)
   const [data, total] = await Promise.all([query, Order.countDocuments(filter)])
   return {
+    data,
     total,
     page: Number(page),
     totalPages: Math.ceil(total / Number(limit)),
-    data,
   }
 }
+
+const ORDER_POPULATES = [
+  ['items.product', 'name nameKo images sku price'],
+  ['items.pack',    'name nameKo heroArt sku price'],
+  ['user', 'name email phone'],
+]
 
 /** 내 주문 목록 */
-const getMyOrders = (userId, { page, limit, status }) => {
+const getMyOrders = async (userId, query) => {
+  const { page, limit, status } = query
   const filter = { user: userId }
-  if (status) filter.status = status
-  return paginate(filter, {
-    page, limit,
-    populates: [['items.product', 'name nameKo images']],
-  })
+  if (status && status !== 'all') filter.status = status
+  return paginate(filter, { page, limit, populates: ORDER_POPULATES })
 }
 
-/** 전체 주문 목록 (관리자) */
-const getAllOrders = ({ page, limit, status }) => {
-  const filter = {}
-  if (status) filter.status = status
-  return paginate(filter, {
-    page, limit,
-    populates: [
-      ['user', 'name email'],
-      ['items.product', 'name nameKo images'],
-    ],
-  })
-}
-
-/** 주문 단건 조회 (권한 체크) */
+/** 단건 조회 (본인 또는 어드민) */
 const getOrderById = async (orderId, requester) => {
   const order = await Order.findById(orderId)
-    .populate('items.product', 'name nameKo images sku category')
+    .populate('items.product', 'name nameKo images sku price')
+    .populate('items.pack',    'name nameKo heroArt sku price')
     .populate('user', 'name email phone')
-
   if (!order) throw new AppError('주문을 찾을 수 없습니다.', 404)
-
-  const isOwner = order.user._id.toString() === requester._id.toString()
-  const isAdmin = requester.user_type === 'admin'
-  if (!isOwner && !isAdmin) throw new AppError('접근 권한이 없습니다.', 403)
-
+  if (requester.user_type !== 'admin' && order.user._id.toString() !== requester._id.toString()) {
+    throw new AppError('권한이 없습니다.', 403)
+  }
   return order
 }
 
-/** 주문 취소 (고객 본인) */
-const cancelOrder = async (orderId, userId, reason = '') => {
+/** 취소 */
+const cancelOrder = async (orderId, userId, reason) => {
   const order = await Order.findOne({ _id: orderId, user: userId })
   if (!order) throw new AppError('주문을 찾을 수 없습니다.', 404)
-  if (!order.isCancellable) {
-    throw new AppError(`${order.status} 상태에서는 취소할 수 없습니다.`)
+  if (!['pending_payment', 'paid', 'preparing'].includes(order.status)) {
+    throw new AppError('현재 상태에서는 취소할 수 없습니다.')
   }
-
-  order.status       = 'cancelled'
-  order.cancelledAt  = new Date()
-  order.cancelReason = reason
-  await order.save()
-
+  // 재고 복구
   await adjustStock(order.items, +1)
+  order.status = 'cancelled'
+  order.cancelledAt = new Date()
+  order.cancelReason = reason || '사용자 요청'
+  await order.save()
   return order
 }
 
-/** 주문 상태 변경 (관리자) — 부수효과 자동 처리 */
+/** 어드민 전체 조회 */
+const getAllOrders = async (query) => {
+  const { page, limit, status, search } = query
+  const filter = {}
+  if (status && status !== 'all') filter.status = status
+  if (search) {
+    const rx = new RegExp(search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
+    filter.$or = [{ orderNumber: rx }, { 'shipping.recipient': rx }]
+  }
+  return paginate(filter, { page, limit, populates: ORDER_POPULATES })
+}
+
+/** 상태 변경 (어드민) */
 const updateOrderStatus = async (orderId, status) => {
   if (!VALID_ADMIN_STATUSES.includes(status)) {
     throw new AppError('유효하지 않은 상태값입니다.')
   }
-
   const order = await Order.findById(orderId)
   if (!order) throw new AppError('주문을 찾을 수 없습니다.', 404)
-
   order.status = status
-
-  // 상태별 자동 부수효과
-  if (status === 'paid') {
-    order.payment.status = 'paid'
-    order.payment.paidAt = new Date()
+  if (status === 'cancelled' || status === 'refunded') {
+    if (!order.cancelledAt) {
+      order.cancelledAt = new Date()
+      await adjustStock(order.items, +1)
+    }
   }
-  if (status === 'cancelled') order.cancelledAt = new Date()
-  if (status === 'refunded') {
-    order.refundedAt = new Date()
-    order.payment.status = 'refunded'
-  }
-  if (status === 'delivered' && order.escrow.status === 'held') {
-    order.escrow.status     = 'released'
-    order.escrow.releasedAt = new Date()
-  }
-
   await order.save()
   return order
 }
 
-/** 송장 등록 (관리자) — 상태도 shipped로 전이 */
+/** 송장 등록 (어드민) */
 const updateTracking = async (orderId, { trackingNumber, carrier }) => {
-  const order = await Order.findByIdAndUpdate(
-    orderId,
-    {
-      'shipping.trackingNumber': trackingNumber,
-      'shipping.carrier':        carrier,
-      'shipping.shippedAt':      new Date(),
-      status:                    'shipped',
-    },
-    { new: true }
-  )
+  const order = await Order.findById(orderId)
   if (!order) throw new AppError('주문을 찾을 수 없습니다.', 404)
+  if (trackingNumber !== undefined) order.shipping.trackingNumber = trackingNumber
+  if (carrier !== undefined) order.shipping.carrier = carrier
+  if (trackingNumber && !order.shipping.shippedAt) {
+    order.shipping.shippedAt = new Date()
+    if (order.status === 'paid' || order.status === 'preparing') order.status = 'shipped'
+  }
+  await order.save()
   return order
 }
 
 module.exports = {
-  AppError,
   createOrder,
   getMyOrders,
-  getAllOrders,
   getOrderById,
   cancelOrder,
+  getAllOrders,
   updateOrderStatus,
   updateTracking,
 }

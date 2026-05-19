@@ -119,5 +119,12 @@ function methodLabel(m) {
   return { card: '신용카드', toss: '토스페이', kakao: '카카오페이', bank: '가상계좌', escrow: '에스크로' }[m] || m
 }
 function shippingLabel(s) {
-  return { fedex: 'FedEx Priority', ems: 'EMS Premium', pickup: '직접 수령' }[s] || s
+  return {
+    standard: '일반 배송',
+    quick: '퀵 배송',
+    fedex: 'FedEx Priority',
+    ems: 'EMS Premium',
+    brinks: "Brink's 무장 수송",
+    pickup: '직접 수령',
+  }[s] || s
 }

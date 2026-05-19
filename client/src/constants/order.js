@@ -9,6 +9,7 @@ export const ORDER_STATUS = {
   delivered:       { label: '도착',       led: 'green',  color: 'text-emerald-700 bg-emerald-50 border-emerald-200', step: 4  },
   cancelled:       { label: '취소',       led: 'red',    color: 'text-rose-700    bg-rose-50    border-rose-200',    step: -1 },
   refunded:        { label: '환불 완료',  led: 'red',    color: 'text-rose-700    bg-rose-50    border-rose-200',    step: -1 },
+  unknown:         { label: '알 수 없음', led: 'red',    color: 'text-mute        bg-bone-2     border-gray-900/15',  step: -1 },
 }
 
 // 5단계 진행 라벨 (HP-bar 등 진행 표시용)
@@ -64,7 +65,7 @@ export const SHIPPING_FEE = Object.fromEntries(
 export const ESCROW_THRESHOLD = 1_000_000
 
 // ─── 헬퍼 ──────────────────────────────────────────────────
-export const getOrderStatus = (status) => ORDER_STATUS[status] || ORDER_STATUS.paid
+export const getOrderStatus = (status) => ORDER_STATUS[status] || ORDER_STATUS.unknown
 export const getPaymentLabel = (method) => PAYMENT_LABEL[method] || method
 export const getShippingLabel = (method) => SHIPPING_LABEL[method] || method
 export const isOrderCancellable = (status) => CANCELLABLE_STATUSES.includes(status)
