@@ -93,6 +93,14 @@ const useCartStore = create(
         // 이전 수량 보관 — 서버 거부 시 롤백용
         const prev = get().items.find((i) => (i.id || i._id) === productId)
         const prevQty = prev?.qty
+        // 사전 재고 가드 — 알려진 stock 초과 요청은 네트워크 호출 없이 거절
+        if (prev && typeof prev.stock === 'number' && qty > prev.stock) {
+          try {
+            const mod = await import('@/store/toastStore')
+            mod.default.getState().push({ type: 'error', message: `재고가 ${prev.stock}개 남았어요.` })
+          } catch {}
+          return
+        }
         set({
           items: get().items.map((i) =>
             (i.id || i._id) === productId ? { ...i, qty } : i

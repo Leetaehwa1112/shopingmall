@@ -78,10 +78,13 @@ export default function CartPage() {
                       {!isPack && <GradeBadge grade={c.grade} size="sm" />}
                       <div className="flex items-center gap-2">
                         <button onClick={() => updateQty(productId, Math.max(1, (c.qty || 1) - 1))}
-                          className="w-8 h-8 rounded-md bg-paper border-2 border-ink text-ink font-bold text-sm shadow-[0_2px_0_#1a1a1a] hover:bg-electric/30 transition-colors">−</button>
+                          disabled={(c.qty || 1) <= 1}
+                          className="w-8 h-8 rounded-md bg-paper border-2 border-ink text-ink font-bold text-sm shadow-[0_2px_0_#1a1a1a] hover:bg-electric/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">−</button>
                         <span className="font-display font-bold text-base w-7 text-center tabular-nums">{c.qty || 1}</span>
                         <button onClick={() => updateQty(productId, (c.qty || 1) + 1)}
-                          className="w-8 h-8 rounded-md bg-paper border-2 border-ink text-ink font-bold text-sm shadow-[0_2px_0_#1a1a1a] hover:bg-electric/30 transition-colors">+</button>
+                          disabled={typeof c.stock === 'number' && (c.qty || 1) >= c.stock}
+                          title={typeof c.stock === 'number' && (c.qty || 1) >= c.stock ? `재고 ${c.stock}개 한도` : ''}
+                          className="w-8 h-8 rounded-md bg-paper border-2 border-ink text-ink font-bold text-sm shadow-[0_2px_0_#1a1a1a] hover:bg-electric/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">+</button>
                       </div>
                     </div>
                     {c.shippingOption === 'quick' && (
