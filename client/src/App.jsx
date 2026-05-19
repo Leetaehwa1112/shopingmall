@@ -23,6 +23,7 @@ const PacksPage = lazy(() => import('@/pages/PacksPage'))
 const PackDetailPage = lazy(() => import('@/pages/PackDetailPage'))
 const SellPage = lazy(() => import('@/pages/SellPage'))
 const DexPage = lazy(() => import('@/pages/DexPage'))
+const InfoPage = lazy(() => import('@/pages/InfoPage'))
 
 // ─── Admin 전체: 비-admin 사용자는 다운로드 안 함 ───────────
 const AdminLayout = lazy(() => import('@/components/layout/AdminLayout'))
@@ -83,6 +84,8 @@ export default function App() {
               <Route path="register" element={<RegisterPage />} />
               <Route path="mypage" element={<MyPage />} />
               <Route path="my-orders" element={<MyOrdersPage />} />
+              {/* 정적 정보 페이지 — 단일 컴포넌트가 슬러그로 분기 */}
+              <Route path="info/:slug" element={<InfoPage />} />
             </Route>
 
             {/* admin 로그인은 Layout(일반 헤더/푸터) 밖에서 풀스크린 */}

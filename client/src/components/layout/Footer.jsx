@@ -23,9 +23,18 @@ export default function Footer() {
           </div>
         </div>
         <div className="md:col-span-7 grid grid-cols-3 gap-8">
-          <Col title="SHOP" links={[['경매', '/auctions'], ['카탈로그', '/products'], ['시세', '/market']]} />
-          <Col title="SUPPORT" links={[['고객센터', '#'], ['배송', '#'], ['반품', '#'], ['FAQ', '#']]} />
-          <Col title="COMPANY" links={[['회사 소개', '#'], ['이용약관', '#'], ['개인정보처리방침', '#']]} />
+          <Col title="SHOP" links={[['경매', '/auctions'], ['카탈로그', '/products'], ['카드팩', '/packs']]} />
+          <Col title="SUPPORT" links={[
+            ['고객센터', '/info/support'],
+            ['배송 안내', '/info/shipping'],
+            ['반품 안내', '/info/returns'],
+            ['FAQ', '/info/faq'],
+          ]} />
+          <Col title="COMPANY" links={[
+            ['회사 소개', '/info/about'],
+            ['이용약관', '/info/terms'],
+            ['개인정보처리방침', '/info/privacy'],
+          ]} />
         </div>
       </div>
       <div className="border-t border-paper/10">
