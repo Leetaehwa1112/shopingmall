@@ -68,7 +68,17 @@ export default function Header() {
 
       {/* ── Main bar ───────────────────────────────────────── */}
       <div className="max-w-7xl mx-auto px-6 h-[76px] flex items-center justify-between gap-4 lg:gap-6">
-        <Link to="/" className="flex items-center gap-3 group shrink-0">
+        <Link
+          to="/"
+          onClick={(e) => {
+            // 이미 홈이면 Link가 no-op → 수동으로 최상단 스크롤
+            if (loc.pathname === '/') {
+              e.preventDefault()
+              window.scrollTo({ top: 0, behavior: 'smooth' })
+            }
+          }}
+          className="flex items-center gap-3 group shrink-0"
+        >
           <Pokeball size={38} className="group-hover:rotate-[20deg] group-hover:scale-110 transition-transform duration-300" />
           <div className="leading-none">
             <div className="font-display font-bold text-[26px] tracking-tight text-ink">
