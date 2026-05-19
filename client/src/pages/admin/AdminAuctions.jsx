@@ -109,6 +109,19 @@ export default function AdminAuctions() {
     }
   }
 
+  const handleDelete = async (id) => {
+    if (!confirm('신청을 삭제할까요?\n(게시된 매물이 있으면 함께 삭제됩니다. 입찰 진행 중인 매물은 삭제 불가)')) return
+    try {
+      await api.delete(`/auctions/${id}`)
+      logAudit({ actor: user?.name, action: 'auction.delete', entity: 'auction', entityId: id, summary: '신청 + 게시 매물 삭제' })
+      toast({ type: 'success', title: '삭제 완료', message: '신청 내역이 삭제되었습니다.' })
+      setDrawer(null)
+      fetchList()
+    } catch (err) {
+      toast({ type: 'error', title: '삭제 실패', message: err?.response?.data?.message || '삭제할 수 없습니다.' })
+    }
+  }
+
   const handleBulk = async (status) => {
     if (!selected.length) return
     if (!confirm(`${selected.length}건을 [${STATUS[status]?.label}](으)로 변경할까요?`)) return
@@ -248,13 +261,14 @@ export default function AdminAuctions() {
           item={drawer}
           onClose={() => setDrawer(null)}
           onStatusChange={handleStatusChange}
+          onDelete={handleDelete}
         />
       )}
     </div>
   )
 }
 
-function AuctionDrawer({ item, onClose, onStatusChange }) {
+function AuctionDrawer({ item, onClose, onStatusChange, onDelete }) {
   const [note, setNote] = useState(item.adminNote || '')
   const s = STATUS[item.status] || STATUS.pending
   return (
@@ -325,6 +339,20 @@ function AuctionDrawer({ item, onClose, onStatusChange }) {
             </button>
           ))}
         </div>
+      </DSection>
+
+      {/* 위험 액션 영역 — 신청 + 게시 매물 영구 삭제 */}
+      <DSection title="위험 작업">
+        <button
+          type="button"
+          onClick={() => onDelete?.(item._id)}
+          className="text-[11px] font-bold px-3 py-1.5 rounded-md border border-red-500 text-white bg-red-600 hover:bg-red-700 transition-colors"
+        >
+          신청 삭제
+        </button>
+        <p className="text-[10px] text-mute mt-1.5 leading-relaxed">
+          신청 내역과 게시된 매물을 함께 영구 삭제합니다. 입찰 진행 중인 매물은 삭제할 수 없습니다.
+        </p>
       </DSection>
     </Drawer>
   )

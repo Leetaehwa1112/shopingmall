@@ -154,6 +154,15 @@ const updateStatus = async (req, res) => {
       application.publishedProduct = product._id;
     }
 
+    // 이미 게시된 Product가 있다면 신청 상태에 맞춰 Product.status 동기화 —
+    // 거절/대기/승인은 'hidden'(사이트 비노출), live는 'active', ended는 'sold_out'.
+    if (application.publishedProduct) {
+      const productStatus =
+        status === "live" ? "active" :
+        status === "ended" ? "sold_out" : "hidden";
+      await Product.findByIdAndUpdate(application.publishedProduct, { status: productStatus });
+    }
+
     await application.save();
     await application.populate("user", "name email");
 
@@ -170,10 +179,39 @@ const updateStatus = async (req, res) => {
   }
 };
 
+// [DELETE] /api/auctions/:id - 신청 삭제 (어드민)
+//   publishedProduct가 있으면 함께 삭제. 단, currentBid가 있으면 거부 (실거래 보호).
+const deleteApplication = async (req, res) => {
+  try {
+    const application = await AuctionApplication.findById(req.params.id);
+    if (!application) {
+      return res.status(404).json({ success: false, message: "신청 내역을 찾을 수 없습니다." });
+    }
+
+    // 게시된 Product에 입찰이 있으면 삭제 거부 — 거래 기록 보호
+    if (application.publishedProduct) {
+      const product = await Product.findById(application.publishedProduct).select("bidCount currentBid");
+      if (product && (product.bidCount > 0 || product.currentBid)) {
+        return res.status(400).json({
+          success: false,
+          message: "입찰이 진행된 매물은 삭제할 수 없습니다. 먼저 'ended'로 전환하세요.",
+        });
+      }
+      if (product) await Product.findByIdAndDelete(application.publishedProduct);
+    }
+
+    await AuctionApplication.findByIdAndDelete(req.params.id);
+    res.status(200).json({ success: true, message: "신청이 삭제되었습니다." });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   createApplication,
   getMyApplications,
   getApplications,
   getApplicationById,
   updateStatus,
+  deleteApplication,
 };
