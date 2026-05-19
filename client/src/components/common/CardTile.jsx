@@ -6,20 +6,32 @@ import Countdown from './Countdown'
 import Icon from './Icon'
 import { formatKRW, timeUntil } from '@/api/cards'
 import useWishlistStore from '@/store/wishlistStore'
+import useAuthStore from '@/store/authStore'
+import useToastStore from '@/store/toastStore'
 
 export default function CardTile({ card }) {
   const cardId = card.id || card._id
   const wished = useWishlistStore((s) => s.has(cardId))
   const toggle = useWishlistStore((s) => s.toggle)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const toast = useToastStore((s) => s.push)
   const [pop, setPop] = useState(false)
 
-  const onWish = (e) => {
+  const onWish = async (e) => {
     e.preventDefault()
     e.stopPropagation()
-    toggle(cardId)
-    if (!wished) {
-      setPop(true)
-      setTimeout(() => setPop(false), 500)
+    if (!isAuthenticated) {
+      toast?.({ type: 'info', message: '로그인 후 이용하실 수 있어요.' })
+      return
+    }
+    try {
+      await toggle(cardId)
+      if (!wished) {
+        setPop(true)
+        setTimeout(() => setPop(false), 500)
+      }
+    } catch {
+      toast?.({ type: 'error', message: '위시리스트 동기화 실패' })
     }
   }
 

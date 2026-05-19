@@ -7,6 +7,7 @@ import CardTile from '@/components/common/CardTile'
 import Icon from '@/components/common/Icon'
 import Sparkles from '@/components/common/Sparkles'
 import Eyebrow from '@/components/common/Eyebrow'
+import useToastStore from '@/store/toastStore'
 
 const PAGE_SIZE = 8
 
@@ -20,18 +21,22 @@ export default function ProductsPage() {
   const [query, setQuery] = useState(queryParam)
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [page, setPage] = useState(1)
+  const toast = useToastStore((s) => s.push)
 
   useEffect(() => { setQuery(queryParam) }, [queryParam])
 
   useEffect(() => {
     setLoading(true)
+    setError(false)
     const params = { status: 'active', limit: 100 }
     if (isAuctionOnly) params.sale_type = 'auction'
     api.get('/products', { params })
       .then(({ data }) => setProducts(data.data.map(normalizeProduct)))
+      .catch(() => { setError(true); setProducts([]); toast?.({ type: 'error', message: '상품 목록을 불러오지 못했어요.' }) })
       .finally(() => setLoading(false))
-  }, [isAuctionOnly])
+  }, [isAuctionOnly, toast])
 
   useEffect(() => { setPage(1) }, [cat, sort, query])
 

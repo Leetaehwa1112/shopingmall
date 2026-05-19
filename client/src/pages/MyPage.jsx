@@ -6,6 +6,8 @@ import useCollectionStore from '@/store/collectionStore'
 import { formatKRWFull } from '@/api/cards'
 import { normalizeProduct } from '@/api/normalize'
 import { getMyOrders } from '@/api/orderApi'
+import { updateUser } from '@/api/userApi'
+import useToastStore from '@/store/toastStore'
 import api from '@/api/axios'
 import { POKEDEX, ARTWORK_URL, TYPE_TOKEN, TYPE_CHIP } from '@/constants/pokedex'
 import CardTile from '@/components/common/CardTile'
@@ -18,6 +20,7 @@ export default function MyPage() {
   const wishlistIds = useWishlistStore((s) => s.ids)
   const collectionIds = useCollectionStore((s) => s.ids)
   const toggleCollection = useCollectionStore((s) => s.toggle)
+  const toast = useToastStore((s) => s.push)
   const [tab, setTab] = useState('collection')
 
   // ─── 실데이터 ─────────────────────────────────────────
@@ -38,7 +41,7 @@ export default function MyPage() {
     setLoading((s) => ({ ...s, orders: true }))
     getMyOrders({ page: 1, limit: 20 })
       .then(({ data }) => setOrders(data.data || []))
-      .catch(() => setOrders([]))
+      .catch(() => { setOrders([]); toast?.({ type: 'error', message: '주문 내역을 불러오지 못했어요.' }) })
       .finally(() => setLoading((s) => ({ ...s, orders: false })))
   }, [isAuthenticated])
 
@@ -66,7 +69,7 @@ export default function MyPage() {
     setLoading((s) => ({ ...s, listings: true }))
     api.get('/auctions/me')
       .then(({ data }) => setListings(data.data || []))
-      .catch(() => setListings([]))
+      .catch(() => { setListings([]); toast?.({ type: 'error', message: '출품 내역을 불러오지 못했어요.' }) })
       .finally(() => setLoading((s) => ({ ...s, listings: false })))
   }, [isAuthenticated])
 
@@ -212,7 +215,7 @@ export default function MyPage() {
           <SkeletonCards />
         ) : wishlistItems.length > 0 ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {wishlistItems.map((c) => <CardTile key={c.id} card={c} />)}
+            {wishlistItems.map((c) => <CardTile key={c._id || c.id} card={c} />)}
           </div>
         ) : (
           <EmptyState
@@ -275,17 +278,7 @@ export default function MyPage() {
       )}
 
       {/* ═══════════════════ PROFILE ═══════════════════ */}
-      {tab === 'profile' && (
-        <div className="max-w-lg space-y-4">
-          <Field label="이름" value={user?.name || ''} />
-          <Field label="이메일" value={user?.email || ''} />
-          <Field label="본인 인증" value={verified ? '인증 완료' : '미인증'} />
-          <Field label="가입일" value={user?.createdAt ? new Date(user.createdAt).toLocaleDateString('ko-KR') : '-'} />
-          <div className="pt-2 text-xs text-mute font-medium">
-            정보 수정은 곧 지원될 예정이에요.
-          </div>
-        </div>
-      )}
+      {tab === 'profile' && <ProfileForm />}
     </div>
   )
 }
@@ -309,6 +302,90 @@ function Field({ label, value }) {
       <div className="text-[11px] text-ink font-bold mb-1.5 tracking-wide">{label}</div>
       <div className="bg-bone-2 border-2 border-ink/20 rounded-lg px-4 py-3 text-sm text-ink font-bold">{value}</div>
     </div>
+  )
+}
+
+function ProfileForm() {
+  const { user, verified, login, token } = useAuthStore()
+  const toast = useToastStore((s) => s.push)
+  const [form, setForm] = useState({
+    name: user?.name || '',
+    phone: user?.phone || '',
+    address: user?.address || '',
+    password: '',
+    password2: '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [touched, setTouched] = useState(false)
+
+  if (!user) return null
+  const onChange = (k) => (e) => { setForm((s) => ({ ...s, [k]: e.target.value })); setTouched(true) }
+
+  const submit = async (e) => {
+    e.preventDefault()
+    if (form.password && form.password !== form.password2) {
+      toast({ type: 'error', message: '비밀번호 확인이 일치하지 않습니다.' })
+      return
+    }
+    setSaving(true)
+    try {
+      const payload = {
+        name: form.name.trim(),
+        phone: form.phone.trim(),
+        address: form.address.trim(),
+      }
+      if (form.password) payload.password = form.password
+      const { data } = await updateUser(user._id, payload)
+      // 인증 스토어 갱신 (토큰 유지)
+      login(data.data, token)
+      toast({ type: 'success', message: '프로필이 저장되었습니다.' })
+      setForm((s) => ({ ...s, password: '', password2: '' }))
+      setTouched(false)
+    } catch (err) {
+      const msg = err?.response?.data?.message || '저장에 실패했습니다.'
+      toast({ type: 'error', message: Array.isArray(msg) ? msg.join(', ') : msg })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="max-w-lg space-y-4">
+      <Field label="이메일" value={user.email || ''} />
+      <Field label="본인 인증" value={verified ? '인증 완료' : '미인증'} />
+      <Field label="가입일" value={user.createdAt ? new Date(user.createdAt).toLocaleDateString('ko-KR') : '-'} />
+
+      <div>
+        <div className="text-[11px] text-ink font-bold mb-1.5 tracking-wide">이름</div>
+        <input value={form.name} onChange={onChange('name')}
+          className="w-full bg-white border-2 border-ink/20 rounded-lg px-4 py-3 text-sm text-ink font-bold focus:border-ink outline-none" />
+      </div>
+      <div>
+        <div className="text-[11px] text-ink font-bold mb-1.5 tracking-wide">연락처</div>
+        <input value={form.phone} onChange={onChange('phone')} placeholder="010-0000-0000"
+          className="w-full bg-white border-2 border-ink/20 rounded-lg px-4 py-3 text-sm text-ink font-bold focus:border-ink outline-none" />
+      </div>
+      <div>
+        <div className="text-[11px] text-ink font-bold mb-1.5 tracking-wide">주소</div>
+        <input value={form.address} onChange={onChange('address')} placeholder="배송 주소"
+          className="w-full bg-white border-2 border-ink/20 rounded-lg px-4 py-3 text-sm text-ink font-bold focus:border-ink outline-none" />
+      </div>
+
+      <div className="pt-3 border-t border-ink/10">
+        <div className="text-[11px] text-mute font-bold mb-2 tracking-wide">비밀번호 변경 (선택)</div>
+        <div className="space-y-3">
+          <input type="password" value={form.password} onChange={onChange('password')} placeholder="새 비밀번호"
+            className="w-full bg-white border-2 border-ink/20 rounded-lg px-4 py-3 text-sm text-ink font-bold focus:border-ink outline-none" />
+          <input type="password" value={form.password2} onChange={onChange('password2')} placeholder="새 비밀번호 확인"
+            className="w-full bg-white border-2 border-ink/20 rounded-lg px-4 py-3 text-sm text-ink font-bold focus:border-ink outline-none" />
+        </div>
+      </div>
+
+      <button type="submit" disabled={!touched || saving}
+        className="btn-pop px-6 py-3 rounded-full font-bold text-sm disabled:opacity-40 disabled:cursor-not-allowed">
+        {saving ? '저장중…' : '저장'}
+      </button>
+    </form>
   )
 }
 

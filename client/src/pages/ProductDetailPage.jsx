@@ -45,7 +45,15 @@ export default function ProductDetailPage() {
       .then(({ data }) => {
         setRelated(data.data.map(normalizeProduct).filter((c) => c.id !== id).slice(0, 4))
       })
-      .catch(() => setCard(null))
+      .catch((err) => {
+        // 404면 상품 자체 없음, 그 외 에러는 토스트로
+        if (err?.response?.status === 404) {
+          setCard(null)
+        } else {
+          setRelated([])
+          toast?.({ type: 'error', message: '관련 카드를 불러오지 못했어요.' })
+        }
+      })
       .finally(() => setLoading(false))
   }, [id])
 
@@ -294,7 +302,11 @@ export default function ProductDetailPage() {
               <div className="grid grid-cols-2 gap-2 pt-4 border-t-2 border-line">
                 <button
                   type="button"
-                  onClick={() => wishlist.toggle(cardId)}
+                  onClick={async () => {
+                  if (!isAuthenticated) { toast({ type: 'info', message: '로그인 후 이용하실 수 있어요.' }); return }
+                  try { await wishlist.toggle(cardId) }
+                  catch { toast({ type: 'error', message: '위시리스트 동기화 실패' }) }
+                }}
                   className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border-2 text-xs font-bold transition-all ${
                     wishlist.has(cardId)
                       ? 'bg-electric border-ink text-ink shadow-[0_2px_0_#1a1a1a]'
@@ -335,7 +347,11 @@ export default function ProductDetailPage() {
               </div>
               <button
                 type="button"
-                onClick={() => wishlist.toggle(cardId)}
+                onClick={async () => {
+                  if (!isAuthenticated) { toast({ type: 'info', message: '로그인 후 이용하실 수 있어요.' }); return }
+                  try { await wishlist.toggle(cardId) }
+                  catch { toast({ type: 'error', message: '위시리스트 동기화 실패' }) }
+                }}
                 className={`w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border-2 text-xs font-bold transition-all ${
                   wishlist.has(cardId)
                     ? 'bg-electric border-ink text-ink shadow-[0_2px_0_#1a1a1a]'

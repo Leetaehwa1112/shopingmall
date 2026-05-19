@@ -49,8 +49,8 @@ export default function OrderCompletePage() {
 
       <div className="flex justify-center gap-3 mb-10 flex-wrap relative sparkle-host">
         <Sparkles always />
-        {order.items.map((c) => (
-          <div key={c.id} className="float-bob">
+        {order.items.map((c, idx) => (
+          <div key={c._id || c.id || idx} className="float-bob">
             <PokeCard card={c} size="sm" interactive={false} showShine={false} />
           </div>
         ))}

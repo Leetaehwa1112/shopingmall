@@ -3,16 +3,25 @@ import PackVisual from './PackVisual'
 import Icon from './Icon'
 import { formatKRW } from '@/api/cards'
 import useWishlistStore from '@/store/wishlistStore'
+import useAuthStore from '@/store/authStore'
+import useToastStore from '@/store/toastStore'
 
 export default function PackTile({ pack }) {
   const packId = pack.id || pack._id
   const wished = useWishlistStore((s) => s.has(packId))
   const toggle = useWishlistStore((s) => s.toggle)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const toast = useToastStore((s) => s.push)
 
-  const onWish = (e) => {
+  const onWish = async (e) => {
     e.preventDefault()
     e.stopPropagation()
-    toggle(packId)
+    if (!isAuthenticated) {
+      toast?.({ type: 'info', message: '로그인 후 이용하실 수 있어요.' })
+      return
+    }
+    try { await toggle(packId) }
+    catch { toast?.({ type: 'error', message: '위시리스트 동기화 실패' }) }
   }
 
   return (

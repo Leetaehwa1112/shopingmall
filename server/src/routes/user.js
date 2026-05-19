@@ -29,10 +29,12 @@ router.route("/:id/wishlist/:cardId")
   .post(protect, addToWishlist)
   .delete(protect, removeFromWishlist);
 
+// 본인 또는 admin (컨트롤러에서 분기)
+router.put("/:id",  protect, updateUser);
+
 // 어드민 전용
-router.get("/",     ...admin, getAllUsers);
-router.get("/:id",  ...admin, getUserById);
-router.put("/:id",  ...admin, updateUser);
+router.get("/",       ...admin, getAllUsers);
+router.get("/:id",    ...admin, getUserById);
 router.delete("/:id", ...admin, deleteUser);
 
 module.exports = router;

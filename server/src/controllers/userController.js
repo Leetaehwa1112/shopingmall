@@ -97,14 +97,28 @@ const createUser = async (req, res) => {
   }
 };
 
-// [PUT] /api/users/:id - 유저 정보 수정
+// [PUT] /api/users/:id - 유저 정보 수정 (본인 또는 admin)
 const updateUser = async (req, res) => {
   try {
+    const isAdmin = req.user?.user_type === "admin";
+    const isSelf = req.user && req.user._id.toString() === req.params.id;
+    if (!isAdmin && !isSelf) {
+      return res.status(403).json({ success: false, message: "권한이 없습니다." });
+    }
+
     const { email, name, password, user_type, profile_image, phone, address } =
       req.body;
 
-    const updateData = { email, name, user_type, profile_image, phone, address };
-    
+    // undefined 필드는 set하지 않도록 명시적으로 추출 (덮어쓰기 방지)
+    const updateData = {};
+    if (name !== undefined) updateData.name = name;
+    if (email !== undefined) updateData.email = email;
+    if (profile_image !== undefined) updateData.profile_image = profile_image;
+    if (phone !== undefined) updateData.phone = phone;
+    if (address !== undefined) updateData.address = address;
+    // user_type 변경은 admin만 가능
+    if (user_type !== undefined && isAdmin) updateData.user_type = user_type;
+
     // 비밀번호가 전달된 경우에만 암호화해서 업데이트 객체에 추가
     if (password) {
       updateData.password = await bcrypt.hash(password, SALT_ROUNDS);
