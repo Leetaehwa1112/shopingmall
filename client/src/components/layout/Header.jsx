@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react'
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import useAuthStore from '@/store/authStore'
 import useCartStore from '@/store/cartStore'
 import Pokeball from '@/components/common/Pokeball'
@@ -14,9 +14,14 @@ export default function Header() {
   const logout = useAuthStore((s) => s.logout)
   const cartCount = useCartStore((s) => (s.items || []).reduce((sum, i) => sum + (i.qty || 1), 0))
   const navigate = useNavigate()
+  const loc = useLocation()
   const [searchQuery, setSearchQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const searchRef = useRef(null)
+
+  // 라우트 변경 시 모바일 메뉴 자동 닫힘
+  useEffect(() => { setMenuOpen(false) }, [loc.pathname])
 
   const submitSearch = (e) => {
     e?.preventDefault?.()
@@ -138,8 +143,47 @@ export default function Header() {
               </Link>
             </div>
           )}
+
+          {/* 햄버거 — lg 미만에서만 노출 (lg에선 nav가 인라인) */}
+          <button
+            type="button"
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-label={menuOpen ? '메뉴 닫기' : '메뉴 열기'}
+            aria-expanded={menuOpen}
+            aria-controls="mobile-nav-panel"
+            className="lg:hidden w-10 h-10 rounded-full bg-bone-2 hover:bg-electric flex items-center justify-center text-ink transition-colors border-2 border-transparent hover:border-ink"
+          >
+            <Icon name={menuOpen ? 'close' : 'menu'} size={18} strokeWidth={2.2} />
+          </button>
         </div>
       </div>
+
+      {/* Mobile nav panel — 햄버거로 토글 */}
+      {menuOpen && (
+        <div
+          id="mobile-nav-panel"
+          className="lg:hidden border-t-2 border-ink bg-paper"
+        >
+          <nav className="max-w-7xl mx-auto px-6 py-3 flex flex-col gap-1">
+            <MobileLink to="/auctions" onClick={() => setMenuOpen(false)}>
+              <span className="led led-red led-pulse" style={{ width: 7, height: 7 }} />
+              경매
+            </MobileLink>
+            <MobileLink to="/products" onClick={() => setMenuOpen(false)}>희귀카드</MobileLink>
+            <MobileLink to="/packs" onClick={() => setMenuOpen(false)}>카드팩</MobileLink>
+            <MobileLink to="/dex" onClick={() => setMenuOpen(false)}>도감</MobileLink>
+            <MobileLink to="/sell" onClick={() => setMenuOpen(false)}>
+              <Icon name="plus" size={13} strokeWidth={2.6} /> 내 카드 출품
+            </MobileLink>
+            {isAdmin && (
+              <MobileLink to="/admin" onClick={() => setMenuOpen(false)}>관리자</MobileLink>
+            )}
+            {!isAuthenticated && (
+              <MobileLink to="/login" onClick={() => setMenuOpen(false)}>로그인</MobileLink>
+            )}
+          </nav>
+        </div>
+      )}
 
       {/* Mobile search overlay */}
       {searchOpen && (
@@ -224,5 +268,25 @@ function UserDropdown({ user, logout, navigate }) {
         </div>
       )}
     </div>
+  )
+}
+
+// ─── Mobile menu link ───────────────────────────────────────
+function MobileLink({ to, onClick, children }) {
+  return (
+    <NavLink
+      to={to}
+      end={to === '/'}
+      onClick={onClick}
+      className={({ isActive }) =>
+        `flex items-center gap-2.5 px-4 py-3 rounded-xl text-[15px] font-bold border-2 transition-colors ${
+          isActive
+            ? 'bg-ink text-electric border-ink'
+            : 'bg-paper text-ink border-transparent hover:bg-bone-2 hover:border-ink'
+        }`
+      }
+    >
+      {children}
+    </NavLink>
   )
 }
