@@ -178,19 +178,19 @@ export default function AdminProducts() {
 
       <button
         onClick={() => navigate('/admin/products/new')}
-        className="group w-full flex items-center justify-between gap-4 bg-ink text-paper rounded-xl px-5 py-4 hover:bg-ink-2 transition-colors shadow-[0_2px_0_#1a1a1a] hover:shadow-[0_4px_0_#1a1a1a] hover:-translate-y-0.5 transform"
+        className="group w-full flex items-center justify-between gap-4 bg-dex text-white rounded-xl px-5 py-4 hover:bg-dex-d transition-colors shadow-[0_3px_0_#7f1d1d] hover:shadow-[0_5px_0_#7f1d1d] hover:-translate-y-0.5 transform border-2 border-dex-dd"
       >
         <div className="flex items-center gap-3 min-w-0">
-          <span className="w-10 h-10 rounded-lg bg-paper/10 border border-paper/20 flex items-center justify-center flex-shrink-0">
-            <Icon name="plus" size={18} strokeWidth={2.5} />
+          <span className="w-11 h-11 rounded-lg bg-white/20 border-2 border-white/40 flex items-center justify-center flex-shrink-0">
+            <Icon name="plus" size={20} strokeWidth={3} />
           </span>
           <div className="text-left min-w-0">
-            <div className="font-display text-sm font-bold tracking-tight">새 카드 등록</div>
-            <div className="text-[11px] text-paper/70 font-medium mt-0.5">SKU · 이미지 · 가격 · 재고를 입력해 카탈로그에 추가</div>
+            <div className="font-display text-base font-bold tracking-tight text-white">+ 새 카드 등록</div>
+            <div className="text-xs text-white/90 font-medium mt-0.5">SKU · 이미지 · 가격 · 재고를 입력해 카탈로그에 추가</div>
           </div>
         </div>
-        <span className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-wider uppercase text-paper/80 group-hover:text-paper">
-          시작 <Icon name="arrow" size={12} strokeWidth={2.4} />
+        <span className="inline-flex items-center gap-1.5 text-xs font-bold tracking-wider uppercase text-white bg-white/15 border border-white/40 px-3 py-1.5 rounded-md">
+          시작 <Icon name="arrow" size={13} strokeWidth={2.6} />
         </span>
       </button>
 
