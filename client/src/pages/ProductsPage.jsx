@@ -79,12 +79,6 @@ export default function ProductsPage() {
         </Eyebrow>
         <h1 className="mt-4 font-display text-4xl lg:text-5xl font-bold text-ink tracking-tight leading-[1.1]">
           {heroTitle}
-          {!isAuctionOnly && (
-            <span className="relative inline-block ml-3">
-              <span className={`relative z-10 text-${heroTone}`}>{heroAccent}</span>
-              <span className="absolute left-0 right-0 bottom-1 h-3 bg-electric/60 -z-0 rounded-sm" aria-hidden />
-            </span>
-          )}
         </h1>
         <p className="text-sm text-mute mt-4 max-w-2xl leading-relaxed font-medium">
           {heroDesc}
