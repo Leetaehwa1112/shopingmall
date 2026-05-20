@@ -18,24 +18,30 @@ import SectionHead from '@/components/common/SectionHead'
 
 // React Query fetchers — 페이지 unmount 후에도 5분 staleTime 캐시 유지 (queryClient default)
 // 경매는 LIVE(active) 1건 + 예정(upcoming) 다건을 함께 가져옴 — lotOrder 정렬 적용됨(서버).
+// 반환은 { list, total } 형태로 통일 — 카테고리 타일이 실제 전체 카운트(서버 total)를
+// 보여줄 수 있도록. list는 limit 제한된 표시용, total은 페이지네이션 전체 수.
 const fetchAuctions = () =>
   api.get('/products', { params: { sale_type: 'auction', status: 'active,upcoming', limit: 10 } })
-    .then((r) => r.data.data.map(normalizeProduct))
+    .then((r) => ({ list: r.data.data.map(normalizeProduct), total: r.data.total ?? 0 }))
 const fetchBuynow = () =>
   api.get('/products', { params: { sale_type: 'buynow', status: 'active', limit: 4 } })
-    .then((r) => r.data.data.map(normalizeProduct))
+    .then((r) => ({ list: r.data.data.map(normalizeProduct), total: r.data.total ?? 0 }))
 const fetchFeaturedPacks = () =>
   api.get('/packs', { params: { status: 'active', limit: 4 } })
-    .then((r) => r.data.data.map(normalizePack))
+    .then((r) => ({ list: r.data.data.map(normalizePack), total: r.data.total ?? 0 }))
 
 export default function HomePage() {
   const auctionsQ = useQuery({ queryKey: ['home-auctions'], queryFn: fetchAuctions })
   const buyNowQ   = useQuery({ queryKey: ['home-buynow'],   queryFn: fetchBuynow })
   const packsQ    = useQuery({ queryKey: ['home-packs'],    queryFn: fetchFeaturedPacks })
 
-  const auctions = auctionsQ.data ?? []
-  const buyNow = buyNowQ.data ?? []
-  const featuredPacks = packsQ.data ?? []
+  const auctions = auctionsQ.data?.list ?? []
+  const buyNow = buyNowQ.data?.list ?? []
+  const featuredPacks = packsQ.data?.list ?? []
+  // 서버 전체 카운트(limit과 무관) — 카테고리 타일 부제에 노출.
+  const auctionsTotal = auctionsQ.data?.total ?? 0
+  const buyNowTotal = buyNowQ.data?.total ?? 0
+  const packsTotal = packsQ.data?.total ?? 0
   const loading = auctionsQ.isLoading || buyNowQ.isLoading || packsQ.isLoading
   const error = auctionsQ.error || buyNowQ.error || packsQ.error
   const fetchAll = () => {
@@ -197,21 +203,27 @@ export default function HomePage() {
             to="/products?type=buynow"
             icon="bolt"
             label="즉시구매"
-            desc={buyNow.length > 0 ? `⚡ ${buyNow.length}건 즉시 발송` : '준비 중'}
+            desc={buyNowTotal > 0 ? `⚡ ${buyNowTotal}건 즉시 발송` : '준비 중'}
             tone="electric"
+            disabled={!loading && buyNowTotal === 0}
           />
           <CategoryTile
             to="/packs"
             icon="package"
             label="카드팩 · 박스"
-            desc={featuredPacks.length > 0 ? `🎁 ${featuredPacks.length}건 미개봉` : '준비 중'}
+            desc={packsTotal > 0 ? `🎁 ${packsTotal}건 미개봉` : '준비 중'}
             tone="water"
+            disabled={!loading && packsTotal === 0}
           />
           <CategoryTile
             to="/products"
             icon="trophy"
             label="전체 카탈로그"
-            desc="🌟 모든 카드"
+            desc={
+              auctionsTotal + buyNowTotal > 0
+                ? `🌟 ${(auctionsTotal + buyNowTotal).toLocaleString()}종 카드`
+                : '🌟 모든 카드'
+            }
             tone="psychic"
           />
         </div>
