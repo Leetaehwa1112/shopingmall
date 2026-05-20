@@ -313,7 +313,8 @@ export default function OrderPage() {
                 <button
                   type="button"
                   onClick={() => setPostcodeOpen(true)}
-                  className="h-[42px] px-4 rounded-lg bg-ink text-paper text-xs font-bold border-2 border-ink shadow-[0_2px_0_#1a1a1a] hover:-translate-y-0.5 hover:shadow-[0_3px_0_#1a1a1a] transition-all whitespace-nowrap inline-flex items-center gap-1.5"
+                  style={{ backgroundColor: '#facc15', color: '#1a1a1a' }}
+                  className="h-[42px] px-4 rounded-lg text-xs font-bold border-2 border-ink shadow-[0_2px_0_#1a1a1a] hover:-translate-y-0.5 hover:shadow-[0_3px_0_#1a1a1a] transition-all whitespace-nowrap inline-flex items-center gap-1.5"
                 >
                   <Icon name="search" size={13} strokeWidth={2.4} />
                   주소 검색
