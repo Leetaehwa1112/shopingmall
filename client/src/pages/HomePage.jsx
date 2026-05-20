@@ -621,164 +621,228 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
     return 180 + (seed % 240)
   }, [card.id, card._id])
 
-  return (
-    <div className="rounded-2xl border-2 border-ink overflow-hidden relative shadow-[0_6px_0_#1a1a1a,0_12px_30px_rgba(220,38,38,0.18)]">
-      {/* 빨간 LIVE 헤더 바 — 화면 진입 1초 안에 "라이브!" 인지 */}
-      <div
-        className="relative px-4 py-3 border-b-2 border-ink overflow-hidden"
-        style={{
-          background: lotEnded
-            ? 'linear-gradient(180deg, #6b7280 0%, #4b5563 100%)'
-            : 'linear-gradient(180deg, var(--color-dex) 0%, var(--color-dex-d) 100%)',
-        }}
-      >
-        {/* 펄스 빛 — 좌→우 휩쓸기 */}
-        {!lotEnded && (
-          <span
-            aria-hidden="true"
-            className="absolute inset-0 pointer-events-none opacity-50"
-            style={{
-              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
-              animation: 'shine-sweep 3.2s ease-in-out infinite',
-            }}
-          />
-        )}
-        <div className="relative flex items-center justify-between gap-2">
-          <div className="inline-flex items-center gap-2">
-            {!lotEnded && (
-              <span
-                aria-hidden="true"
-                className="relative inline-flex items-center justify-center"
-                style={{ width: 12, height: 12 }}
-              >
-                <span
-                  className="absolute inset-0 rounded-full bg-white opacity-70"
-                  style={{ animation: 'live-ring 1.4s ease-out infinite' }}
-                />
-                <span className="relative rounded-full bg-white" style={{ width: 10, height: 10 }} />
-              </span>
-            )}
-            <span className="font-display font-extrabold text-white text-lg tracking-tight">
-              {lotEnded ? 'CLOSED' : 'LIVE'}
-            </span>
-            <span className="text-[10px] font-bold text-white/85 uppercase tracking-widest">
-              · LOT #{card.lotOrder || 1}
+  // compact (모바일) — 단순 좌우 배치 유지
+  if (compact) {
+    return (
+      <div className="rounded-2xl border-2 border-ink overflow-hidden relative shadow-[0_6px_0_#1a1a1a,0_12px_30px_rgba(220,38,38,0.18)]">
+        <div
+          className="relative px-4 py-3 border-b-2 border-ink overflow-hidden"
+          style={{
+            background: lotEnded
+              ? 'linear-gradient(180deg, #6b7280 0%, #4b5563 100%)'
+              : 'linear-gradient(180deg, var(--color-dex) 0%, var(--color-dex-d) 100%)',
+          }}
+        >
+          {!lotEnded && (
+            <span aria-hidden="true" className="absolute inset-0 pointer-events-none opacity-50"
+              style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)', animation: 'shine-sweep 3.2s ease-in-out infinite' }} />
+          )}
+          <div className="relative flex items-center justify-between gap-2">
+            <div className="inline-flex items-center gap-2">
+              {!lotEnded && (
+                <span aria-hidden="true" className="relative inline-flex items-center justify-center" style={{ width: 12, height: 12 }}>
+                  <span className="absolute inset-0 rounded-full bg-white opacity-70" style={{ animation: 'live-ring 1.4s ease-out infinite' }} />
+                  <span className="relative rounded-full bg-white" style={{ width: 10, height: 10 }} />
+                </span>
+              )}
+              <span className="font-display font-extrabold text-white text-lg tracking-tight">{lotEnded ? 'CLOSED' : 'LIVE'}</span>
+              <span className="text-[10px] font-bold text-white/85 uppercase tracking-widest">· LOT #{card.lotOrder || 1}</span>
+            </div>
+            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-black/30 border border-white/30 text-white text-[11px] font-bold tabular-nums">
+              <Icon name="eye" size={11} strokeWidth={2.4} aria-hidden="true" />
+              {viewers.toLocaleString()}
             </span>
           </div>
-          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-black/30 border border-white/30 text-white text-[11px] font-bold tabular-nums">
-            <Icon name="eye" size={11} strokeWidth={2.4} aria-hidden="true" />
-            {viewers.toLocaleString()}
-          </span>
         </div>
-      </div>
-
-      {/* 카드 + 정보 */}
-      <Link to={`/products/${card.id}`} className="block group bg-paper" aria-label={`${card.nameKo} 경매 상세`}>
-        <div className="flex gap-4 p-5">
-          <div className="shrink-0 holo-sheen rounded-lg">
-            <PokeCard card={card} size={compact ? 'xs' : 'sm'} />
-          </div>
-          <div className="min-w-0 flex flex-col justify-between flex-1">
-            <div>
-              <h2 className="font-display text-xl sm:text-2xl font-bold text-ink leading-tight mb-1 group-hover:text-dex transition-colors">
-                {card.nameKo}
-              </h2>
-              <div className="text-xs text-mute mb-2 truncate font-medium">
-                {card.name} · {card.setShort || card.set} · {card.year}
+        <Link to={`/products/${card.id}`} className="block group bg-paper" aria-label={`${card.nameKo} 경매 상세`}>
+          <div className="flex gap-4 p-5">
+            <div className="shrink-0 holo-sheen rounded-lg">
+              <PokeCard card={card} size="xs" />
+            </div>
+            <div className="min-w-0 flex flex-col justify-between flex-1">
+              <div>
+                <h2 className="font-display text-xl font-bold text-ink leading-tight mb-1 group-hover:text-dex transition-colors">{card.nameKo}</h2>
+                <div className="text-xs text-mute mb-2 truncate font-medium">{card.name} · {card.setShort || card.set} · {card.year}</div>
+                <GradeBadge grade={card.grade} size="sm" />
               </div>
+              <div className="mt-3">
+                <div className="text-[10px] font-bold tracking-[0.18em] uppercase text-dex">{lotEnded ? '최종 입찰가' : '현재 입찰가'}</div>
+                <div className="font-display text-2xl font-bold text-ink leading-none tabular-nums">{formatKRW(card.currentBid || card.startPrice)}</div>
+                <div className="text-[11px] font-mono text-mute mt-1">{card.bidCount || 0}회 입찰</div>
+              </div>
+            </div>
+          </div>
+        </Link>
+        <div className="px-5 pb-5 bg-paper">
+          {lotEnded ? (
+            <Button variant="secondary" size="lg" className="w-full" disabled aria-disabled="true">입찰 종료</Button>
+          ) : (
+            <Link to="/auctions" className="block" aria-label="경매장 둘러보기">
+              <button type="button" className="btn btn-pop btn-lg relative overflow-hidden w-full">
+                <Icon name="gavel" size={16} strokeWidth={2.6} />
+                두근두근 경매 보러가기
+                <Icon name="arrow" size={14} strokeWidth={2.6} />
+              </button>
+            </Link>
+          )}
+        </div>
+        <style>{`
+          @keyframes live-ring { 0%{transform:scale(1);opacity:.85} 80%{transform:scale(2.4);opacity:0} 100%{transform:scale(2.4);opacity:0} }
+          @keyframes shine-sweep { 0%{transform:translateX(-120%)} 100%{transform:translateX(260%)} }
+        `}</style>
+      </div>
+    )
+  }
+
+  // 데스크탑 — 카드가 배너 위로 솟아오른 입체 레이아웃
+  return (
+    <div className="relative" style={{ marginTop: 130 }}>
+      {/* 배너 위로 솟아오른 카드 — md 사이즈로 키워 입체감 부여 (holo-sheen은 position:relative + overflow:hidden 이라 미사용) */}
+      <Link
+        to={`/products/${card.id}`}
+        className="z-20 group/card"
+        style={{
+          position: 'absolute',
+          left: '50%',
+          top: -150,
+          transform: 'translateX(-50%)',
+          display: 'inline-block',
+          borderRadius: 12,
+          filter: 'drop-shadow(0 18px 30px rgba(0,0,0,0.4)) drop-shadow(0 6px 12px rgba(220,38,38,0.25))',
+        }}
+        aria-label={`${card.nameKo} 경매 상세`}
+      >
+        <div className="card-sway-wrap">
+          <PokeCard card={card} size="md" />
+        </div>
+      </Link>
+
+      <div className="rounded-2xl border-2 border-ink overflow-hidden relative shadow-[0_6px_0_#1a1a1a,0_12px_30px_rgba(220,38,38,0.18)]">
+        {/* LIVE 헤더 — 좌측 LIVE/LOT, 우측 시청자수 (카드는 중앙 위로 솟음) */}
+        <div
+          className="relative px-4 py-3 border-b-2 border-ink overflow-hidden"
+          style={{
+            background: lotEnded
+              ? 'linear-gradient(180deg, #6b7280 0%, #4b5563 100%)'
+              : 'linear-gradient(180deg, var(--color-dex) 0%, var(--color-dex-d) 100%)',
+          }}
+        >
+          {!lotEnded && (
+            <span
+              aria-hidden="true"
+              className="absolute inset-0 pointer-events-none opacity-50"
+              style={{
+                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
+                animation: 'shine-sweep 3.2s ease-in-out infinite',
+              }}
+            />
+          )}
+          <div className="relative flex items-center justify-between gap-2">
+            <div className="inline-flex items-center gap-2">
+              {!lotEnded && (
+                <span aria-hidden="true" className="relative inline-flex items-center justify-center" style={{ width: 12, height: 12 }}>
+                  <span className="absolute inset-0 rounded-full bg-white opacity-70" style={{ animation: 'live-ring 1.4s ease-out infinite' }} />
+                  <span className="relative rounded-full bg-white" style={{ width: 10, height: 10 }} />
+                </span>
+              )}
+              <span className="font-display font-extrabold text-white text-lg tracking-tight">{lotEnded ? 'CLOSED' : 'LIVE'}</span>
+              <span className="text-[10px] font-bold text-white/85 uppercase tracking-widest">· LOT #{card.lotOrder || 1}</span>
+            </div>
+            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-black/30 border border-white/30 text-white text-[11px] font-bold tabular-nums">
+              <Icon name="eye" size={11} strokeWidth={2.4} aria-hidden="true" />
+              {viewers.toLocaleString()}
+            </span>
+          </div>
+        </div>
+
+        {/* 정보 영역 — 카드 하단부가 위로 겹치므로 pt 여백 충분히 (카드 하단 ≈ y=158, 배너=54) */}
+        <Link to={`/products/${card.id}`} className="block group bg-paper" aria-label={`${card.nameKo} 경매 상세`}>
+          <div className="px-5 pt-[180px] pb-2 text-center">
+            <h2 className="font-display text-2xl sm:text-3xl font-bold text-ink leading-tight mb-1 group-hover:text-dex transition-colors">
+              {card.nameKo}
+            </h2>
+            <div className="text-xs text-mute mb-3 font-medium">
+              {card.name} · {card.setShort || card.set} · {card.year}
+            </div>
+            <div className="flex justify-center mb-4">
               <GradeBadge grade={card.grade} size="sm" />
             </div>
-            <div className="mt-3">
-              <div className="text-[10px] font-bold tracking-[0.18em] uppercase text-dex">
+            <div>
+              <div className="text-[10px] font-bold tracking-[0.18em] uppercase text-dex mb-1">
                 {lotEnded ? '최종 입찰가' : '현재 입찰가'}
               </div>
-              <div className="font-display text-2xl font-bold text-ink leading-none tabular-nums">
+              <div className="font-display text-3xl sm:text-[34px] font-bold text-ink leading-none tabular-nums">
                 {formatKRW(card.currentBid || card.startPrice)}
               </div>
-              <div className="text-[11px] font-mono text-mute mt-1">
+              <div className="text-[11px] font-mono text-mute mt-1.5">
                 {card.bidCount || 0}회 입찰
               </div>
             </div>
           </div>
-        </div>
 
-        {/* 카운트다운 띠 — 마감 임박감 */}
-        {!lotEnded && card.endsAt && (
-          <div className="px-5 pb-2 -mt-1">
-            <div className="rounded-lg bg-ink text-white px-3 py-2 flex items-center justify-between gap-2">
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-electric">
-                <Icon name="clock" size={11} strokeWidth={2.6} aria-hidden="true" />
-                마감까지
-              </span>
-              <Countdown endsAt={card.endsAt} size="sm" label={false} />
+          {!lotEnded && card.endsAt && (
+            <div className="px-5 pb-2">
+              <div className="rounded-lg bg-ink text-white px-3 py-2 flex items-center justify-between gap-2">
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-electric">
+                  <Icon name="clock" size={11} strokeWidth={2.6} aria-hidden="true" />
+                  마감까지
+                </span>
+                <Countdown endsAt={card.endsAt} size="sm" label={false} />
+              </div>
             </div>
-          </div>
-        )}
-      </Link>
+          )}
+        </Link>
 
-      {/* 거대 CTA */}
-      <div className="px-5 pb-5 bg-paper">
-        {lotEnded ? (
-          <Button variant="secondary" size="lg" className="w-full" disabled aria-disabled="true">
-            입찰 종료
-          </Button>
-        ) : (
-          <Link to="/auctions" className="block" aria-label="경매장 둘러보기">
-            <button
-              type="button"
-              className="btn btn-pop btn-lg relative overflow-hidden w-full"
+        <div className="px-5 pb-5 bg-paper">
+          {lotEnded ? (
+            <Button variant="secondary" size="lg" className="w-full" disabled aria-disabled="true">입찰 종료</Button>
+          ) : (
+            <Link to="/auctions" className="block" aria-label="경매장 둘러보기">
+              <button type="button" className="btn btn-pop btn-lg relative overflow-hidden w-full">
+                <Icon name="gavel" size={16} strokeWidth={2.6} />
+                두근두근 경매 보러가기
+                <Icon name="arrow" size={14} strokeWidth={2.6} />
+                <span aria-hidden="true" className="absolute top-0 left-0 h-full w-1/3 pointer-events-none"
+                  style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)', animation: 'shine-sweep 3.4s ease-in-out infinite' }}
+                />
+              </button>
+            </Link>
+          )}
+          <div className="mt-2 text-center text-[11px] font-bold text-mute">
+            지금 <span className="text-dex font-extrabold">{viewers}</span>명이 함께 지켜보는 중
+          </div>
+          {nextLot && (
+            <Link
+              to="/auctions"
+              className="mt-2 flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-bone-2 border border-ink/10 hover:border-ink/40 hover:bg-electric/15 transition-colors group"
+              aria-label={`다음 경매: ${nextLot.nameKo || nextLot.name}`}
             >
-              <Icon name="gavel" size={16} strokeWidth={2.6} />
-              두근두근 경매 보러가기
-              <Icon name="arrow" size={14} strokeWidth={2.6} />
-              <span
-                aria-hidden="true"
-                className="absolute top-0 left-0 h-full w-1/3 pointer-events-none"
-                style={{
-                  background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)',
-                  animation: 'shine-sweep 3.4s ease-in-out infinite',
-                }}
-              />
-            </button>
-          </Link>
-        )}
-        <div className="mt-2 text-center text-[11px] font-bold text-mute">
-          지금 <span className="text-dex font-extrabold">{viewers}</span>명이 함께 지켜보는 중
+              <span className="inline-flex items-center gap-1.5 min-w-0">
+                <span className="inline-flex items-center justify-center w-4 h-4 rounded bg-ink text-electric text-[9px] font-mono font-extrabold tabular-nums shrink-0">
+                  {nextLot.lotOrder || '·'}
+                </span>
+                <span className="text-[11px] font-bold text-ink/65 shrink-0">NEXT</span>
+                <span className="text-[11.5px] font-extrabold text-ink truncate">
+                  {nextLot.nameKo || nextLot.name}
+                </span>
+              </span>
+              <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-mute group-hover:text-ink whitespace-nowrap">
+                {nextLot.startsAt ? formatRelativeStart(nextLot.startsAt) : '곧'}
+                <Icon name="arrow" size={10} strokeWidth={2.5} aria-hidden="true" />
+              </span>
+            </Link>
+          )}
         </div>
-        {/* 다음 LOT 힌트 — 한 줄로 압축해서 별도 UP NEXT 패널 제거 (좌우 높이 정렬). */}
-        {nextLot && (
-          <Link
-            to="/auctions"
-            className="mt-2 flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-bone-2 border border-ink/10 hover:border-ink/40 hover:bg-electric/15 transition-colors group"
-            aria-label={`다음 경매: ${nextLot.nameKo || nextLot.name}`}
-          >
-            <span className="inline-flex items-center gap-1.5 min-w-0">
-              <span className="inline-flex items-center justify-center w-4 h-4 rounded bg-ink text-electric text-[9px] font-mono font-extrabold tabular-nums shrink-0">
-                {nextLot.lotOrder || '·'}
-              </span>
-              <span className="text-[11px] font-bold text-ink/65 shrink-0">NEXT</span>
-              <span className="text-[11.5px] font-extrabold text-ink truncate">
-                {nextLot.nameKo || nextLot.name}
-              </span>
-            </span>
-            <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-mute group-hover:text-ink whitespace-nowrap">
-              {nextLot.startsAt ? formatRelativeStart(nextLot.startsAt) : '곧'}
-              <Icon name="arrow" size={10} strokeWidth={2.5} aria-hidden="true" />
-            </span>
-          </Link>
-        )}
       </div>
 
       <style>{`
-        @keyframes live-ring {
-          0%   { transform: scale(1);   opacity: 0.85; }
-          80%  { transform: scale(2.4); opacity: 0; }
-          100% { transform: scale(2.4); opacity: 0; }
+        @keyframes live-ring { 0%{transform:scale(1);opacity:.85} 80%{transform:scale(2.4);opacity:0} 100%{transform:scale(2.4);opacity:0} }
+        @keyframes shine-sweep { 0%{transform:translateX(-120%)} 100%{transform:translateX(260%)} }
+        @keyframes card-float-sway {
+          0%,100% { transform: translateY(0) rotate(-1.2deg); }
+          50%     { transform: translateY(-6px) rotate(1.2deg); }
         }
-        @keyframes shine-sweep {
-          0%   { transform: translateX(-120%); }
-          100% { transform: translateX(260%); }
-        }
+        .card-sway-wrap { animation: card-float-sway 5.5s ease-in-out infinite; transform-origin: center bottom; }
       `}</style>
     </div>
   )
