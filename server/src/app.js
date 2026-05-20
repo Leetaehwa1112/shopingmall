@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const errorHandler = require('./middlewares/errorHandler');
 
@@ -9,6 +10,10 @@ const app = express();
 
 // ─── 프록시 뒤 신뢰 (Nginx/Cloudflare/AWS ALB 뒤에 두면 X-Forwarded-* 신뢰) ───
 app.set('trust proxy', 1);
+
+// ─── gzip 압축 — JSON 응답 60-80% 감소 (Heroku ↔ 원거리 클라이언트 RTT 비용 큼) ───
+// threshold 1KB: 작은 응답은 압축 오버헤드 회피
+app.use(compression({ threshold: 1024 }));
 
 // ─── HTTP 로깅 — production은 combined, dev는 dev ───────────
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
