@@ -39,7 +39,7 @@ export default function Header() {
     }`
 
   return (
-    <header className="sticky top-0 z-50 bg-paper/95 backdrop-blur-md border-b-2 border-ink">
+    <header className="sticky top-0 z-50 bg-paper border-b-2 border-ink">
       {/* ── Top fun ribbon ─────────────────────────────────── */}
       <div className="bg-ink text-white">
         <div className="max-w-7xl mx-auto px-6 h-8 flex items-center justify-between text-[11px] font-medium">

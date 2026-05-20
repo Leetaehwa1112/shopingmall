@@ -67,7 +67,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background-image:
     radial-gradient(ellipse 60% 30% at 50% 0%, rgba(245, 184, 0, 0.06), transparent 60%);
-  background-attachment: fixed;
+  /* background-attachment: fixed 제거 — Safari/Chrome에서 스크롤 시 reflow 유발 */
   /* 가로 overflow 차단 (스파클/장식 요소가 viewport 넘쳐도 가로 스크롤바 안 뜨게) */
   overflow-x: hidden;
 }
@@ -133,10 +133,15 @@ body {
   z-index: -1;
   transition: opacity 0.5s ease;
   animation: holo-rotate 8s linear infinite;
+  /* 평소엔 애니메이션 멈춤 — opacity:0이어도 회전+blur는 매 프레임 GPU 비용 발생 */
+  animation-play-state: paused;
   pointer-events: none;
 }
 .holo-shine:hover::before,
-.holo-shine.is-on::before { opacity: 0.55; }
+.holo-shine.is-on::before {
+  opacity: 0.55;
+  animation-play-state: running;
+}
 
 /* Rainbow border — like a holo card's foil edge */
 .rainbow-border {
@@ -183,10 +188,14 @@ body {
   opacity: 0;
   pointer-events: none;
   animation: holo-pan 4s ease-in-out infinite;
+  animation-play-state: paused;
   transition: opacity 0.4s ease;
 }
 .holo-sheen:hover::after,
-.holo-sheen.is-on::after { opacity: 1; }
+.holo-sheen.is-on::after {
+  opacity: 1;
+  animation-play-state: running;
+}
 
 /* === Sparkle particles — pinprick stars that twinkle on hover === */
 @keyframes sparkle-twinkle {
