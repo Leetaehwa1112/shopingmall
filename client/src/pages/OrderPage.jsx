@@ -84,6 +84,11 @@ export default function OrderPage() {
         channelKey: 'channel-key-05b70ec0-8306-4378-aaad-33ada270685a',
         ...(payInfo.easyPayProvider && { easyPay: { easyPayProvider: payInfo.easyPayProvider } }),
         ...(payInfo.escrow && { escrow: true }),
+        // PortOne v2: VIRTUAL_ACCOUNT은 발급 만료 시점(validHours) 필수.
+        // 24시간 입금 정책에 맞춰 고정. dueDate ISO도 가능하지만 단순함 우선.
+        ...(payInfo.payMethod === 'VIRTUAL_ACCOUNT' && {
+          virtualAccount: { accountExpiry: { validHours: 24 } },
+        }),
         customer: {
           fullName:    form.name,
           phoneNumber: form.phone,
