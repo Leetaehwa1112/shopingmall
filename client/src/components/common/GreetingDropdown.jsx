@@ -30,7 +30,7 @@ export default function GreetingDropdown() {
     // 우측 상단 고정, pointer-events-none이면 아래 요소 클릭도 막지 않음.
     <div
       aria-live="polite"
-      className={`fixed top-4 right-4 z-40 transition-all duration-500 pointer-events-none ${
+      className={`fixed top-24 right-4 z-[60] transition-all duration-500 pointer-events-none ${
         visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
       }`}
     >
