@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import api from '@/api/axios'
 import useCollectionStore from '@/store/collectionStore'
-import { POKEDEX, ARTWORK_URL, TYPE_TOKEN, TYPE_BG_SOFT } from '@/constants/pokedex'
+import { POKEDEX, ARTWORK_URL, TYPE_TOKEN, TYPE_BG_SOFT, TYPE_INFO } from '@/constants/pokedex'
 import Icon from '@/components/common/Icon'
 import {
   DexLed,
@@ -134,6 +134,9 @@ export default function DexPage() {
         hasActiveFilter={hasActiveFilter}
         onReset={resetFilters}
       />
+
+      {/* 선택된 타입의 심볼·설명·상성 카드 — '전체'면 숨김 */}
+      {typeFilter !== '전체' && <TypeDetailCard type={typeFilter} matchCount={filtered.length} />}
 
       {/* ── Grid ───────────────────────────────────────────── */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
@@ -338,21 +341,31 @@ function DexControlPanel({
 
         {/* 타입 칩 — 가로 스크롤 */}
         <div
-          className="flex gap-1.5 overflow-x-auto scrollbar-none flex-1 min-w-0 -my-1 py-1"
+          className="flex gap-2.5 overflow-x-auto scrollbar-none flex-1 min-w-0 -my-1 py-1"
           role="radiogroup"
           aria-label="타입 필터"
         >
-          {allTypes.map((t) => (
-            <ControlChip
-              key={t}
-              role="radio"
-              aria-checked={typeFilter === t}
-              active={typeFilter === t}
-              onClick={() => onType(t)}
-            >
-              {t}
-            </ControlChip>
-          ))}
+          {allTypes.map((t) => {
+            const info = TYPE_INFO[t] || TYPE_INFO['전체']
+            const isActive = typeFilter === t
+            return (
+              <button
+                key={t}
+                role="radio"
+                aria-checked={isActive}
+                onClick={() => onType(t)}
+                style={isActive ? { backgroundColor: info.hex, color: '#fff', borderColor: '#1a1a1a' } : undefined}
+                className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${
+                  isActive
+                    ? 'shadow-[0_3px_0_#1a1a1a] -translate-y-0.5'
+                    : 'border-ink/15 bg-paper text-ink/75 hover:border-ink hover:text-ink hover:-translate-y-0.5'
+                }`}
+              >
+                <span className="text-sm leading-none" aria-hidden="true">{info.symbol}</span>
+                <span className="leading-none">{t}</span>
+              </button>
+            )
+          })}
         </div>
 
         <span className="hidden sm:inline-flex shrink-0 font-mono text-[10px] font-bold tracking-wider uppercase text-mute tabular-nums">
@@ -368,6 +381,92 @@ function DexControlPanel({
           </button>
         )}
       </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════
+// TYPE DETAIL CARD ── 선택된 타입의 심볼·설명·상성을 한 카드에
+// ═══════════════════════════════════════════════════════════
+function TypeDetailCard({ type, matchCount }) {
+  const info = TYPE_INFO[type]
+  if (!info) return null
+  return (
+    <section
+      aria-label={`${type} 타입 상세`}
+      className="max-w-7xl mx-auto px-4 sm:px-6 -mt-2 mb-6"
+    >
+      <div
+        className="relative overflow-hidden rounded-2xl border-2 border-ink shadow-[0_4px_0_#1a1a1a] p-6 sm:p-7"
+        style={{ background: `linear-gradient(135deg, ${info.hex}22 0%, transparent 60%), #fffaf2` }}
+      >
+        <div className="flex items-start gap-5 flex-wrap sm:flex-nowrap">
+          {/* 큰 심볼 */}
+          <div
+            className="shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-2 border-ink flex items-center justify-center text-4xl sm:text-5xl shadow-[0_3px_0_#1a1a1a]"
+            style={{ backgroundColor: info.hex }}
+            aria-hidden="true"
+          >
+            <span style={{ filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.2))' }}>{info.symbol}</span>
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-mute">TYPE · 속성</span>
+              <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-ink/60 tabular-nums">
+                {String(matchCount).padStart(2, '0')}마리
+              </span>
+            </div>
+            <h2 className="font-display text-2xl sm:text-3xl font-bold text-ink leading-none mb-2 inline-flex items-center gap-2">
+              {type}
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border-2 border-ink"
+                    style={{ backgroundColor: info.hex, color: '#fff' }}>
+                {info.symbol} {type}
+              </span>
+            </h2>
+            <p className="text-sm text-ink/80 font-medium leading-relaxed">{info.desc}</p>
+
+            {/* 상성 */}
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <EffectivenessRow label="효과적이에요" tone="strong" types={info.strong} />
+              <EffectivenessRow label="약점이에요"   tone="weak"   types={info.weak} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function EffectivenessRow({ label, tone, types }) {
+  const accent = tone === 'strong' ? '#16a34a' : '#dc2626'
+  const bgTone = tone === 'strong' ? 'rgba(22,163,74,0.10)' : 'rgba(220,38,38,0.08)'
+  return (
+    <div className="rounded-xl p-3 border-2 border-ink/15" style={{ backgroundColor: bgTone }}>
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: accent }} aria-hidden="true" />
+        <span className="font-mono text-[10px] font-bold uppercase tracking-wider" style={{ color: accent }}>
+          {tone === 'strong' ? 'STRONG VS' : 'WEAK TO'} · {label}
+        </span>
+      </div>
+      {types.length === 0 ? (
+        <span className="text-xs text-mute font-bold">없음</span>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {types.map((t) => {
+            const ti = TYPE_INFO[t] || {}
+            return (
+              <span
+                key={t}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border border-ink/30"
+                style={{ backgroundColor: `${ti.hex}22`, color: ti.hex }}
+              >
+                <span aria-hidden="true">{ti.symbol}</span>{t}
+              </span>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
