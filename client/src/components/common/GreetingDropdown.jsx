@@ -26,7 +26,14 @@ export default function GreetingDropdown() {
   if (!name) return null
 
   return (
-    <div className={`max-w-7xl mx-auto px-6 pt-5 flex justify-end transition-all duration-500 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
+    // fixed overlay — 레이아웃 흐름 밖에 두어 페이지가 밀려나지 않게 함.
+    // 우측 상단 고정, pointer-events-none이면 아래 요소 클릭도 막지 않음.
+    <div
+      aria-live="polite"
+      className={`fixed top-4 right-4 z-40 transition-all duration-500 pointer-events-none ${
+        visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
+      }`}
+    >
       <div className="inline-flex items-center gap-2 px-4 py-2 surface-soft elev-1 rounded-full">
         <div className="w-6 h-6 rounded-full bg-ink text-white flex items-center justify-center text-[11px] font-bold">
           {name[0].toUpperCase()}
