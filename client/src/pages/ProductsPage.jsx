@@ -394,7 +394,7 @@ function AuctionLivePage({ lots, loading, error }) {
   const [showAll, setShowAll] = useState(false)
   const [featuredId, setFeaturedId] = useState(null)
 
-  // 마감 임박 LOT부터 정렬 — 단상에 올라가는 LOT 선정 기준
+  // 마감 임박 LOT부터 정렬 — 메인 화면에 올라가는 LOT 선정 기준
   const sorted = useMemo(() => {
     return [...lots].sort((a, b) => (a.endsAt || Infinity) - (b.endsAt || Infinity))
   }, [lots])
@@ -406,14 +406,19 @@ function AuctionLivePage({ lots, loading, error }) {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 pb-28 lg:pb-10">
-      {/* === 1. 컴팩트 컨텍스트 스트립 (시각 점유 최소) === */}
+      {/* === 1. 헤더 (컴팩트) === */}
       <CompactHeroStrip
         liveCount={sorted.length}
         onOpenAll={() => setShowAll(true)}
         disabled={loading || sorted.length === 0}
       />
 
-      {/* === 2. 상태별 본문 === */}
+      {/* === 2. LED 전광판 — 페이지 최대 비주얼 / 방송 중계용 === */}
+      {!error && !loading && featured && (
+        <BroadcastScoreboard lot={featured} liveCount={sorted.length} />
+      )}
+
+      {/* === 3. 상태별 본문 === */}
       {error ? (
         <ErrorState />
       ) : loading ? (
@@ -528,63 +533,297 @@ function CounterPokeballs({ liveCount }) {
   )
 }
 
+// ═══════════════════════════════════════════════════════════════
+// 📺 LED 전광판 (BroadcastScoreboard)
+// ───────────────────────────────────────────────────────────────
+//  스포츠 경기장 / 옥션 하우스의 LED 디스플레이를 모티프로
+//  - 두꺼운 흑색 베젤 + 코너 브래킷 (산업 디스플레이)
+//  - LED 도트 매트릭스 백그라운드 + CRT 스캔라인
+//  - 메인 : CURRENT BID 거대한 amber LED 숫자
+//  - 좌/우 : TIME LEFT (HH:MM:SS) · BIDS / VIEWERS
+//  - 상단 : LIVE · LOT 시리얼 · 카드명 마키
+//  - 하단 : NEXT MIN BID + bidCount 보조 라인
+// ═══════════════════════════════════════════════════════════════
+function CornerBracket({ position }) {
+  const cls = {
+    tl: 'top-2 left-2 border-t-4 border-l-4',
+    tr: 'top-2 right-2 border-t-4 border-r-4',
+    bl: 'bottom-2 left-2 border-b-4 border-l-4',
+    br: 'bottom-2 right-2 border-b-4 border-r-4',
+  }[position]
+  return (
+    <span
+      aria-hidden="true"
+      className={`absolute ${cls} w-5 h-5 border-electric/60 pointer-events-none`}
+    />
+  )
+}
+
+function ScoreboardPanel({ label, children, accent = 'amber', align = 'center' }) {
+  // accent: amber | electric | rose
+  const tone = {
+    amber: { fg: '#ffb347', glow: 'rgba(255,179,71,0.55)' },
+    electric: { fg: '#facc15', glow: 'rgba(250,204,21,0.55)' },
+    rose: { fg: '#ff6b6b', glow: 'rgba(255,107,107,0.55)' },
+  }[accent]
+  const alignCls = align === 'left' ? 'items-start text-left' : align === 'right' ? 'items-end text-right' : 'items-center text-center'
+  return (
+    <div className={`relative flex flex-col ${alignCls} gap-1 px-2 sm:px-3`}>
+      <span className="font-mono text-[9px] sm:text-[10px] font-extrabold uppercase tracking-[0.22em] text-electric/70">
+        {label}
+      </span>
+      <span
+        className="font-mono font-extrabold tabular-nums leading-none"
+        style={{
+          color: tone.fg,
+          textShadow: `0 0 8px ${tone.glow}, 0 0 16px ${tone.glow}`,
+          letterSpacing: '0.02em',
+        }}
+      >
+        {children}
+      </span>
+    </div>
+  )
+}
+
+function BroadcastScoreboard({ lot, liveCount }) {
+  const [, setNow] = useState(Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  // 시청자 — 라이브 분위기
+  const seedViewers = useMemo(
+    () => 80 + ((lot.id?.charCodeAt?.(0) || 7) * 13) % 240,
+    [lot.id]
+  )
+  const [viewers, setViewers] = useState(seedViewers)
+  useEffect(() => {
+    setViewers(seedViewers)
+    const id = setInterval(
+      () => setViewers((v) => Math.max(20, v + Math.round((Math.random() - 0.45) * 6))),
+      2400
+    )
+    return () => clearInterval(id)
+  }, [lot.id, seedViewers])
+
+  const current = lot.currentBid || lot.startingBid || 0
+  const nextMin = Math.round(current * 1.05 / 1000) * 1000 || current + 1000
+  const t = lot.endsAt ? timeUntil(lot.endsAt) : null
+  const isCritical = t && !t.ended && t.totalMs < 1000 * 60 * 10
+  const isUrgent = t && !t.ended && t.totalMs < 1000 * 60 * 60
+  const timeAccent = isCritical ? 'rose' : isUrgent ? 'amber' : 'electric'
+
+  const clockText = !t
+    ? '— —:—'
+    : t.ended
+    ? 'CLOSED'
+    : `${t.d > 0 ? `${t.d}D ` : ''}${String(t.h).padStart(2, '0')}:${String(t.m).padStart(2, '0')}:${String(t.s).padStart(2, '0')}`
+
+  return (
+    <section
+      className="mt-4 relative rounded-2xl border-[3px] border-ink shadow-[0_8px_0_#1a1a1a]"
+      aria-label="라이브 경매 전광판"
+      style={{
+        background:
+          'linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%)',
+      }}
+    >
+      {/* 상단 베젤 — 방송 헤더 */}
+      <div className="relative px-3 sm:px-4 py-2 flex items-center justify-between gap-2 border-b-2 border-electric/15">
+        <div className="inline-flex items-center gap-2 min-w-0">
+          <span
+            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded font-mono text-[10px] font-extrabold uppercase tracking-[0.22em] text-paper"
+            style={{
+              background: '#dc2626',
+              boxShadow: '0 0 12px rgba(220,38,38,0.7)',
+              animation: 'pulse-live 1.6s ease-in-out infinite',
+            }}
+          >
+            ● LIVE
+          </span>
+          <span className="font-mono text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.22em] text-electric/85 truncate">
+            CH.01 · POKÉ AUCTION
+          </span>
+          <SerialTag tone="dark">
+            LOT-{String(lot.id || '').slice(-4).toUpperCase() || '0000'}
+          </SerialTag>
+        </div>
+        <div className="hidden sm:inline-flex items-center gap-2">
+          <span className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-electric/60">
+            BROADCAST
+          </span>
+          {/* 신호 막대 */}
+          <span aria-hidden="true" className="inline-flex items-end gap-0.5 h-3">
+            <span className="w-1 h-1 bg-electric/40" />
+            <span className="w-1 h-2 bg-electric/65" />
+            <span className="w-1 h-2.5 bg-electric/85" />
+            <span className="w-1 h-3 bg-electric" />
+          </span>
+        </div>
+      </div>
+
+      {/* 메인 디스플레이 — 도트 매트릭스 + 코너 브래킷 */}
+      <div
+        className="relative px-3 sm:px-5 py-5 sm:py-7 overflow-hidden"
+        style={{
+          background:
+            'radial-gradient(120% 90% at 50% -10%, #0d1730 0%, #050912 100%)',
+        }}
+      >
+        <CornerBracket position="tl" />
+        <CornerBracket position="tr" />
+        <CornerBracket position="bl" />
+        <CornerBracket position="br" />
+
+        {/* LED 도트 매트릭스 백그라운드 */}
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none opacity-40"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle, rgba(250,204,21,0.18) 0.6px, transparent 1px)',
+            backgroundSize: '6px 6px',
+          }}
+        />
+        {/* CRT 스캔라인 */}
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none mix-blend-overlay"
+          style={{
+            backgroundImage:
+              'repeating-linear-gradient(180deg, rgba(255,255,255,0.05) 0 1px, transparent 1px 4px)',
+          }}
+        />
+        {/* CRT flicker */}
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none bg-electric/5"
+          style={{ animation: 'crt-flicker 4s steps(1) infinite' }}
+        />
+
+        {/* 카드명 마키 (상단) */}
+        <div className="relative z-10 mb-3 sm:mb-4 flex items-center gap-2 flex-wrap min-w-0">
+          <span className="font-mono text-[9px] sm:text-[10px] font-extrabold uppercase tracking-[0.22em] text-electric/60">
+            NOW BIDDING
+          </span>
+          <span className="font-display text-base sm:text-lg lg:text-xl font-extrabold text-paper truncate">
+            {lot.nameKo || lot.name}
+          </span>
+          {lot.grade?.grade != null && (
+            <span
+              className="font-mono text-[9.5px] font-extrabold px-1.5 py-0.5 rounded border-2 border-electric/50 text-electric"
+              style={{ textShadow: '0 0 6px rgba(250,204,21,0.55)' }}
+            >
+              {lot.grade.cert || 'PSA'} {lot.grade.grade}
+            </span>
+          )}
+        </div>
+
+        {/* 메인 3분할 — CURRENT BID / TIME / BIDS */}
+        <div
+          className="relative z-10 grid items-center"
+          style={{
+            gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, auto)',
+            columnGap: '12px',
+          }}
+        >
+          {/* CURRENT BID — 가장 큰 amber LED 숫자 */}
+          <ScoreboardPanel label="CURRENT BID · KRW" accent="amber" align="left">
+            <span style={{ fontSize: 'clamp(34px, 7.5vw, 72px)' }}>
+              {formatKRWFull(current).replace('₩', '').trim()}
+            </span>
+          </ScoreboardPanel>
+
+          {/* 구분선 */}
+          <span
+            aria-hidden="true"
+            className="hidden sm:block h-16 sm:h-20 w-px"
+            style={{
+              background:
+                'linear-gradient(180deg, transparent, rgba(250,204,21,0.35), transparent)',
+            }}
+          />
+
+          {/* TIME LEFT */}
+          <ScoreboardPanel label="TIME LEFT" accent={timeAccent} align="right">
+            <span
+              style={{ fontSize: 'clamp(20px, 3.6vw, 34px)' }}
+              className={isCritical ? 'inline-block' : ''}
+            >
+              {clockText}
+            </span>
+          </ScoreboardPanel>
+        </div>
+
+        {/* 하단 보조 라인 */}
+        <div className="relative z-10 mt-4 sm:mt-5 pt-3 border-t border-electric/15 flex items-center justify-between gap-3 flex-wrap">
+          <div className="inline-flex items-center gap-4 sm:gap-6 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 font-mono text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.18em] text-electric/75">
+              NEXT MIN
+              <span
+                className="text-electric tabular-nums"
+                style={{ textShadow: '0 0 6px rgba(250,204,21,0.5)' }}
+              >
+                {formatKRWFull(nextMin)}
+              </span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 font-mono text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.18em] text-electric/75">
+              BIDS
+              <span className="text-paper tabular-nums">{lot.bidCount || 0}</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 font-mono text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.18em] text-electric/75">
+              <Icon name="eye" size={11} strokeWidth={2.6} />
+              VIEWERS
+              <span className="text-paper tabular-nums">{viewers.toLocaleString()}</span>
+            </span>
+          </div>
+          <span className="font-mono text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.22em] text-electric/45 tabular-nums">
+            ALL LOTS · {String(liveCount).padStart(2, '0')}
+          </span>
+        </div>
+      </div>
+
+      {/* 바닥 베젤 — 빛 반사 */}
+      <div
+        aria-hidden="true"
+        className="h-1.5 rounded-b-xl"
+        style={{
+          background:
+            'linear-gradient(180deg, rgba(250,204,21,0.12), transparent)',
+        }}
+      />
+    </section>
+  )
+}
+
 function CompactHeroStrip({ liveCount, onOpenAll, disabled }) {
   return (
     <header
-      className="relative overflow-hidden rounded-2xl border-2 border-ink bg-paper shadow-[0_5px_0_#1a1a1a]"
-      aria-label="포켓몬센터 라이브 경매장 정면"
+      className="relative overflow-hidden rounded-2xl border-2 border-ink bg-paper shadow-[0_4px_0_#1a1a1a]"
+      aria-label="라이브 경매장 헤더"
     >
-      {/* ── 빨간 사다리꼴 지붕 (포켓몬센터 시그니처) ── */}
-      <div className="relative h-7 sm:h-8" aria-hidden="true">
-        <svg
-          viewBox="0 0 100 12"
-          preserveAspectRatio="none"
-          className="absolute inset-0 w-full h-full"
-        >
-          <polygon points="0,12 6,0 94,0 100,12" fill="#ff7a45" />
-          <polygon points="0,12 6,0 94,0 100,12" fill="none" stroke="#1a1a1a" strokeWidth="0.8" />
-          {/* 지붕 안쪽 가로줄 (포켓볼 모티프 선) */}
-          <line x1="8" y1="6" x2="92" y2="6" stroke="#1a1a1a" strokeWidth="0.45" opacity="0.35" />
-        </svg>
-        {/* PC 간판 — 한복판 흰 동그라미 + P 마크 (게임 속 PokéMart/Center 표지) */}
-        <span
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-paper border-2 border-ink shadow-[0_2px_0_#1a1a1a]"
-        >
-          <span className="font-display font-extrabold text-fire text-base sm:text-lg leading-none">P</span>
-        </span>
-      </div>
-
-      {/* ── 흰 벽 + 자동문: 메인 컨텐츠 영역 ── */}
-      <div
-        className="relative px-4 sm:px-5 py-4 flex items-center justify-between gap-3 flex-wrap"
-        style={{
-          background:
-            'linear-gradient(180deg, #fff 0%, #fbf7ec 100%)',
-        }}
-      >
-        {/* 자동문 좌우 라인 (배경 데코) */}
-        <span aria-hidden="true" className="absolute inset-y-2 left-1/3 w-px bg-ink/8" />
-        <span aria-hidden="true" className="absolute inset-y-2 right-1/3 w-px bg-ink/8" />
-
-        <div className="flex items-center gap-3 min-w-0 relative">
-          <PokeballMark size={44} />
+      <div className="bg-fire px-4 sm:px-5 py-3 flex items-center justify-between gap-3 flex-wrap border-b-2 border-ink">
+        <div className="flex items-center gap-3 min-w-0">
+          <PokeballMark size={40} />
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-[0.18em] bg-fire text-paper border-2 border-ink">
-                <LiveDot size={5} color="#facc15" />
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-[0.18em] bg-paper text-fire border-2 border-ink">
+                <LiveDot size={5} color="#ff7a45" />
                 ON AIR
               </span>
-              <span className="font-mono text-[10px] font-extrabold tracking-[0.18em] uppercase text-mute">
-                POKÉ AUCTION CENTER · 1F
+              <span className="font-mono text-[10px] font-extrabold tracking-[0.18em] uppercase text-paper/85">
+                LIVE AUCTION · 정품 인증
               </span>
             </div>
-            <h1 className="mt-1 font-display text-xl sm:text-2xl font-extrabold text-ink tracking-tight leading-tight">
+            <h1 className="mt-0.5 font-display text-xl sm:text-2xl font-extrabold text-paper tracking-tight leading-tight">
               두근두근 라이브 경매장
             </h1>
-            <div className="mt-1 inline-flex items-center gap-2 text-[11px] font-bold text-mute">
+            <div className="mt-0.5 inline-flex items-center gap-2 text-[11px] font-bold text-paper/85">
               <CounterPokeballs liveCount={liveCount} />
               <span>
-                카운터에 <span className="text-ink font-extrabold tabular-nums">{liveCount}</span>건이 회복중이에요
+                지금 <span className="text-paper font-extrabold tabular-nums">{liveCount}</span>건이 진행 중이에요
               </span>
             </div>
           </div>
@@ -595,7 +834,7 @@ function CompactHeroStrip({ liveCount, onOpenAll, disabled }) {
           onClick={onOpenAll}
           disabled={disabled}
           className="focus-ring relative inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-ink text-electric border-2 border-ink shadow-[0_3px_0_#1a1a1a] hover:-translate-y-0.5 hover:shadow-[0_4px_0_#1a1a1a] disabled:opacity-50 disabled:cursor-not-allowed transition-all font-extrabold text-sm"
-          aria-label={`전체 LOT 보기, ${liveCount}건 대기`}
+          aria-label={`전체 LOT 보기, ${liveCount}건`}
         >
           <Icon name="layers" size={14} strokeWidth={2.4} />
           오늘의 LOT
@@ -604,16 +843,6 @@ function CompactHeroStrip({ liveCount, onOpenAll, disabled }) {
           </span>
         </button>
       </div>
-
-      {/* ── 바닥 타일 라인 (포켓몬센터 타일 바닥 모티프) ── */}
-      <div
-        aria-hidden="true"
-        className="h-2 bg-fire border-t-2 border-ink"
-        style={{
-          backgroundImage:
-            'repeating-linear-gradient(135deg, rgba(255,255,255,0) 0 10px, rgba(255,255,255,0.18) 10px 12px)',
-        }}
-      />
     </header>
   )
 }
@@ -758,12 +987,6 @@ function HealingStage({ img, alt, viewers, lotId }) {
 // ═══════════════════════════════════════════════════════════════
 function FeaturedLot({ lot }) {
   const navigate = useNavigate()
-  const [, setNow] = useState(Date.now())
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(t)
-  }, [])
-  const t = lot.endsAt ? timeUntil(lot.endsAt) : null
 
   // 시청자 카운트 — 라이브 분위기 (실제 소켓 없이도)
   const seedViewers = useMemo(
@@ -784,20 +1007,13 @@ function FeaturedLot({ lot }) {
   const current = lot.currentBid || lot.startingBid || 0
   const nextMin = Math.round(current * 1.05 / 1000) * 1000 || current + 1000
 
-  // 마감 임박도 — 1시간 이내면 강조
-  const isCritical = t && !t.ended && t.totalMs < 1000 * 60 * 10  // 10분 이하
-  const isUrgent   = t && !t.ended && t.totalMs < 1000 * 60 * 60  // 1시간 이하
-
   return (
     <section
       className="relative overflow-hidden rounded-2xl border-2 border-ink bg-paper shadow-[0_6px_0_#1a1a1a]"
       aria-label={`라이브 LOT: ${lot.nameKo || lot.name}`}
     >
-      {/* ── 위계 1: 카운트다운 배너 (가장 먼저 인지) ── */}
-      <CountdownBanner t={t} isCritical={isCritical} isUrgent={isUrgent} />
-
       <div className="grid sm:grid-cols-[1.2fr_1fr] gap-0">
-        {/* ── 위계 2: 카드 이미지 = 포켓몬센터 회복기 도크 ── */}
+        {/* ── 카드 이미지 = 라이브 단상 (핀스팟 + 헤일로 + 발판) ── */}
         <HealingStage
           img={img}
           alt={lot.nameKo || lot.name}
@@ -805,7 +1021,7 @@ function FeaturedLot({ lot }) {
           lotId={lot.id}
         />
 
-        {/* ── 위계 3-4-5: 카운터 영수증 패널 — 가격 → CTA → 신뢰 ── */}
+        {/* ── 가격 → CTA → 신뢰 ── */}
         <CounterReceipt
           lot={lot}
           current={current}
@@ -925,10 +1141,10 @@ function CounterReceipt({ lot, current, nextMin, viewers, onBid }) {
         />
       </button>
       <div className="text-center text-[11px] font-bold text-mute leading-relaxed">
-        지금 <span className="text-fire font-extrabold">{viewers.toLocaleString()}명</span>의 트레이너가 함께 지켜보는 중
+        지금 <span className="text-fire font-extrabold">{viewers.toLocaleString()}명</span>이 함께 지켜보는 중
         <br className="sm:hidden" />
         <span className="hidden sm:inline"> · </span>
-        클릭하면 안전한 입찰 카운터로 이동해요
+        클릭하면 안전한 입찰 화면으로 이동해요
       </div>
 
       {/* 위계 5: 신뢰 배지 */}
@@ -1019,13 +1235,13 @@ function LiveSidebar({ featured, upcoming, onPickLot, onOpenAll }) {
       <div className="rounded-xl border-2 border-ink bg-paper shadow-[0_4px_0_#1a1a1a] overflow-hidden">
         <SectionHeader
           icon="layers"
-          title="다음 회복 대기"
+          title="다음 LOT"
           meta={`${upcoming.length}건 대기`}
         />
         <ul className="divide-y divide-ink/10">
           {upcoming.length === 0 && (
             <li className="px-4 py-6 text-center text-xs text-mute font-bold">
-              카운터 위 회복 대기 LOT이 없어요.
+              대기 중인 LOT이 없어요.
             </li>
           )}
           {upcoming.map((c, i) => {
@@ -1038,7 +1254,7 @@ function LiveSidebar({ featured, upcoming, onPickLot, onOpenAll }) {
                   type="button"
                   onClick={() => onPickLot(c.id)}
                   className="focus-ring w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-electric/20 transition-colors"
-                  aria-label={`${c.nameKo || c.name} 회복 도크로 옮기기`}
+                  aria-label={`${c.nameKo || c.name} 메인 화면에 띄우기`}
                 >
                   {/* 줄지어선 포켓볼 슬롯 번호 */}
                   <span className="relative shrink-0">
@@ -1082,7 +1298,7 @@ function LiveSidebar({ featured, upcoming, onPickLot, onOpenAll }) {
         </button>
       </div>
 
-      {/* 입찰 피드 — 빌의 PC CRT 모니터 */}
+      {/* 입찰 피드 — 실시간 입찰 모니터 */}
       <BidFeed lot={featured} />
     </aside>
   )
@@ -1105,7 +1321,7 @@ function BidFeed({ lot }) {
 
   useEffect(() => {
     seedRef.current = Math.max(1000, lot.currentBid || 0)
-    setItems([{ id: `sys-${lot.id}`, sys: true, msg: `${lot.nameKo || lot.name} 단상 입장!`, t: Date.now() }])
+    setItems([{ id: `sys-${lot.id}`, sys: true, msg: `${lot.nameKo || lot.name} 라이브 시작!`, t: Date.now() }])
   }, [lot.id, lot.currentBid, lot.nameKo, lot.name])
 
   useEffect(() => {
@@ -1145,12 +1361,12 @@ function BidFeed({ lot }) {
 
   return (
     <div className="relative overflow-hidden rounded-xl border-2 border-ink bg-paper shadow-[0_4px_0_#1a1a1a] flex flex-col lg:min-h-0 lg:flex-1">
-      {/* 빌의 PC 헤더 — CRT 모니터 상단 베젤 */}
+      {/* 실시간 입찰 모니터 — CRT 헤더 베젤 */}
       <div className="bg-ink px-4 py-2.5 flex items-center justify-between border-b-2 border-ink">
         <div className="inline-flex items-center gap-2 text-electric">
           <LiveDot size={6} color="#facc15" />
           <span className="font-display text-sm font-extrabold tracking-tight">
-            BILL'S PC · 입찰 모니터
+            실시간 입찰 모니터
           </span>
         </div>
         <span className="font-mono text-[10px] font-bold text-electric/70 tabular-nums uppercase tracking-[0.18em]">
@@ -1309,7 +1525,7 @@ function LoadingState() {
         </div>
         <div>
           <div className="font-display text-lg font-extrabold text-ink">
-            카운터에서 카드를 회복중이에요
+            라이브 경매를 불러오는 중
           </div>
           <div className="mt-1 text-sm text-mute font-medium">잠시만 기다려주세요…</div>
         </div>
@@ -1328,10 +1544,10 @@ function EmptyState() {
         <PokeballMark size={72} />
         <div>
           <div className="font-display text-2xl font-extrabold text-ink">
-            오늘 카운터는 한가해요
+            진행 중인 라이브 경매가 없어요
           </div>
           <p className="mt-2 text-sm text-mute font-medium leading-relaxed">
-            지금 회복 도크에 오른 카드가 없어요.<br />
+            지금 라이브로 진행되는 LOT이 없어요.<br />
             즉시구매 카탈로그에서 먼저 둘러볼 수 있어요.
           </p>
         </div>
@@ -1357,7 +1573,7 @@ function ErrorState() {
         </div>
         <div>
           <div className="font-display text-2xl font-extrabold text-ink">
-            빌의 PC가 잠시 멈췄어요
+            연결이 잠시 끊겼어요
           </div>
           <p className="mt-2 text-sm text-mute font-medium leading-relaxed">
             경매 데이터를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
@@ -1409,53 +1625,27 @@ function AllLotsModal({ lots, featuredId, onClose, onPickLot }) {
         className="relative w-full max-w-5xl max-h-[88vh] rounded-2xl border-2 border-ink bg-paper shadow-[0_8px_0_#1a1a1a] overflow-hidden flex flex-col"
         style={{ animation: 'modal-in 0.22s ease-out' }}
       >
-        {/* 포켓몬센터 사다리꼴 지붕 헤더 */}
-        <div className="relative shrink-0">
-          <div className="relative h-6" aria-hidden="true">
-            <svg
-              viewBox="0 0 100 12"
-              preserveAspectRatio="none"
-              className="absolute inset-0 w-full h-full"
-            >
-              <polygon points="0,12 5,0 95,0 100,12" fill="#ff7a45" />
-              <polygon
-                points="0,12 5,0 95,0 100,12"
-                fill="none"
-                stroke="#1a1a1a"
-                strokeWidth="0.8"
-              />
-            </svg>
-          </div>
-          <div className="bg-fire px-4 sm:px-5 py-3 flex items-center justify-between gap-3 border-y-2 border-ink">
-            <div className="flex items-center gap-3 min-w-0">
-              <PokeballMark size={36} />
-              <div className="min-w-0">
-                <div className="font-mono text-[10px] font-extrabold uppercase tracking-[0.22em] text-paper/85">
-                  POKÉ AUCTION · 오늘의 LOT
-                </div>
-                <div className="font-display text-base sm:text-lg font-extrabold text-paper leading-tight truncate">
-                  카운터에 오를 카드 모음
-                </div>
+        {/* 모달 헤더 */}
+        <div className="bg-fire px-4 sm:px-5 py-3 flex items-center justify-between gap-3 border-b-2 border-ink shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <PokeballMark size={36} />
+            <div className="min-w-0">
+              <div className="font-mono text-[10px] font-extrabold uppercase tracking-[0.22em] text-paper/85">
+                LIVE AUCTION · 오늘의 LOT
+              </div>
+              <div className="font-display text-base sm:text-lg font-extrabold text-paper leading-tight truncate">
+                현재 진행 중인 카드 모음
               </div>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="닫기"
-              className="focus-ring w-9 h-9 rounded-full bg-paper border-2 border-ink shadow-[0_3px_0_rgba(0,0,0,0.35)] hover:-translate-y-0.5 transition-all inline-flex items-center justify-center shrink-0"
-            >
-              <Icon name="close" size={14} strokeWidth={2.8} className="text-ink" />
-            </button>
           </div>
-          {/* 타일 바닥 */}
-          <div
-            aria-hidden="true"
-            className="h-2 bg-fire border-b-2 border-ink"
-            style={{
-              backgroundImage:
-                'repeating-linear-gradient(135deg, rgba(255,255,255,0) 0 10px, rgba(255,255,255,0.18) 10px 12px)',
-            }}
-          />
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="닫기"
+            className="focus-ring w-9 h-9 rounded-full bg-paper border-2 border-ink shadow-[0_3px_0_rgba(0,0,0,0.35)] hover:-translate-y-0.5 transition-all inline-flex items-center justify-center shrink-0"
+          >
+            <Icon name="close" size={14} strokeWidth={2.8} className="text-ink" />
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto bg-bone p-3 sm:p-5">
@@ -1464,7 +1654,7 @@ function AllLotsModal({ lots, featuredId, onClose, onPickLot }) {
               <div className="inline-flex flex-col items-center gap-3">
                 <PokeballMark size={56} />
                 <div className="font-display text-lg font-bold text-ink">
-                  아직 카운터에 오른 LOT이 없어요
+                  아직 등록된 LOT이 없어요
                 </div>
               </div>
             </div>
@@ -1487,7 +1677,7 @@ function AllLotsModal({ lots, featuredId, onClose, onPickLot }) {
         <div className="px-4 sm:px-5 py-3 bg-bone-2 border-t-2 border-ink/10 flex items-center justify-between gap-3 shrink-0">
           <span className="text-[11px] sm:text-xs text-mute font-bold inline-flex items-center gap-1.5">
             <Icon name="bolt" size={11} strokeWidth={2.4} className="text-fire" />
-            LOT을 누르면 회복 도크로 즉시 옮겨져요.
+            LOT을 누르면 메인 화면에 즉시 띄워져요.
           </span>
           <span className="font-mono text-[11px] font-extrabold text-ink tabular-nums">
             TOTAL · {lots.length}
@@ -1507,7 +1697,7 @@ function ModalLotRow({ lot, index, active, onPick }) {
       type="button"
       onClick={onPick}
       aria-current={active ? 'true' : undefined}
-      aria-label={`${lot.nameKo || lot.name}, ${formatKRWFull(lot.currentBid || lot.startingBid || 0)}, 회복 도크로 옮기기`}
+      aria-label={`${lot.nameKo || lot.name}, ${formatKRWFull(lot.currentBid || lot.startingBid || 0)}, 메인 화면에 띄우기`}
       className={`focus-ring group w-full flex items-stretch gap-3 p-2.5 rounded-xl border-2 bg-paper text-left transition-all ${
         active
           ? 'border-fire shadow-[0_3px_0_#ff7a45] -translate-y-0.5'
@@ -1529,7 +1719,7 @@ function ModalLotRow({ lot, index, active, onPick }) {
         <span>
           <span className="font-mono text-[9.5px] font-extrabold uppercase tracking-[0.22em] text-mute">
             LOT {String(index).padStart(3, '0')}
-            {active && <span className="ml-1.5 text-fire">· ON DOCK</span>}
+            {active && <span className="ml-1.5 text-fire">· ON AIR</span>}
           </span>
           <span className="block font-display text-sm font-extrabold text-ink leading-tight truncate">
             {lot.nameKo || lot.name}
