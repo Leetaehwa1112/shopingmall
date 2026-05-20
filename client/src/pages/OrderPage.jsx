@@ -306,17 +306,16 @@ export default function OrderPage() {
               <Field label="수령인" value={form.name} onChange={(v) => setForm({...form, name: v})} validate={validators.name} required />
               <Field label="이메일" value={form.email} onChange={(v) => setForm({...form, email: v})} validate={validators.email} required placeholder="example@email.com" type="email" />
               <Field label="연락처" value={form.phone} onChange={(v) => setForm({...form, phone: v})} validate={validators.phone} required placeholder="010-0000-0000" />
-              <div className="flex gap-2 items-end">
-                <div className="flex-1">
-                  <Field label="우편번호" value={form.zip} onChange={(v) => setForm({...form, zip: v})} validate={validators.zip} required placeholder="06236" readOnly />
-                </div>
+              <div className="grid grid-cols-[1fr_auto] gap-2 items-start">
+                <Field label="우편번호" value={form.zip} onChange={(v) => setForm({...form, zip: v})} validate={validators.zip} required placeholder="06236" readOnly />
+                {/* 라벨 높이(22px ≈ text-[11px] + mb-1.5)만큼 buton에 mt 줘서 input과 baseline 정렬 */}
                 <button
                   type="button"
                   onClick={() => setPostcodeOpen(true)}
                   style={{ backgroundColor: '#facc15', color: '#1a1a1a' }}
-                  className="h-[42px] px-4 rounded-lg text-xs font-bold border-2 border-ink shadow-[0_2px_0_#1a1a1a] hover:-translate-y-0.5 hover:shadow-[0_3px_0_#1a1a1a] transition-all whitespace-nowrap inline-flex items-center gap-1.5"
+                  className="mt-[22px] h-[46px] px-5 rounded-lg text-sm font-bold border-2 border-ink shadow-[0_2px_0_#1a1a1a] hover:-translate-y-0.5 hover:shadow-[0_3px_0_#1a1a1a] transition-all whitespace-nowrap inline-flex items-center justify-center gap-1.5"
                 >
-                  <Icon name="search" size={13} strokeWidth={2.4} />
+                  <Icon name="search" size={14} strokeWidth={2.4} />
                   주소 검색
                 </button>
               </div>
