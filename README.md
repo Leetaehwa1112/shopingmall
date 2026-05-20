@@ -10,10 +10,9 @@
 
 ```
 shopingmall/
-├── client/                React 19 + Vite 8 + Tailwind v4
-├── server/                Node.js 22 + Express 5 + Mongoose 9
-├── docker-compose.yml     로컬 풀스택 (mongo + server + client)
-└── .github/workflows/     CI (build / syntax / docker)
+├── client/                React 19 + Vite 8 + Tailwind v4 (Vercel 배포)
+├── server/                Node.js 22 + Express 5 + Mongoose 9 (Heroku 배포)
+└── .github/workflows/     CI (build / syntax check)
 ```
 
 ---
@@ -56,20 +55,11 @@ npm install
 npm run dev                # http://localhost:3000
 ```
 
-### Docker Compose (풀스택)
+### 배포
 
-```bash
-# 환경변수 export 또는 .env 파일 작성
-export JWT_SECRET=$(openssl rand -base64 48)
-export CLOUDINARY_CLOUD_NAME=...
-export CLOUDINARY_API_KEY=...
-export CLOUDINARY_API_SECRET=...
-
-docker compose up -d --build
-# client:  http://localhost:8080
-# server:  http://localhost:5000
-# mongo:   localhost:27017
-```
+- **Client** → Vercel (Root Directory: `client`, env: `VITE_API_URL`)
+- **Server** → Heroku (monorepo buildpack, env: `APP_BASE=server` + 시크릿)
+- **DB** → MongoDB Atlas (Network Access: `0.0.0.0/0`)
 
 ---
 
@@ -109,7 +99,7 @@ docker compose up -d --build
 - **production 응답** — 5xx에서 스택/내부 메시지 마스킹
 - **graceful shutdown** — SIGTERM/SIGINT 시 진행 중 요청 마무리
 - **인덱스** — Product / Order / Pack / Auction 모든 hot path
-- **`/health` 엔드포인트** — Docker / k8s / ALB health probe용
+- **`/health` 엔드포인트** — 배포 플랫폼 health probe용
 
 향후 (인프라/도메인/3rd party 필요):
 - HTTPS / Let's Encrypt
@@ -148,7 +138,6 @@ docker compose up -d --build
 `.github/workflows/ci.yml` — push/PR 시 자동 실행:
 - **client-build** — Vite production 빌드
 - **server-syntax** — 모든 `.js` 문법 + 모듈 로드 체크
-- **docker-build** — server/client 이미지 빌드 smoke 테스트
 
 ---
 
