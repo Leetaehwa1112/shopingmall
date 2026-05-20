@@ -716,13 +716,13 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
             입찰 종료
           </Button>
         ) : (
-          <Link to={`/products/${card.id}`} className="block" aria-label="입찰 참여">
+          <Link to="/auctions" className="block" aria-label="경매장 둘러보기">
             <button
               type="button"
               className="btn btn-pop btn-lg relative overflow-hidden w-full"
             >
               <Icon name="gavel" size={16} strokeWidth={2.6} />
-              지금 두근두근 입찰!
+              두근두근 경매장 보러가기
               <Icon name="arrow" size={14} strokeWidth={2.6} />
               <span
                 aria-hidden="true"
