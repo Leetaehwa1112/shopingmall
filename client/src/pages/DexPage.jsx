@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import api from '@/api/axios'
 import useCollectionStore from '@/store/collectionStore'
 import { POKEDEX, ARTWORK_URL, TYPE_TOKEN, TYPE_BG_SOFT, TYPE_INFO } from '@/constants/pokedex'
+import TypeSymbol from '@/components/common/TypeSymbol'
 import Icon from '@/components/common/Icon'
 import {
   DexLed,
@@ -317,7 +318,7 @@ function DexControlPanel({
   filteredCount, totalCount, hasActiveFilter, onReset,
 }) {
   return (
-    <div className="sticky top-[108px] z-30 bg-paper/95 backdrop-blur-md border-b-2 border-ink shadow-[0_2px_0_rgba(0,0,0,0.06)]">
+    <div className="sticky top-[108px] z-30 bg-paper border-b-2 border-ink shadow-[0_2px_0_rgba(0,0,0,0.06)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-2.5">
         {/* LCD 미니 검색 */}
         <label className="relative shrink-0">
@@ -340,29 +341,40 @@ function DexControlPanel({
         </label>
 
         {/* 타입 칩 — 가로 스크롤 */}
+        {/*
+          포켓몬 디바이스 — 심볼 전용 버튼 행.
+          전체(✦)는 텍스트 라벨, 나머지는 SVG 심볼만 (이모지 X).
+          gap을 늘려 손가락 타깃 사이 호흡 확보.
+        */}
         <div
-          className="flex gap-2.5 overflow-x-auto scrollbar-none flex-1 min-w-0 -my-1 py-1"
+          className="flex gap-3 overflow-x-auto scrollbar-none flex-1 min-w-0 -my-1 py-1 items-center"
           role="radiogroup"
           aria-label="타입 필터"
         >
           {allTypes.map((t) => {
             const info = TYPE_INFO[t] || TYPE_INFO['전체']
             const isActive = typeFilter === t
+            const isAll = t === '전체'
             return (
               <button
                 key={t}
                 role="radio"
                 aria-checked={isActive}
+                aria-label={t}
+                title={t}
                 onClick={() => onType(t)}
-                style={isActive ? { backgroundColor: info.hex, color: '#fff', borderColor: '#1a1a1a' } : undefined}
-                className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${
+                style={{
+                  backgroundColor: isActive ? info.hex : '#fffaf2',
+                  borderColor: isActive ? '#1a1a1a' : 'rgba(13,23,48,0.18)',
+                  color: isActive ? '#fff' : '#1a1a1a',
+                }}
+                className={`shrink-0 inline-flex items-center justify-center rounded-full border-2 transition-all ${
                   isActive
                     ? 'shadow-[0_3px_0_#1a1a1a] -translate-y-0.5'
-                    : 'border-ink/15 bg-paper text-ink/75 hover:border-ink hover:text-ink hover:-translate-y-0.5'
-                }`}
+                    : 'hover:border-ink hover:-translate-y-0.5 hover:shadow-[0_2px_0_#1a1a1a]'
+                } ${isAll ? 'h-10 px-4 text-[11px] font-bold tracking-wider uppercase' : 'w-10 h-10'}`}
               >
-                <span className="text-sm leading-none" aria-hidden="true">{info.symbol}</span>
-                <span className="leading-none">{t}</span>
+                {isAll ? 'ALL · 전체' : <TypeSymbol type={t} size={22} variant="plain" />}
               </button>
             )
           })}
@@ -401,13 +413,16 @@ function TypeDetailCard({ type, matchCount }) {
         style={{ background: `linear-gradient(135deg, ${info.hex}22 0%, transparent 60%), #fffaf2` }}
       >
         <div className="flex items-start gap-5 flex-wrap sm:flex-nowrap">
-          {/* 큰 심볼 */}
+          {/* 큰 심볼 — 실제 타입 심볼 (SVG) */}
           <div
-            className="shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-2 border-ink flex items-center justify-center text-4xl sm:text-5xl shadow-[0_3px_0_#1a1a1a]"
-            style={{ backgroundColor: info.hex }}
+            className="shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-2 border-ink flex items-center justify-center shadow-[0_3px_0_#1a1a1a]"
+            style={{
+              backgroundColor: info.hex,
+              boxShadow: '0 4px 0 #1a1a1a, inset 0 2px 0 rgba(255,255,255,0.25)',
+            }}
             aria-hidden="true"
           >
-            <span style={{ filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.2))' }}>{info.symbol}</span>
+            <TypeSymbol type={type} size={56} variant="plain" className="text-white" />
           </div>
 
           <div className="flex-1 min-w-0">
@@ -417,12 +432,9 @@ function TypeDetailCard({ type, matchCount }) {
                 {String(matchCount).padStart(2, '0')}마리
               </span>
             </div>
-            <h2 className="font-display text-2xl sm:text-3xl font-bold text-ink leading-none mb-2 inline-flex items-center gap-2">
+            <h2 className="font-display text-2xl sm:text-3xl font-bold text-ink leading-none mb-2 inline-flex items-center gap-2.5">
               {type}
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border-2 border-ink"
-                    style={{ backgroundColor: info.hex, color: '#fff' }}>
-                {info.symbol} {type}
-              </span>
+              <TypeSymbol type={type} size={20} variant="solid" />
             </h2>
             <p className="text-sm text-ink/80 font-medium leading-relaxed">{info.desc}</p>
 
@@ -458,10 +470,11 @@ function EffectivenessRow({ label, tone, types }) {
             return (
               <span
                 key={t}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border border-ink/30"
+                className="inline-flex items-center gap-1.5 pl-1 pr-2.5 py-0.5 rounded-full text-[11px] font-bold border border-ink/30"
                 style={{ backgroundColor: `${ti.hex}22`, color: ti.hex }}
               >
-                <span aria-hidden="true">{ti.symbol}</span>{t}
+                <TypeSymbol type={t} size={14} variant="solid" />
+                {t}
               </span>
             )
           })}
