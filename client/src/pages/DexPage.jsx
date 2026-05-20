@@ -653,9 +653,20 @@ function SpecimenEntry({ poke, owned, onToggleOwned, onSelect }) {
       onKeyDown={onKey}
       ariaLabel={`${poke.nameKo} 카드 도감 열기${hasSale ? `, 판매중 ${poke.onSaleCount}장` : ''}`}
     >
-      {/* 상단 표본 라벨 띠 */}
-      <div className="flex items-center justify-between px-3 pt-2.5 pb-2 border-b border-ink/10">
-        <CatalogueLabel id={poke.id} name={poke.name} />
+      {/* === 상단 데이터 시트 헤더 (LED + №) === */}
+      <div className="flex items-center justify-between px-3 pt-2.5 pb-2 border-b border-ink/10 relative">
+        <div className="flex items-center gap-1.5">
+          {/* 상태 LED — 재고 있으면 그린 펄스, 없으면 그레이 */}
+          <span
+            className={`w-1.5 h-1.5 rounded-full ${hasSale ? 'animate-pulse' : ''}`}
+            style={{
+              backgroundColor: hasSale ? '#16a34a' : '#9ca3af',
+              boxShadow: hasSale ? '0 0 5px #16a34a' : 'none',
+            }}
+            aria-hidden="true"
+          />
+          <CatalogueLabel id={poke.id} name={poke.name} />
+        </div>
         <button
           onClick={(e) => { e.stopPropagation(); onToggleOwned() }}
           aria-label={owned ? `${poke.nameKo} 소장 해제` : `${poke.nameKo} 도감에 추가`}
@@ -672,54 +683,116 @@ function SpecimenEntry({ poke, owned, onToggleOwned, onSelect }) {
         </button>
       </div>
 
-      {/* 일러스트 — 진열장 */}
-      <div className={`relative px-4 pt-4 pb-3 bg-gradient-to-b ${TYPE_BG_SOFT[primaryToken]} to-transparent min-h-[150px] flex items-center justify-center`}>
+      {/* === 일러스트 — 표본 윈도우 (4코너 마커 + 살짝 입체) === */}
+      <div className={`relative px-4 pt-4 pb-3 bg-gradient-to-b ${TYPE_BG_SOFT[primaryToken]} to-transparent min-h-[160px] flex items-center justify-center`}>
+        {/* 4코너 마커 — 표본 슬롯 느낌 */}
+        {['top-1.5 left-1.5', 'top-1.5 right-1.5', 'bottom-1.5 left-1.5', 'bottom-1.5 right-1.5'].map((pos, i) => (
+          <span
+            key={i}
+            aria-hidden="true"
+            className={`absolute ${pos} w-2 h-2 pointer-events-none`}
+            style={{
+              borderTop:    i < 2  ? '1.5px solid rgba(13,23,48,0.35)' : 'none',
+              borderBottom: i >= 2 ? '1.5px solid rgba(13,23,48,0.35)' : 'none',
+              borderLeft:   i % 2 === 0 ? '1.5px solid rgba(13,23,48,0.35)' : 'none',
+              borderRight:  i % 2 === 1 ? '1.5px solid rgba(13,23,48,0.35)' : 'none',
+            }}
+          />
+        ))}
+
         {hasSale && (
           <span
             aria-hidden="true"
-            className="absolute top-2.5 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-grass/95 text-white text-[9px] font-bold tracking-[0.15em] uppercase shadow-sm"
+            className="absolute top-2 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[9px] font-bold tracking-[0.18em] uppercase border-2 border-ink"
+            style={{
+              backgroundColor: '#16a34a',
+              color: '#fff',
+              boxShadow: '0 0 10px rgba(22,163,74,0.55), 0 2px 0 #1a1a1a',
+            }}
           >
-            <span className="w-1 h-1 rounded-full bg-paper animate-pulse" /> Live
+            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" /> LIVE
           </span>
         )}
+
         <img
           src={ARTWORK_URL(poke.id)}
           alt={`${poke.nameKo} 일러스트`}
           loading="lazy"
-          className="w-24 h-24 object-contain drop-shadow-[0_8px_8px_rgba(0,0,0,0.15)] group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300"
+          className="w-24 h-24 object-contain drop-shadow-[0_8px_8px_rgba(0,0,0,0.18)] group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300"
+        />
+
+        {/* 미세 스캔라인 — 표본 윈도우 톤 */}
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none opacity-10 mix-blend-overlay"
+          style={{
+            backgroundImage:
+              'repeating-linear-gradient(0deg, rgba(13,23,48,0.15) 0px, rgba(13,23,48,0.15) 1px, transparent 1px, transparent 4px)',
+          }}
         />
       </div>
 
-      {/* 명패 */}
-      <div className="px-3.5 pb-3 pt-2.5 border-t border-ink/5">
-        <div className="font-display text-[17px] font-bold text-ink leading-tight">
-          {poke.nameKo}
-        </div>
-        <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
-          {poke.types.map((t) => <TypeChip key={t} type={t} size="sm" />)}
+      {/* === 명패 + 디바이스 데이터 라인 === */}
+      <div className="px-3.5 pb-3 pt-2.5 border-t border-ink/10 bg-paper">
+        <div className="flex items-baseline justify-between gap-2 mb-1.5">
+          <div className="font-display text-[17px] font-bold text-ink leading-tight truncate">
+            {poke.nameKo}
+          </div>
+          <div className="font-mono text-[9px] font-bold tracking-wider text-mute/50 tabular-nums shrink-0">
+            GEN.{poke.gen}
+          </div>
         </div>
 
-        {/* 상태 인디케이터 */}
-        <div className="mt-2.5 pt-2 border-t border-dashed border-ink/10">
-          {hasSale ? (
-            <div className="flex items-center justify-between">
-              <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-grass">
-                In Stock
+        {/* 유리알 jewel 타입 칩 */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {poke.types.map((t) => {
+            const ti = TYPE_INFO[t] || {}
+            return (
+              <span
+                key={t}
+                className="inline-flex items-center gap-1 pl-0.5 pr-2 py-0.5 rounded-full text-[10px] font-bold border"
+                style={{
+                  backgroundColor: `${ti.hex}15`,
+                  borderColor: `${ti.hex}55`,
+                  color: ti.hex,
+                }}
+              >
+                <TypeSymbol type={t} size={14} variant="solid" />
+                {t}
               </span>
-              <span className="font-mono text-[12px] font-bold text-ink tabular-nums">
-                {String(poke.onSaleCount).padStart(2, '0')} <span className="text-mute font-normal">/ {poke.cards.length}</span>
-              </span>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between">
-              <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-mute/60">
-                Catalogued
-              </span>
-              <span className="font-mono text-[12px] font-bold text-mute/70 tabular-nums">
-                — / {poke.cards.length}
-              </span>
-            </div>
-          )}
+            )
+          })}
+        </div>
+
+        {/* LCD 데이터 바 — 상태 인디케이터 */}
+        <div
+          className="mt-2.5 px-2 py-1.5 rounded-md flex items-center justify-between"
+          style={{
+            background: hasSale ? 'rgba(22,163,74,0.08)' : 'rgba(13,23,48,0.04)',
+            boxShadow: `inset 0 0 0 1px ${hasSale ? 'rgba(22,163,74,0.3)' : 'rgba(13,23,48,0.12)'}`,
+          }}
+        >
+          <span
+            className="inline-flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-wider"
+            style={{ color: hasSale ? '#16a34a' : '#9ca3af' }}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${hasSale ? 'animate-pulse' : ''}`}
+              style={{
+                backgroundColor: hasSale ? '#16a34a' : '#9ca3af',
+                boxShadow: hasSale ? '0 0 5px #16a34a' : 'none',
+              }}
+              aria-hidden="true"
+            />
+            {hasSale ? 'IN STOCK' : 'CATALOGUED'}
+          </span>
+          <span
+            className="font-mono text-[11px] font-bold tabular-nums"
+            style={{ color: hasSale ? '#1a1a1a' : '#9ca3af' }}
+          >
+            {hasSale ? String(poke.onSaleCount).padStart(2, '0') : '—'}
+            <span className="text-mute/60 font-normal"> / {poke.cards.length}</span>
+          </span>
         </div>
       </div>
     </SpecimenFrame>
