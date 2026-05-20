@@ -447,98 +447,138 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
   }, [card.id, card._id])
 
   return (
-    <div className="rounded-2xl border-2 border-ink overflow-hidden relative shadow-[0_6px_0_#1a1a1a,0_12px_30px_rgba(220,38,38,0.18)]">
-      {/* 빨간 LIVE 헤더 바 — 화면 진입 1초 안에 "라이브!" 인지 */}
+    // 외곽 컨테이너 — 위쪽 큰 padding(카드 절반 솟음 공간). overflow visible.
+    <div className="relative pt-24 sm:pt-28">
+      {/* ─── 떠있는 큰 카드 ─── 빨간 LIVE 배너 위로 절반 솟아오름.
+          카드 하단은 배너 안에 잠긴 채로, 상단은 위로 입체적으로 튀어나옴.
+          turntable disc 위에서 360° 회전 (리자몽 무대 효과). */}
       <div
-        className="relative px-4 py-3 border-b-2 border-ink overflow-hidden"
-        style={{
-          background: lotEnded
-            ? 'linear-gradient(180deg, #6b7280 0%, #4b5563 100%)'
-            : 'linear-gradient(180deg, var(--color-dex) 0%, var(--color-dex-d) 100%)',
-        }}
+        className="absolute left-1/2 -translate-x-1/2 z-30 sparkle-host"
+        style={{ top: 0, perspective: 1400 }}
       >
-        {/* 펄스 빛 — 좌→우 휩쓸기 */}
-        {!lotEnded && (
-          <span
-            aria-hidden="true"
-            className="absolute inset-0 pointer-events-none opacity-50"
-            style={{
-              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
-              animation: 'shine-sweep 3.2s ease-in-out infinite',
-            }}
-          />
-        )}
-        <div className="relative flex items-center justify-between gap-2">
-          <div className="inline-flex items-center gap-2">
-            {!lotEnded && (
-              <span
-                aria-hidden="true"
-                className="relative inline-flex items-center justify-center"
-                style={{ width: 12, height: 12 }}
-              >
-                <span
-                  className="absolute inset-0 rounded-full bg-white opacity-70"
-                  style={{ animation: 'live-ring 1.4s ease-out infinite' }}
-                />
-                <span className="relative rounded-full bg-white" style={{ width: 10, height: 10 }} />
-              </span>
-            )}
-            <span className="font-display font-extrabold text-white text-lg tracking-tight">
-              {lotEnded ? 'CLOSED' : 'LIVE'}
-            </span>
-            <span className="text-[10px] font-bold text-white/85 uppercase tracking-widest">
-              · LOT #{card.lotOrder || 1}
-            </span>
-          </div>
-          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-black/30 border border-white/30 text-white text-[11px] font-bold tabular-nums">
-            <Icon name="eye" size={11} strokeWidth={2.4} aria-hidden="true" />
-            {viewers.toLocaleString()}
-          </span>
+        {/* spotlight glow — 카드 뒤 노랑+빨강 후광 */}
+        <span
+          aria-hidden="true"
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+          style={{
+            width: '200%',
+            aspectRatio: '1',
+            background: 'radial-gradient(circle at 50% 50%, rgba(250,204,21,0.45) 0%, rgba(220,38,38,0.28) 30%, transparent 65%)',
+            filter: 'blur(22px)',
+            zIndex: 0,
+          }}
+        />
+        {/* turntable disc — 카드 아래 회전 단상 (자체 회전) */}
+        <span
+          aria-hidden="true"
+          className="absolute left-1/2 -translate-x-1/2 pointer-events-none"
+          style={{
+            bottom: '-8%',
+            width: '140%',
+            aspectRatio: '1 / 0.28',
+            borderRadius: '50%',
+            background: 'radial-gradient(ellipse at 50% 50%, rgba(250,204,21,0.32) 0%, rgba(255,255,255,0.15) 40%, transparent 75%)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            animation: 'stage-disc-turn 9s linear infinite',
+            zIndex: 0,
+          }}
+        />
+        <Sparkles always />
+        {/* 카드 자체 — 360° Y축 회전 (rotateY 무한). hover시 일시 정지. */}
+        <div className="relative card-turntable-spin">
+          <Link to={`/products/${card.id}`} className="block focus-ring" aria-label={`${card.nameKo} 경매 상세`}>
+            <PokeCard card={card} size={compact ? 'sm' : 'md'} eager interactive={false} />
+          </Link>
         </div>
       </div>
 
-      {/* 카드 + 정보 */}
-      <Link to={`/products/${card.id}`} className="block group bg-paper" aria-label={`${card.nameKo} 경매 상세`}>
-        <div className="flex gap-4 p-5">
-          <div className="shrink-0 holo-sheen rounded-lg">
-            <PokeCard card={card} size={compact ? 'xs' : 'sm'} />
-          </div>
-          <div className="min-w-0 flex flex-col justify-between flex-1">
-            <div>
-              <h2 className="font-display text-xl sm:text-2xl font-bold text-ink leading-tight mb-1 group-hover:text-dex transition-colors">
-                {card.nameKo}
-              </h2>
-              <div className="text-xs text-mute mb-2 truncate font-medium">
-                {card.name} · {card.setShort || card.set} · {card.year}
-              </div>
-              <GradeBadge grade={card.grade} size="sm" />
+      {/* ─── 본 패널 ─── 카드 뒤로 배치, overflow hidden은 그대로 (배너 빛 효과는 안에서만). */}
+      <div className="relative rounded-2xl border-2 border-ink overflow-hidden shadow-[0_6px_0_#1a1a1a,0_12px_30px_rgba(220,38,38,0.18)]">
+        {/* 빨간 LIVE 헤더 바 — 화면 진입 1초 안에 "라이브!" 인지. 카드 하단이 안에 잠김. */}
+        <div
+          className="relative px-4 border-b-2 border-ink overflow-hidden"
+          style={{
+            paddingTop: '3rem',
+            paddingBottom: '0.85rem',
+            background: lotEnded
+              ? 'linear-gradient(180deg, #6b7280 0%, #4b5563 100%)'
+              : 'linear-gradient(180deg, var(--color-dex) 0%, var(--color-dex-d) 100%)',
+          }}
+        >
+          {/* 펄스 빛 — 좌→우 휩쓸기 */}
+          {!lotEnded && (
+            <span
+              aria-hidden="true"
+              className="absolute inset-0 pointer-events-none opacity-50"
+              style={{
+                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
+                animation: 'shine-sweep 3.2s ease-in-out infinite',
+              }}
+            />
+          )}
+          <div className="relative flex items-center justify-between gap-2">
+            <div className="inline-flex items-center gap-2">
+              {!lotEnded && (
+                <span
+                  aria-hidden="true"
+                  className="relative inline-flex items-center justify-center"
+                  style={{ width: 12, height: 12 }}
+                >
+                  <span
+                    className="absolute inset-0 rounded-full bg-white opacity-70"
+                    style={{ animation: 'live-ring 1.4s ease-out infinite' }}
+                  />
+                  <span className="relative rounded-full bg-white" style={{ width: 10, height: 10 }} />
+                </span>
+              )}
+              <span className="font-display font-extrabold text-white text-lg tracking-tight">
+                {lotEnded ? 'CLOSED' : 'LIVE'}
+              </span>
+              <span className="text-[10px] font-bold text-white/85 uppercase tracking-widest">
+                · LOT #{card.lotOrder || 1}
+              </span>
             </div>
-            <div className="mt-3">
-              <div className="text-[10px] font-bold tracking-[0.18em] uppercase text-dex">
+            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-black/30 border border-white/30 text-white text-[11px] font-bold tabular-nums">
+              <Icon name="eye" size={11} strokeWidth={2.4} aria-hidden="true" />
+              {viewers.toLocaleString()}
+            </span>
+          </div>
+        </div>
+
+      {/* 카드 정보 — 카드는 위에 absolute로 있고, 텍스트만 깔끔하게 stack */}
+      <Link to={`/products/${card.id}`} className="block group bg-paper" aria-label={`${card.nameKo} 경매 상세`}>
+        <div className="px-5 pt-4 pb-2">
+          <h2 className="font-display text-xl sm:text-2xl font-bold text-ink leading-tight mb-1 group-hover:text-dex transition-colors">
+            {card.nameKo}
+          </h2>
+          <div className="text-xs text-mute mb-2 truncate font-medium">
+            {card.name} · {card.setShort || card.set} · {card.year}
+          </div>
+          <GradeBadge grade={card.grade} size="sm" />
+
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="rounded-lg bg-bone-2 border-2 border-ink/10 px-3 py-2">
+              <div className="text-[10px] font-bold tracking-[0.18em] uppercase text-dex mb-1">
                 {lotEnded ? '최종 입찰가' : '현재 입찰가'}
               </div>
-              <div className="font-display text-2xl font-bold text-ink leading-none tabular-nums">
+              <div className="font-display text-xl font-bold text-ink leading-none tabular-nums">
                 {formatKRW(card.currentBid || card.startPrice)}
               </div>
-              <div className="text-[11px] font-mono text-mute mt-1">
+              <div className="text-[10px] font-mono text-mute mt-1.5">
                 {card.bidCount || 0}회 입찰
+              </div>
+            </div>
+            <div className="rounded-lg bg-ink text-white px-3 py-2 flex flex-col justify-between">
+              <div className="text-[10px] font-bold tracking-[0.18em] uppercase text-electric inline-flex items-center gap-1.5">
+                <Icon name="clock" size={10} strokeWidth={2.6} aria-hidden="true" />
+                {lotEnded ? '종료' : '마감까지'}
+              </div>
+              <div className="font-mono text-[15px] font-extrabold tabular-nums leading-none mt-1.5">
+                {lotEnded ? 'CLOSED' : (card.endsAt ? <Countdown endsAt={card.endsAt} size="sm" label={false} /> : '—')}
               </div>
             </div>
           </div>
         </div>
-
-        {/* 카운트다운 띠 — 마감 임박감 */}
-        {!lotEnded && card.endsAt && (
-          <div className="px-5 pb-2 -mt-1">
-            <div className="rounded-lg bg-ink text-white px-3 py-2 flex items-center justify-between gap-2">
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-electric">
-                <Icon name="clock" size={11} strokeWidth={2.6} aria-hidden="true" />
-                마감까지
-              </span>
-              <Countdown endsAt={card.endsAt} size="sm" label={false} />
-            </div>
-          </div>
-        )}
       </Link>
 
       {/* 거대 CTA */}
@@ -593,6 +633,7 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
           </Link>
         )}
       </div>
+      </div>{/* /본 패널 */}
 
       <style>{`
         @keyframes live-ring {
@@ -604,6 +645,12 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
           0%   { transform: translateX(-120%); }
           100% { transform: translateX(260%); }
         }
+        /* 카드 자체 360 회전 — 9초 주기 rotateY 무한. hover 시 일시 정지 */
+        .card-turntable-spin {
+          animation: turntable-spin 9s linear infinite;
+          transform-style: preserve-3d;
+        }
+        .card-turntable-spin:hover { animation-play-state: paused; }
       `}</style>
     </div>
   )

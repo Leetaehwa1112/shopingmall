@@ -1,7 +1,6 @@
 import { memo } from 'react'
 import { Link } from 'react-router-dom'
 import PackVisual from './PackVisual'
-import OpenedPackVisual from './OpenedPackVisual'
 import Icon from './Icon'
 import { formatKRW } from '@/api/cards'
 import useWishlistStore from '@/store/wishlistStore'
@@ -42,23 +41,9 @@ function PackTile({ pack }) {
         </button>
       </div>
 
-      {/* 카드깡 심리 유도 — 단순 hover swap (애니메이션 X).
-          기본: 밀봉 PackVisual / hover: OpenedPackVisual (찢어진 팩 + 카드 3장 부채꼴)
-          opacity 페이드만 짧게(150ms) — 위치/크기 변화 없어 'jank' 0. */}
-      <div
-        className="relative px-6 py-6 flex justify-center holo-sheen"
-        style={{
-          background: `radial-gradient(ellipse at center, ${pack.accent}12 0%, transparent 70%)`,
-        }}
-      >
-        {/* 밀봉(기본) */}
-        <div className="transition-opacity duration-150 group-hover:opacity-0">
-          <PackVisual pack={pack} size="md" />
-        </div>
-        {/* 개봉됨(hover) — 같은 자리에 stack */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none">
-          <OpenedPackVisual pack={pack} size="md" />
-        </div>
+      <div className="px-6 py-6 flex justify-center holo-sheen"
+        style={{ background: `radial-gradient(ellipse at center, ${pack.accent}12 0%, transparent 70%)` }}>
+        <PackVisual pack={pack} size="md" />
       </div>
       <span aria-hidden="true">
         <span className="sparkle s1" />
