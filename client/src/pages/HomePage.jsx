@@ -17,8 +17,9 @@ import Sparkles from '@/components/common/Sparkles'
 import SectionHead from '@/components/common/SectionHead'
 
 // React Query fetchers — 페이지 unmount 후에도 5분 staleTime 캐시 유지 (queryClient default)
+// 경매는 LIVE(active) 1건 + 예정(upcoming) 다건을 함께 가져옴 — lotOrder 정렬 적용됨(서버).
 const fetchAuctions = () =>
-  api.get('/products', { params: { sale_type: 'auction', status: 'active', limit: 10 } })
+  api.get('/products', { params: { sale_type: 'auction', status: 'active,upcoming', limit: 10 } })
     .then((r) => r.data.data.map(normalizeProduct))
 const fetchBuynow = () =>
   api.get('/products', { params: { sale_type: 'buynow', status: 'active', limit: 4 } })
@@ -41,22 +42,30 @@ export default function HomePage() {
     auctionsQ.refetch(); buyNowQ.refetch(); packsQ.refetch()
   }
 
-  // 파생값 memoize — auctions 참조 변경 시에만 재계산
-  const { activeAuctions, FEATURED_LIVE, TOP_LOT, LIVE_CARDS } = useMemo(() => {
-    const active = auctions.filter((a) => !a.endsAt || a.endsAt - Date.now() > 0)
-    const featured = active[0]
-    const topLot = auctions.find((a) => (a.id || a._id) !== (featured?.id || featured?._id)) || auctions[0]
-    const usedIds = new Set([featured, topLot].filter(Boolean).map((c) => c.id || c._id))
-    const live = active.filter((c) => !usedIds.has(c.id || c._id)).slice(0, 3)
-    return { activeAuctions: active, FEATURED_LIVE: featured, TOP_LOT: topLot, LIVE_CARDS: live }
+  // 파생값 memoize — auctions 참조 변경 시에만 재계산.
+  // 정책: 동시 LIVE 1건. 나머지는 'upcoming' (시작 전 예고).
+  const { liveAuctions, upcomingAuctions, FEATURED_LIVE, TOP_LOT } = useMemo(() => {
+    const live = auctions.filter(
+      (a) => a.status === 'active' && (!a.endsAt || a.endsAt - Date.now() > 0)
+    )
+    const upcoming = auctions
+      .filter((a) => a.status === 'upcoming')
+      .sort((a, b) => (a.lotOrder || 0) - (b.lotOrder || 0) || (a.startsAt || Infinity) - (b.startsAt || Infinity))
+    // featured = 현재 무대 위 LOT (LIVE 1건). LIVE가 없으면 다음 예정 LOT을 카드로 보여줌.
+    const featured = live[0] || null
+    const topLot = featured || upcoming[0] || null
+    return { liveAuctions: live, upcomingAuctions: upcoming, FEATURED_LIVE: featured, TOP_LOT: topLot }
   }, [auctions])
 
-  const heroPrimaryCta = activeAuctions.length > 0
-    ? `두근두근 입찰 · ${activeAuctions.length}건 LIVE`
-    : '즉시구매 카드 보기'
-  const heroPrimaryTo = activeAuctions.length > 0 ? '/auctions' : '/products?type=buynow'
-  const heroSecondaryCta = activeAuctions.length > 0 ? '즉시구매 둘러보기' : '카드팩 · 박스 보기'
-  const heroSecondaryTo = activeAuctions.length > 0 ? '/products?type=buynow' : '/packs'
+  // CTA — 라이브가 있으면 LIVE 카드 이름을 직접 노출 (5초 컷, 정체성 강조)
+  const heroPrimaryCta = FEATURED_LIVE
+    ? `🔴 지금 ${FEATURED_LIVE.nameKo || FEATURED_LIVE.name} 입찰 중!`
+    : upcomingAuctions.length > 0
+      ? `다음 경매 일정 보기 · ${upcomingAuctions.length}건 예정`
+      : '즉시구매 카드 보기'
+  const heroPrimaryTo = FEATURED_LIVE ? `/products/${FEATURED_LIVE.id}` : '/auctions'
+  const heroSecondaryCta = FEATURED_LIVE ? '경매장 둘러보기' : '카드팩 · 박스 보기'
+  const heroSecondaryTo = FEATURED_LIVE ? '/auctions' : '/packs'
 
   return (
     <main className="bg-bone">
@@ -141,12 +150,19 @@ export default function HomePage() {
             </ul>
           </div>
 
-          {/* RIGHT — smart panel */}
-          <div className="hidden md:block">
+          {/* RIGHT — smart panel + 다음 LOT 미리보기 */}
+          <div className="hidden md:block space-y-3">
             {loading ? (
               <HeroPanelSkeleton />
             ) : FEATURED_LIVE ? (
-              <FeaturedLivePanel card={FEATURED_LIVE} />
+              <>
+                <FeaturedLivePanel card={FEATURED_LIVE} />
+                {upcomingAuctions.length > 0 && (
+                  <UpNextStrip cards={upcomingAuctions.slice(0, 3)} />
+                )}
+              </>
+            ) : upcomingAuctions[0] ? (
+              <NextAuctionPanel card={upcomingAuctions[0]} queueCount={upcomingAuctions.length} />
             ) : buyNow[0] ? (
               <FeaturedBuyNowPanel card={buyNow[0]} />
             ) : (
@@ -171,10 +187,16 @@ export default function HomePage() {
             to="/auctions"
             icon="flame"
             label="경매"
-            desc={activeAuctions.length > 0 ? `🔥 ${activeAuctions.length}건 진행중` : '곧 오픈!'}
+            desc={
+              FEATURED_LIVE
+                ? `🔴 LIVE · ${FEATURED_LIVE.nameKo || FEATURED_LIVE.name}`
+                : upcomingAuctions.length > 0
+                  ? `🕒 ${upcomingAuctions.length}건 예정`
+                  : '곧 오픈!'
+            }
             tone="fire"
-            ledPulse={activeAuctions.length > 0}
-            disabled={!loading && activeAuctions.length === 0}
+            ledPulse={!!FEATURED_LIVE}
+            disabled={!loading && !FEATURED_LIVE && upcomingAuctions.length === 0}
           />
           <CategoryTile
             to="/products?type=buynow"
@@ -201,9 +223,9 @@ export default function HomePage() {
       </section>
 
       {/* ════════════════════════════════════════════════
-          TODAY'S TOP LOT — Pokédex casing preserved & enhanced
+          TODAY'S TOP LOT — 현재 LIVE 경매 1건만 노출 (예정만 있을 땐 숨김)
           ════════════════════════════════════════════════ */}
-      {!loading && TOP_LOT && (
+      {!loading && FEATURED_LIVE && TOP_LOT && (
         <section aria-label="오늘의 탑 로트" className="py-12 px-6">
           <div className="max-w-7xl mx-auto">
             <div className="flex items-end justify-between gap-4 mb-8">
@@ -369,38 +391,11 @@ export default function HomePage() {
       )}
 
       {/* ════════════════════════════════════════════════
-          LIVE AUCTIONS
+          UP NEXT — 다음 경매 일정 (LIVE 1건 정책 — 큐가 보여야 신뢰)
           ════════════════════════════════════════════════ */}
-      <section aria-label="진행중인 경매" className="max-w-7xl mx-auto px-6 py-14">
-        <SectionHead
-          eyebrow="LIVE 경매"
-          eyebrowTone="ink"
-          eyebrowDot
-          eyebrowIcon="flame"
-          title="지금 진행 중인 카드"
-          accent={<span className="text-dex">🔥</span>}
-          desc="입찰 한 번이면 컬렉션이 채워져요. 본인 인증 후 참여하실 수 있어요."
-          cta={LIVE_CARDS.length > 0 ? { label: '전체 경매', to: '/auctions' } : null}
-        />
-        {loading ? (
-          <GridSkeleton cols={3} count={3} />
-        ) : LIVE_CARDS.length === 0 ? (
-          <EmptyState
-            icon="clock"
-            title="지금은 잠시 쉬어가는 중이에요"
-            desc="다음 경매 오픈 때 알림으로 콕 찔러드릴게요. 그동안 즉시구매 카드 어때요?"
-            cta={{ label: '즉시구매 보기', to: '/products?type=buynow' }}
-          />
-        ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {LIVE_CARDS.map((c, i) => (
-              <div key={c.id || c._id} className="reveal-up" style={{ animationDelay: `${i * 0.06}s` }}>
-                <CardTile card={c} />
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+      {!loading && upcomingAuctions.length > 0 && (
+        <UpcomingScheduleSection cards={upcomingAuctions} hasLive={!!FEATURED_LIVE} />
+      )}
 
       {/* ════════════════════════════════════════════════
           TRUST — playful pop block
@@ -601,39 +596,89 @@ function PendingDepositBanner() {
 
 /* ─── Featured panels ─────────────────────────────────────── */
 
+// 5초 컷 임팩트 패널 — 빨간 LIVE 헤더 + 카드 + 현재가 + 거대 CTA.
+// 정책: 동시 LIVE 1건 → 이 패널은 "지금 무대 위" 그 자체.
 function FeaturedLivePanel({ card, compact = false }) {
   const lotEnded = card.endsAt && timeUntil(card.endsAt).ended
+  // 가짜 시청자 수 — LOT _id 기반 결정적 의사난수 (리렌더 마다 흔들리지 않게)
+  const viewers = useMemo(() => {
+    const id = String(card.id || card._id || '')
+    const seed = id ? id.charCodeAt(id.length - 1) + id.length * 7 : 73
+    return 180 + (seed % 240)
+  }, [card.id, card._id])
+
   return (
-    <div className="surface-pop holo-shine sparkle-host overflow-hidden relative">
-      <Sparkles />
-      <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b-2 border-ink">
-        <span className="inline-flex items-center gap-2">
-          {lotEnded ? (
-            <>
-              <span className="led" style={{ width: 8, height: 8, background: '#9aa1a8' }} aria-hidden="true" />
-              <span className="pixel-label text-mute">RECENTLY CLOSED</span>
-            </>
-          ) : (
-            <>
-              <span className="led led-red led-pulse" style={{ width: 8, height: 8 }} aria-hidden="true" />
-              <span className="pixel-label text-dex">LIVE NOW · 🔥</span>
-            </>
-          )}
-        </span>
-        {!lotEnded && <Countdown endsAt={card.endsAt} size="sm" label={false} />}
-      </div>
-      <Link to={`/products/${card.id}`} className="block group" aria-label={`${card.nameKo} 경매 상세`}>
-        <div className="flex gap-4 p-5">
-          <div className="shrink-0 holo-sheen rounded-lg">
-            <PokeCard card={card} size={compact ? 'xs' : 'sm'} />
+    <div className="rounded-2xl border-2 border-ink overflow-hidden relative shadow-[0_6px_0_#1a1a1a,0_12px_30px_rgba(220,38,38,0.18)]">
+      {/* 빨간 LIVE 헤더 바 — 화면 진입 1초 안에 "라이브!" 인지 */}
+      <div
+        className="relative px-4 py-3 border-b-2 border-ink overflow-hidden"
+        style={{
+          background: lotEnded
+            ? 'linear-gradient(180deg, #6b7280 0%, #4b5563 100%)'
+            : 'linear-gradient(180deg, var(--color-dex) 0%, var(--color-dex-d) 100%)',
+        }}
+      >
+        {/* 펄스 빛 — 좌→우 휩쓸기 */}
+        {!lotEnded && (
+          <span
+            aria-hidden="true"
+            className="absolute inset-0 pointer-events-none opacity-50"
+            style={{
+              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
+              animation: 'shine-sweep 3.2s ease-in-out infinite',
+            }}
+          />
+        )}
+        <div className="relative flex items-center justify-between gap-2">
+          <div className="inline-flex items-center gap-2">
+            {!lotEnded && (
+              <span
+                aria-hidden="true"
+                className="relative inline-flex items-center justify-center"
+                style={{ width: 12, height: 12 }}
+              >
+                <span
+                  className="absolute inset-0 rounded-full bg-white opacity-70"
+                  style={{ animation: 'live-ring 1.4s ease-out infinite' }}
+                />
+                <span className="relative rounded-full bg-white" style={{ width: 10, height: 10 }} />
+              </span>
+            )}
+            <span className="font-display font-extrabold text-white text-lg tracking-tight">
+              {lotEnded ? 'CLOSED' : 'LIVE'}
+            </span>
+            <span className="text-[10px] font-bold text-white/85 uppercase tracking-widest">
+              · LOT #{card.lotOrder || 1}
+            </span>
           </div>
-          <div className="min-w-0 flex flex-col justify-between">
+          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-black/30 border border-white/30 text-white text-[11px] font-bold tabular-nums">
+            <Icon name="eye" size={11} strokeWidth={2.4} aria-hidden="true" />
+            {viewers.toLocaleString()}
+          </span>
+        </div>
+      </div>
+
+      {/* 카드 + 정보 */}
+      <Link to={`/products/${card.id}`} className="block group bg-paper" aria-label={`${card.nameKo} 경매 상세`}>
+        <div className="flex gap-4 p-5">
+          <div className="shrink-0 holo-sheen rounded-lg relative">
+            <PokeCard card={card} size={compact ? 'xs' : 'sm'} />
+            {!lotEnded && (
+              <span
+                aria-hidden="true"
+                className="absolute -top-1.5 -right-1.5 inline-flex items-center px-1.5 py-0.5 rounded-md bg-dex text-paper text-[9px] font-extrabold tracking-wider border-2 border-ink shadow-[0_2px_0_#1a1a1a]"
+              >
+                NOW
+              </span>
+            )}
+          </div>
+          <div className="min-w-0 flex flex-col justify-between flex-1">
             <div>
               <h2 className="font-display text-xl sm:text-2xl font-bold text-ink leading-tight mb-1 group-hover:text-dex transition-colors">
                 {card.nameKo}
               </h2>
               <div className="text-xs text-mute mb-2 truncate font-medium">
-                {card.name} · {card.setShort} · {card.year}
+                {card.name} · {card.setShort || card.set} · {card.year}
               </div>
               <GradeBadge grade={card.grade} size="sm" />
             </div>
@@ -642,27 +687,270 @@ function FeaturedLivePanel({ card, compact = false }) {
                 {lotEnded ? '최종 입찰가' : '현재 입찰가'}
               </div>
               <div className="font-display text-2xl font-bold text-ink leading-none tabular-nums">
-                {formatKRW(card.currentBid)}
+                {formatKRW(card.currentBid || card.startPrice)}
               </div>
-              <div className="text-[11px] font-mono text-mute mt-1">{card.bidCount}회 · {card.watchers ?? 0}명이 보는 중</div>
+              <div className="text-[11px] font-mono text-mute mt-1">
+                {card.bidCount || 0}회 입찰
+              </div>
             </div>
           </div>
         </div>
+
+        {/* 카운트다운 띠 — 마감 임박감 */}
+        {!lotEnded && card.endsAt && (
+          <div className="px-5 pb-2 -mt-1">
+            <div className="rounded-lg bg-ink text-white px-3 py-2 flex items-center justify-between gap-2">
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-electric">
+                <Icon name="clock" size={11} strokeWidth={2.6} aria-hidden="true" />
+                마감까지
+              </span>
+              <Countdown endsAt={card.endsAt} size="sm" label={false} />
+            </div>
+          </div>
+        )}
       </Link>
-      <div className="px-5 pb-5">
+
+      {/* 거대 CTA */}
+      <div className="px-5 pb-5 bg-paper">
         {lotEnded ? (
-          <Button variant="secondary" size="md" className="w-full" disabled aria-disabled="true">
+          <Button variant="secondary" size="lg" className="w-full" disabled aria-disabled="true">
             입찰 종료
           </Button>
         ) : (
           <Link to={`/products/${card.id}`} className="block" aria-label="입찰 참여">
-            <Button variant="pop" size="md" className="w-full">
-              두근두근 입찰! <Icon name="arrow" size={13} strokeWidth={2.5} />
-            </Button>
+            <button
+              type="button"
+              className="btn btn-pop btn-lg relative overflow-hidden w-full"
+            >
+              <Icon name="gavel" size={16} strokeWidth={2.6} />
+              지금 두근두근 입찰!
+              <Icon name="arrow" size={14} strokeWidth={2.6} />
+              <span
+                aria-hidden="true"
+                className="absolute top-0 left-0 h-full w-1/3 pointer-events-none"
+                style={{
+                  background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)',
+                  animation: 'shine-sweep 3.4s ease-in-out infinite',
+                }}
+              />
+            </button>
           </Link>
         )}
+        <div className="mt-2 text-center text-[11px] font-bold text-mute">
+          지금 <span className="text-dex font-extrabold">{viewers}</span>명이 함께 지켜보는 중
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes live-ring {
+          0%   { transform: scale(1);   opacity: 0.85; }
+          80%  { transform: scale(2.4); opacity: 0; }
+          100% { transform: scale(2.4); opacity: 0; }
+        }
+        @keyframes shine-sweep {
+          0%   { transform: translateX(-120%); }
+          100% { transform: translateX(260%); }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+// 우측 LIVE 패널 밑에 붙는 작은 큐 — "다음 LOT" 미리보기 (최대 3개)
+function UpNextStrip({ cards }) {
+  return (
+    <div className="rounded-xl border-2 border-ink/15 bg-bone-2 p-2.5">
+      <div className="px-2 pb-1.5 flex items-center justify-between">
+        <span className="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-ink/70">
+          <span className="led led-yellow" aria-hidden="true" />
+          UP NEXT
+        </span>
+        <Link to="/auctions" className="text-[10px] font-bold text-mute hover:text-ink underline underline-offset-2">
+          전체 일정 →
+        </Link>
+      </div>
+      <ul className="flex flex-col gap-1.5">
+        {cards.map((c) => (
+          <li key={c.id || c._id}>
+            <Link
+              to={`/products/${c.id}`}
+              className="flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-paper border border-ink/10 hover:border-ink hover:-translate-y-0.5 transition-all"
+              aria-label={`예정 경매: ${c.nameKo || c.name}`}
+            >
+              <span className="inline-flex items-center gap-2 min-w-0">
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-ink text-electric text-[10px] font-mono font-extrabold tabular-nums border border-ink shrink-0">
+                  {c.lotOrder || '·'}
+                </span>
+                <span className="font-display text-[12.5px] font-bold text-ink truncate">{c.nameKo || c.name}</span>
+              </span>
+              <span className="text-[10px] font-mono font-bold text-mute tabular-nums whitespace-nowrap">
+                {c.startsAt ? formatRelativeStart(c.startsAt) : '곧'}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+// LIVE가 없을 때만 노출되는 다음 경매 카운트다운 패널
+function NextAuctionPanel({ card, queueCount }) {
+  return (
+    <div className="rounded-2xl border-2 border-ink bg-paper overflow-hidden shadow-[0_4px_0_#1a1a1a]">
+      <div className="px-4 py-3 border-b-2 border-ink bg-bone-2 flex items-center justify-between">
+        <span className="inline-flex items-center gap-2">
+          <span className="led led-yellow led-pulse" style={{ width: 8, height: 8 }} aria-hidden="true" />
+          <span className="font-display font-extrabold text-ink text-base">곧 시작</span>
+          <span className="text-[10px] font-bold text-mute uppercase tracking-widest">· LOT #{card.lotOrder || '-'}</span>
+        </span>
+        <span className="text-[10px] font-bold text-mute">{queueCount}건 대기열</span>
+      </div>
+      <Link to={`/products/${card.id}`} className="block group" aria-label={`예정 경매: ${card.nameKo}`}>
+        <div className="flex gap-4 p-5">
+          <div className="shrink-0 holo-sheen rounded-lg opacity-90">
+            <PokeCard card={card} size="sm" />
+          </div>
+          <div className="min-w-0 flex flex-col justify-between flex-1">
+            <div>
+              <h2 className="font-display text-xl sm:text-2xl font-bold text-ink leading-tight mb-1 group-hover:text-dex transition-colors">
+                {card.nameKo}
+              </h2>
+              <div className="text-xs text-mute mb-2 truncate font-medium">
+                {card.name} · {card.setShort || card.set} · {card.year}
+              </div>
+              <GradeBadge grade={card.grade} size="sm" />
+            </div>
+            <div className="mt-3">
+              <div className="text-[10px] font-bold tracking-[0.18em] uppercase text-mute">시작가</div>
+              <div className="font-display text-2xl font-bold text-ink leading-none tabular-nums">
+                {formatKRW(card.startPrice)}
+              </div>
+            </div>
+          </div>
+        </div>
+        {card.startsAt && (
+          <div className="px-5 pb-3">
+            <div className="rounded-lg bg-ink text-white px-3 py-2 flex items-center justify-between gap-2">
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-electric">
+                <Icon name="clock" size={11} strokeWidth={2.6} aria-hidden="true" />
+                시작까지
+              </span>
+              <Countdown endsAt={card.startsAt} size="sm" label={false} />
+            </div>
+          </div>
+        )}
+      </Link>
+      <div className="px-5 pb-5">
+        <Link to="/auctions" className="block" aria-label="경매 일정 전체 보기">
+          <Button variant="pop" size="md" className="w-full">
+            경매 일정 전체 보기 <Icon name="arrow" size={13} strokeWidth={2.5} />
+          </Button>
+        </Link>
       </div>
     </div>
+  )
+}
+
+// 상대 시간 포맷 — "2시간 후", "1일 후" 등 짧게
+function formatRelativeStart(ts) {
+  const diff = ts - Date.now()
+  if (diff <= 0) return '진행 중'
+  const mins = Math.round(diff / 60000)
+  if (mins < 60) return `${mins}분 후`
+  const hrs = Math.round(mins / 60)
+  if (hrs < 24) return `${hrs}시간 후`
+  const days = Math.round(hrs / 24)
+  return `${days}일 후`
+}
+
+// "오늘의 경매 일정" 풀 와이드 섹션 — 카드형 큐
+function UpcomingScheduleSection({ cards, hasLive }) {
+  return (
+    <section aria-label="다음 경매 일정" className="max-w-7xl mx-auto px-6 py-12">
+      <div className="flex items-end justify-between gap-4 mb-6 flex-wrap">
+        <div>
+          <Eyebrow tone="ink" dot dotColor="yellow" className="mb-3">
+            오늘의 경매 큐
+          </Eyebrow>
+          <h2 className="font-display text-3xl lg:text-[36px] font-bold text-ink tracking-tight leading-[1.1]">
+            {hasLive ? (
+              <>다음은 <span className="text-dex">{cards[0]?.nameKo || cards[0]?.name}</span>!</>
+            ) : (
+              <>곧 무대에 오를 카드들</>
+            )}
+          </h2>
+          <p className="text-[14px] text-mute mt-2 font-medium">
+            한 번에 하나씩, 차분히 진행해요. 알람을 켜두면 시작 직전에 콕 찔러드릴게요.
+          </p>
+        </div>
+        <Link
+          to="/auctions"
+          className="focus-ring inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-paper text-ink border-2 border-ink shadow-[0_3px_0_#1a1a1a] hover:-translate-y-0.5 hover:shadow-[0_4px_0_#1a1a1a] hover:bg-electric/20 transition-all font-extrabold text-xs"
+          aria-label="경매장 전체 보기"
+        >
+          <Icon name="layers" size={12} strokeWidth={2.4} />
+          경매장으로
+        </Link>
+      </div>
+      <ol className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {cards.slice(0, 6).map((c) => (
+          <li key={c.id || c._id}>
+            <UpcomingLotCard card={c} />
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
+function UpcomingLotCard({ card }) {
+  return (
+    <Link
+      to={`/products/${card.id}`}
+      className="surface-pop block p-4 hover:-translate-y-0.5 transition-all group"
+      aria-label={`예정 경매: ${card.nameKo || card.name}`}
+    >
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-ink text-electric text-[10px] font-mono font-extrabold tabular-nums border-2 border-ink">
+          LOT #{card.lotOrder || '-'}
+        </span>
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-mute">
+          <span className="led led-yellow" style={{ width: 6, height: 6 }} aria-hidden="true" />
+          예정
+        </span>
+      </div>
+      <div className="flex gap-3 mb-3">
+        <div className="shrink-0">
+          <PokeCard card={card} size="xs" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="font-display text-base font-bold text-ink leading-tight mb-1 group-hover:text-dex transition-colors truncate">
+            {card.nameKo || card.name}
+          </div>
+          <div className="text-[11px] text-mute font-medium truncate">
+            {card.setShort || card.set} · {card.year}
+          </div>
+          <div className="mt-1.5">
+            <GradeBadge grade={card.grade} size="sm" />
+          </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-lg bg-bone-2 px-2 py-1.5">
+          <div className="text-[9px] font-bold uppercase tracking-wider text-mute mb-0.5">시작가</div>
+          <div className="font-mono text-[12px] font-extrabold text-ink tabular-nums">
+            {formatKRW(card.startPrice)}
+          </div>
+        </div>
+        <div className="rounded-lg bg-ink text-white px-2 py-1.5">
+          <div className="text-[9px] font-bold uppercase tracking-wider text-electric mb-0.5">시작까지</div>
+          <div className="font-mono text-[12px] font-extrabold tabular-nums">
+            {card.startsAt ? formatRelativeStart(card.startsAt) : '곧'}
+          </div>
+        </div>
+      </div>
+    </Link>
   )
 }
 

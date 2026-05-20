@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { CATEGORIES } from '@/api/cards'
 import { normalizeProduct } from '@/api/normalize'
@@ -27,12 +27,18 @@ export default function ProductsPage() {
 
   useEffect(() => { setQuery(queryParam) }, [queryParam])
 
-  // React Query로 캐시 — /products(auction|all)는 staleTime(5분) 동안 재요청 X
+  // React Query로 캐시 — /products(auction|all)는 staleTime(5분) 동안 재요청 X.
+  // 경매 페이지는 LIVE(active) + 예정(upcoming) 모두 받아 페이지 내부에서 분리.
   const { data: products = [], isLoading: loading, isError: error } = useQuery({
     queryKey: ['products', isAuctionOnly ? 'auction' : 'all'],
     queryFn: () => {
-      const params = { status: 'active', limit: 100 }
-      if (isAuctionOnly) params.sale_type = 'auction'
+      const params = { limit: 100 }
+      if (isAuctionOnly) {
+        params.sale_type = 'auction'
+        params.status = 'active,upcoming'
+      } else {
+        params.status = 'active'
+      }
       return api.get('/products', { params }).then((r) => r.data.data.map(normalizeProduct))
     },
   })
@@ -333,20 +339,21 @@ function SectionHeader({ icon, title, meta, accent = false }) {
 
 function AuctionLivePage({ lots, loading, error }) {
   const [showAll, setShowAll] = useState(false)
-  const [featuredId, setFeaturedId] = useState(null)
   const [bidLot, setBidLot] = useState(null)
   // BidFeed로 "내 입찰" 시스템 메시지를 흘려보내는 가벼운 이벤트 채널
   const [userBidEvent, setUserBidEvent] = useState(null)
 
-  // 마감 임박 LOT부터 정렬 — 메인 화면에 올라가는 LOT 선정 기준
-  const sorted = useMemo(() => {
-    return [...lots].sort((a, b) => (a.endsAt || Infinity) - (b.endsAt || Infinity))
+  // 정책: 동시 LIVE 1건 — status='active'인 첫 LOT(서버에서 lotOrder 정렬)만 무대 위.
+  //   나머지는 status='upcoming'으로 큐에서 대기.
+  const { liveLot, upcomingQueue } = useMemo(() => {
+    const live = lots.filter(
+      (l) => l.status === 'active' && (!l.endsAt || l.endsAt - Date.now() > 0)
+    )
+    const upcoming = lots
+      .filter((l) => l.status === 'upcoming')
+      .sort((a, b) => (a.lotOrder || 0) - (b.lotOrder || 0) || (a.startsAt || Infinity) - (b.startsAt || Infinity))
+    return { liveLot: live[0] || null, upcomingQueue: upcoming }
   }, [lots])
-
-  const featured = useMemo(() => {
-    if (featuredId) return sorted.find((c) => c.id === featuredId) || sorted[0]
-    return sorted[0]
-  }, [sorted, featuredId])
 
   const openBid = (lot) => setBidLot(lot)
 
@@ -354,14 +361,15 @@ function AuctionLivePage({ lots, loading, error }) {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 pb-28 lg:pb-10">
       {/* === 1. 헤더 (컴팩트) === */}
       <CompactHeroStrip
-        liveCount={sorted.length}
+        liveLot={liveLot}
+        upcomingCount={upcomingQueue.length}
         onOpenAll={() => setShowAll(true)}
-        disabled={loading || sorted.length === 0}
+        disabled={loading || (!liveLot && upcomingQueue.length === 0)}
       />
 
-      {/* === 2. 라이브 방송 플레이어 — 페이지 최대 비주얼 === */}
-      {!error && !loading && featured && (
-        <BroadcastStream lot={featured} onBid={() => openBid(featured)} />
+      {/* === 2. 라이브 방송 플레이어 — LIVE 1건만 === */}
+      {!error && !loading && liveLot && (
+        <BroadcastStream lot={liveLot} onBid={() => openBid(liveLot)} />
       )}
 
       {/* === 3. 상태별 본문 === */}
@@ -369,32 +377,39 @@ function AuctionLivePage({ lots, loading, error }) {
         <ErrorState />
       ) : loading ? (
         <LoadingState />
-      ) : !featured ? (
+      ) : !liveLot && upcomingQueue.length === 0 ? (
         <EmptyState />
-      ) : (
+      ) : liveLot ? (
         <div className="mt-5 grid lg:grid-cols-[1fr_320px] gap-5">
-          <FeaturedLot lot={featured} onBid={() => openBid(featured)} />
+          <FeaturedLot lot={liveLot} onBid={() => openBid(liveLot)} />
           <LiveSidebar
-            featured={featured}
-            upcoming={sorted.filter((c) => c.id !== featured.id).slice(0, 4)}
-            onPickLot={setFeaturedId}
+            featured={liveLot}
+            upcoming={upcomingQueue.slice(0, 4)}
             onOpenAll={() => setShowAll(true)}
             userBidEvent={userBidEvent}
           />
         </div>
+      ) : (
+        // LIVE 없음 — 첫 예정 LOT을 카운트다운 패널로
+        <NextLotCountdown lot={upcomingQueue[0]} queueCount={upcomingQueue.length} onOpenAll={() => setShowAll(true)} />
       )}
 
-      {/* === 4. 모바일 sticky CTA — 항상 시야 === */}
-      {featured && !loading && !error && (
-        <MobileStickyCta lot={featured} onBid={() => openBid(featured)} />
+      {/* === 4. 다음 경매 큐 (LIVE가 있을 때도 별도 섹션으로) === */}
+      {!loading && !error && upcomingQueue.length > 0 && liveLot && (
+        <UpcomingQueueSection lots={upcomingQueue} />
+      )}
+
+      {/* === 5. 모바일 sticky CTA — 항상 시야 === */}
+      {liveLot && !loading && !error && (
+        <MobileStickyCta lot={liveLot} onBid={() => openBid(liveLot)} />
       )}
 
       {showAll && (
         <AllLotsModal
-          lots={sorted}
-          featuredId={featured?.id}
+          lots={[...(liveLot ? [liveLot] : []), ...upcomingQueue]}
+          featuredId={liveLot?.id}
           onClose={() => setShowAll(false)}
-          onPickLot={(id) => { setFeaturedId(id); setShowAll(false) }}
+          onPickLot={() => setShowAll(false)}
         />
       )}
 
@@ -956,7 +971,9 @@ function MiniBroadcastPlayer({
   )
 }
 
-function CompactHeroStrip({ liveCount, onOpenAll, disabled }) {
+function CompactHeroStrip({ liveLot, upcomingCount, onOpenAll, disabled }) {
+  const totalCount = (liveLot ? 1 : 0) + upcomingCount
+  const hasLive = !!liveLot
   return (
     <header
       className="relative sparkle-host mb-6"
@@ -967,24 +984,36 @@ function CompactHeroStrip({ liveCount, onOpenAll, disabled }) {
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
         <div>
           <Eyebrow tone="ink" dot dotColor="red" className="mb-4">
-            LIVE AUCTION · 두근두근 진행 중
+            {hasLive ? 'LIVE AUCTION · 두근두근 진행 중' : 'AUCTION · 곧 시작'}
           </Eyebrow>
           <h1 className="font-display text-3xl sm:text-4xl lg:text-[44px] font-bold text-ink tracking-tight leading-[1.05]">
-            오늘의 라이브 경매장,{' '}
-            <span className="relative inline-block">
-              <span className="relative z-10">{liveCount}건</span>
-              <span className="absolute -bottom-1 left-0 right-0 h-3 bg-electric -z-0 rounded-full" aria-hidden="true" />
-            </span>{' '}
-            진행 중
+            {hasLive ? (
+              <>
+                지금{' '}
+                <span className="relative inline-block">
+                  <span className="relative z-10">{liveLot.nameKo || liveLot.name}</span>
+                  <span className="absolute -bottom-1 left-0 right-0 h-3 bg-electric -z-0 rounded-full" aria-hidden="true" />
+                </span>
+                {' '}경매 중!
+              </>
+            ) : (
+              <>
+                다음 경매까지{' '}
+                <span className="text-dex">차분히 준비</span> 중
+              </>
+            )}
           </h1>
           <p className="mt-3 text-[14px] sm:text-[15px] text-mute leading-relaxed font-medium max-w-xl">
-            정품 인증된 카드만 LIVE 입찰로 진행해요.{' '}
+            한 번에 한 LOT만 차분히 진행해요. 모든 카드는 정품 인증 완료 · 안심 결제 보호.{' '}
             <span className="text-ink font-bold">한 번 두근거려보실래요?</span>
           </p>
           <div className="mt-4 inline-flex items-center gap-2 text-[12px] font-bold text-ink/70">
-            <CounterPokeballs liveCount={liveCount} />
+            <CounterPokeballs liveCount={hasLive ? 1 : 0} />
             <span>
-              지금 <span className="text-dex font-extrabold tabular-nums">{liveCount}</span>건이 카운터에 올라와 있어요
+              {hasLive ? (
+                <>지금 <span className="text-dex font-extrabold tabular-nums">1</span>건 LIVE · </>
+              ) : null}
+              예정 <span className="text-ink font-extrabold tabular-nums">{upcomingCount}</span>건 대기
             </span>
           </div>
         </div>
@@ -994,12 +1023,12 @@ function CompactHeroStrip({ liveCount, onOpenAll, disabled }) {
           onClick={onOpenAll}
           disabled={disabled}
           className="focus-ring relative inline-flex items-center gap-2 px-5 py-3 rounded-full bg-paper text-ink border-2 border-ink shadow-[0_3px_0_#1a1a1a] hover:-translate-y-0.5 hover:shadow-[0_4px_0_#1a1a1a] hover:bg-electric/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-extrabold text-sm shrink-0 self-start md:self-auto"
-          aria-label={`전체 LOT 보기, ${liveCount}건`}
+          aria-label={`전체 LOT 보기, 총 ${totalCount}건`}
         >
           <Icon name="layers" size={14} strokeWidth={2.4} />
           오늘의 LOT 전체보기
           <span className="ml-0.5 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 rounded-full bg-dex text-paper font-mono text-[10.5px] font-bold tabular-nums border-2 border-ink">
-            {liveCount}
+            {totalCount}
           </span>
         </button>
       </div>
@@ -1183,10 +1212,10 @@ function TrustItem({ icon, title, sub, tone = 'grass' }) {
 //    - 위: 다음 LOT (카운터 위 포켓볼 줄지어 대기)
 //    - 아래: 입찰 피드 (빌의 PC CRT 모니터 톤)
 // ═══════════════════════════════════════════════════════════════
-function LiveSidebar({ featured, upcoming, onPickLot, onOpenAll, userBidEvent }) {
+function LiveSidebar({ featured, upcoming, onOpenAll, userBidEvent }) {
   return (
     <aside className="flex flex-col gap-4 lg:max-h-[calc(100vh-9rem)] lg:overflow-hidden lg:sticky lg:top-24">
-      {/* 다음 LOT — 카운터 줄 */}
+      {/* 다음 LOT — 시작까지 카운트다운으로 표기 */}
       <div className="rounded-xl border-2 border-ink bg-paper shadow-[0_4px_0_#1a1a1a] overflow-hidden">
         <SectionHeader
           icon="layers"
@@ -1199,24 +1228,20 @@ function LiveSidebar({ featured, upcoming, onPickLot, onOpenAll, userBidEvent })
               대기 중인 LOT이 없어요.
             </li>
           )}
-          {upcoming.map((c, i) => {
-            const t = c.endsAt ? timeUntil(c.endsAt) : null
+          {upcoming.map((c) => {
             const img = c.images?.[0] || c.image
-            const urgent = t && !t.ended && t.totalMs < 1000 * 60 * 60
+            const startMs = c.startsAt ? c.startsAt - Date.now() : 0
+            const urgent = startMs > 0 && startMs < 1000 * 60 * 60
             return (
               <li key={c.id}>
-                <button
-                  type="button"
-                  onClick={() => onPickLot(c.id)}
+                <Link
+                  to={`/products/${c.id}`}
                   className="focus-ring w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-electric/20 transition-colors"
-                  aria-label={`${c.nameKo || c.name} 메인 화면에 띄우기`}
+                  aria-label={`예정 LOT: ${c.nameKo || c.name}`}
                 >
-                  {/* 줄지어선 포켓볼 슬롯 번호 */}
-                  <span className="relative shrink-0">
-                    <PokeballMark size={20} animated={false} />
-                    <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 font-mono text-[8.5px] font-extrabold text-mute tabular-nums">
-                      {String(i + 2).padStart(2, '0')}
-                    </span>
+                  {/* LOT 번호 칩 */}
+                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-ink text-electric text-[11px] font-mono font-extrabold tabular-nums border-2 border-ink shrink-0">
+                    {c.lotOrder || '·'}
                   </span>
                   <span className="w-10 h-12 rounded-md bg-bone-2 border-2 border-ink overflow-hidden shrink-0">
                     {img && <img src={img} alt="" className="w-full h-full object-cover" />}
@@ -1226,20 +1251,20 @@ function LiveSidebar({ featured, upcoming, onPickLot, onOpenAll, userBidEvent })
                       {c.nameKo || c.name}
                     </span>
                     <span className="block text-[10.5px] font-mono text-mute truncate tabular-nums">
-                      {formatKRW(c.currentBid || c.startingBid || 0)} · {c.bidCount || 0}회
+                      시작가 {formatKRW(c.startPrice || 0)}
                     </span>
                   </span>
-                  {t && !t.ended && (
+                  {startMs > 0 && (
                     <span
                       className={`font-mono text-[10px] font-extrabold tabular-nums shrink-0 ${
                         urgent ? 'text-fire' : 'text-mute'
                       }`}
                     >
                       {urgent && <LiveDot size={4} />}{' '}
-                      {t.d > 0 ? `${t.d}D` : `${String(t.h).padStart(2, '0')}:${String(t.m).padStart(2, '0')}`}
+                      {formatStartMs(startMs)}
                     </span>
                   )}
-                </button>
+                </Link>
               </li>
             )
           })}
@@ -1256,6 +1281,168 @@ function LiveSidebar({ featured, upcoming, onPickLot, onOpenAll, userBidEvent })
       {/* 입찰 피드 — 실시간 입찰 모니터 */}
       <BidFeed lot={featured} userBidEvent={userBidEvent} />
     </aside>
+  )
+}
+
+// 시작까지 남은 시간 — 짧게 (1H 12M / 3H / 1D)
+function formatStartMs(ms) {
+  if (ms <= 0) return '진행 중'
+  const mins = Math.floor(ms / 60000)
+  if (mins < 60) return `${mins}M`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) {
+    const rm = mins - hrs * 60
+    return rm > 0 && hrs < 6 ? `${hrs}H ${String(rm).padStart(2, '0')}M` : `${hrs}H`
+  }
+  const days = Math.floor(hrs / 24)
+  return `${days}D`
+}
+
+// LIVE 없을 때 — 첫 예정 LOT의 시작 카운트다운 (페이지 중앙)
+function NextLotCountdown({ lot, queueCount, onOpenAll }) {
+  if (!lot) return null
+  return (
+    <section className="mt-5 surface-pop p-6 sm:p-8 sparkle-host relative" aria-label={`다음 경매: ${lot.nameKo || lot.name}`}>
+      <Sparkles always />
+      <div className="grid lg:grid-cols-[280px_1fr] gap-6 items-center">
+        <div className="flex justify-center">
+          <div className="relative">
+            <img
+              src={lot.images?.[0] || lot.image || ''}
+              alt={lot.nameKo || lot.name}
+              className="max-w-[240px] rounded-lg border-2 border-ink shadow-[0_6px_0_#1a1a1a]"
+              onError={(e) => { e.currentTarget.style.display = 'none' }}
+            />
+          </div>
+        </div>
+        <div>
+          <div className="inline-flex items-center gap-2 mb-3">
+            <span className="led led-yellow led-pulse" aria-hidden="true" />
+            <span className="pixel-label text-mute">곧 시작 · LOT #{lot.lotOrder || '-'}</span>
+          </div>
+          <h2 className="font-display text-3xl sm:text-4xl font-bold text-ink leading-[1.05] tracking-tight mb-2">
+            {lot.nameKo || lot.name}
+          </h2>
+          <div className="text-[13px] text-mute font-medium mb-4">
+            {lot.name} · {lot.setShort || lot.set} · {lot.year}
+          </div>
+          <div className="rounded-xl bg-ink text-white px-4 py-4 mb-4 flex items-center justify-between gap-3">
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-electric">
+              <Icon name="clock" size={11} strokeWidth={2.6} aria-hidden="true" />
+              시작까지
+            </span>
+            {lot.startsAt && (
+              <span className="font-mono text-2xl font-extrabold text-electric tabular-nums">
+                <Countdown endsAt={lot.startsAt} size="lg" label={false} />
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-2 mb-5">
+            <div className="rounded-lg border-2 border-ink/15 bg-bone-2 px-3 py-2">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-mute">시작가</div>
+              <div className="font-mono text-lg font-extrabold text-ink tabular-nums">
+                {formatKRWFull(lot.startPrice)}
+              </div>
+            </div>
+            <div className="rounded-lg border-2 border-ink/15 bg-bone-2 px-3 py-2">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-mute">대기열</div>
+              <div className="font-mono text-lg font-extrabold text-ink tabular-nums">{queueCount}건</div>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link to={`/products/${lot.id}`} className="btn btn-pop btn-md" aria-label={`${lot.nameKo} 상세 보기`}>
+              <Icon name="eye" size={14} strokeWidth={2.4} />
+              상세 보기
+            </Link>
+            <button type="button" onClick={onOpenAll}
+              className="focus-ring inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-paper text-ink border-2 border-ink shadow-[0_3px_0_#1a1a1a] hover:-translate-y-0.5 hover:shadow-[0_4px_0_#1a1a1a] hover:bg-electric/20 transition-all font-extrabold text-sm">
+              <Icon name="layers" size={13} strokeWidth={2.4} />
+              전체 LOT 보기
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// Countdown 컴포넌트 — startsAt까지의 시간을 보여주기 위해 간단히 inline 구현
+//   (기존 Countdown은 endsAt 기반 — props명은 그대로 두고 의미만 "목표 ms"로 사용)
+function Countdown({ endsAt, label }) {
+  const [tick, setTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setTick((x) => x + 1), 1000)
+    return () => clearInterval(id)
+  }, [])
+  const ms = (endsAt || 0) - Date.now()
+  if (ms <= 0) return <span className="font-mono">00:00:00</span>
+  const totalSec = Math.floor(ms / 1000)
+  const d = Math.floor(totalSec / 86400)
+  const h = Math.floor((totalSec % 86400) / 3600)
+  const m = Math.floor((totalSec % 3600) / 60)
+  const s = totalSec % 60
+  return (
+    <span className="font-mono tabular-nums">
+      {d > 0 ? `${d}D ` : ''}
+      {String(h).padStart(2, '0')}:{String(m).padStart(2, '0')}:{String(s).padStart(2, '0')}
+      {label && <span className="ml-1 text-[10px] font-bold opacity-70">남음</span>}
+      {/* tick 의존 — 매초 리렌더 트리거 */}
+      <span className="hidden">{tick}</span>
+    </span>
+  )
+}
+
+// 페이지 하단 풀와이드 큐 — 본 LIVE 아래에 흐름 표시
+function UpcomingQueueSection({ lots }) {
+  return (
+    <section className="mt-10 sm:mt-12" aria-label="다음 경매 큐">
+      <div className="flex items-end justify-between gap-4 mb-5 flex-wrap">
+        <div>
+          <Eyebrow tone="ink" dot dotColor="yellow" className="mb-2">
+            오늘의 경매 큐
+          </Eyebrow>
+          <h2 className="font-display text-2xl sm:text-3xl font-bold text-ink tracking-tight leading-tight">
+            다음 차례는 <span className="text-dex">{lots[0]?.nameKo || lots[0]?.name}</span>!
+          </h2>
+        </div>
+      </div>
+      <ol className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        {lots.slice(0, 8).map((c) => {
+          const img = c.images?.[0] || c.image
+          const startMs = c.startsAt ? c.startsAt - Date.now() : 0
+          return (
+            <li key={c.id}>
+              <Link
+                to={`/products/${c.id}`}
+                className="block surface-pop p-3 hover:-translate-y-0.5 transition-all group"
+                aria-label={`예정: ${c.nameKo || c.name}`}
+              >
+                <div className="flex items-start gap-3">
+                  <span className="inline-flex items-center justify-center w-9 h-9 rounded-md bg-ink text-electric text-xs font-mono font-extrabold tabular-nums border-2 border-ink shrink-0">
+                    {c.lotOrder || '·'}
+                  </span>
+                  <div className="w-12 h-16 rounded-md bg-bone-2 border-2 border-ink overflow-hidden shrink-0">
+                    {img && <img src={img} alt="" className="w-full h-full object-cover" />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-display text-sm font-bold text-ink leading-tight truncate group-hover:text-dex transition-colors">
+                      {c.nameKo || c.name}
+                    </div>
+                    <div className="text-[10.5px] text-mute font-medium truncate mt-0.5">
+                      {c.setShort || c.set}
+                    </div>
+                    <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-mono font-extrabold tabular-nums text-mute">
+                      <Icon name="clock" size={10} strokeWidth={2.4} aria-hidden="true" />
+                      {startMs > 0 ? `${formatStartMs(startMs)} 후 시작` : '곧 시작'}
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            </li>
+          )
+        })}
+      </ol>
+    </section>
   )
 }
 

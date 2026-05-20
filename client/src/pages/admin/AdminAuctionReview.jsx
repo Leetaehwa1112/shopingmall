@@ -431,6 +431,8 @@ function DetailBody({ item, trust, comparables, note, onNoteChange, noteRef }) {
         {item.year && <Fact label="발매년도" value={item.year} mono />}
         {item.number && <Fact label="카드번호" value={item.number} mono />}
         {item.cardCountry && <Fact label="언어판" value={`${COUNTRY_FLAG[item.cardCountry]} ${item.cardCountry}`} />}
+        {item.lotOrder ? <Fact label="LOT 순번" value={`#${item.lotOrder}`} mono /> : null}
+        {item.startsAt && <Fact label="시작 예정" value={new Date(item.startsAt).toLocaleString('ko-KR')} />}
         {item.endsAt && <Fact label="종료 예정" value={new Date(item.endsAt).toLocaleString('ko-KR')} />}
       </div>
 

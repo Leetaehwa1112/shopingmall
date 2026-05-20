@@ -4,7 +4,7 @@ const Product = require("../models/Product");
 // 제외: bidHistory(최대 50개 sub-doc), description(긴 본문), created_by populate.
 const LIST_FIELDS =
   "sku name nameKo set setShort year number accent rarity isHolo grade " +
-  "price startPrice buyNowPrice currentBid bidCount watchers endsAt population category " +
+  "price startPrice buyNowPrice currentBid bidCount watchers startsAt endsAt lotOrder population category " +
   "sale_type status images stock createdAt";
 
 // [GET] /api/products - 상품 목록 조회
@@ -14,10 +14,18 @@ const getProducts = async (req, res) => {
 
     const filter = {};
     if (category) filter.category = category;
-    if (status) filter.status = status;
+    if (status) {
+      // 콤마 구분 다중 상태 지원: ?status=active,upcoming (경매 페이지에서 LIVE+예정 함께 조회)
+      const arr = String(status).split(",").map((s) => s.trim()).filter(Boolean);
+      filter.status = arr.length > 1 ? { $in: arr } : arr[0];
+    }
     if (sale_type) filter.sale_type = sale_type;
 
     const skip = (Number(page) - 1) * Number(limit);
+
+    // 경매 목록 정렬: lotOrder 우선(작은 수 먼저), 그 다음 startsAt(빠른 일정 먼저), 그 다음 createdAt.
+    // buynow 목록은 lotOrder/startsAt이 0/null이라 createdAt 정렬이 자연스럽게 적용됨.
+    const sortKey = { lotOrder: 1, startsAt: 1, createdAt: -1 };
 
     // lean() — Mongoose hydration 스킵, plain object 반환 (list는 read-only)
     // select(LIST_FIELDS) — bidHistory/description 등 list 미사용 필드 제외
@@ -25,7 +33,7 @@ const getProducts = async (req, res) => {
     const [products, total] = await Promise.all([
       Product.find(filter)
         .select(LIST_FIELDS)
-        .sort({ createdAt: -1 })
+        .sort(sortKey)
         .skip(skip)
         .limit(Number(limit))
         .lean(),
@@ -81,7 +89,7 @@ const createProduct = async (req, res) => {
   try {
     const {
       sku, name, price, category, images, description, stock, sale_type,
-      startPrice, buyNowPrice, endsAt,
+      startPrice, buyNowPrice, startsAt, endsAt, lotOrder,
     } = req.body;
 
     const existing = await Product.findOne({ sku: sku?.toUpperCase() });
@@ -112,7 +120,9 @@ const createProduct = async (req, res) => {
       ...(sale_type === "auction" ? {
         startPrice: startPrice != null ? Number(startPrice) : undefined,
         buyNowPrice: buyNowPrice != null && buyNowPrice !== "" ? Number(buyNowPrice) : null,
+        startsAt: startsAt || undefined,
         endsAt: endsAt || undefined,
+        lotOrder: lotOrder != null && lotOrder !== "" ? Number(lotOrder) : 0,
       } : {}),
       created_by: req.user._id,
     });
@@ -135,7 +145,7 @@ const updateProduct = async (req, res) => {
   try {
     const {
       sku, name, price, category, images, description, stock, sale_type, status,
-      startPrice, buyNowPrice, endsAt,
+      startPrice, buyNowPrice, startsAt, endsAt, lotOrder,
     } = req.body;
 
     // SKU 변경 시 중복 확인
@@ -164,7 +174,11 @@ const updateProduct = async (req, res) => {
       if (buyNowPrice !== undefined) {
         update.buyNowPrice = buyNowPrice === "" || buyNowPrice == null ? null : Number(buyNowPrice);
       }
-      if (endsAt !== undefined) update.endsAt = endsAt;
+      if (startsAt !== undefined) update.startsAt = startsAt || null;
+      if (endsAt !== undefined) update.endsAt = endsAt || null;
+      if (lotOrder !== undefined) {
+        update.lotOrder = lotOrder === "" || lotOrder == null ? 0 : Number(lotOrder);
+      }
     }
 
     const product = await Product.findByIdAndUpdate(

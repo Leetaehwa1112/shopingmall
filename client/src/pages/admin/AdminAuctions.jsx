@@ -13,11 +13,12 @@ import {
 const COUNTRY_FLAG = { USA: '🇺🇸', JPN: '🇯🇵', KOR: '🇰🇷' }
 
 const STATUS = {
-  pending:  { label: '검수 대기', tone: 'amber', led: 'yellow' },
-  approved: { label: '승인됨',   tone: 'blue',  led: 'blue' },
-  live:     { label: '진행 중',  tone: 'emerald', led: 'green' },
-  ended:    { label: '종료',     tone: 'gray',  led: 'green' },
-  rejected: { label: '거절됨',   tone: 'red',   led: 'red' },
+  pending:  { label: '검수 대기',   tone: 'amber',   led: 'yellow' },
+  approved: { label: '승인됨',     tone: 'blue',    led: 'blue' },
+  upcoming: { label: '경매 예정',  tone: 'amber',   led: 'yellow' },
+  live:     { label: '진행 중',    tone: 'emerald', led: 'green' },
+  ended:    { label: '종료',       tone: 'gray',    led: 'green' },
+  rejected: { label: '거절됨',     tone: 'red',     led: 'red' },
 }
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50]
@@ -72,6 +73,7 @@ export default function AdminAuctions() {
         currentBid: r.currentBid || 0,
         bidCount: r.bidCount || 0,
         status: r.status,
+        lotOrder: r.lotOrder || 9999, // 미지정은 뒤로
       }[sort.key])
       const av = get(a), bv = get(b)
       if (av < bv) return -1 * dir
@@ -90,6 +92,7 @@ export default function AdminAuctions() {
   const kpis = useMemo(() => ({
     pending: list.filter((i) => i.status === 'pending').length,
     live: list.filter((i) => i.status === 'live').length,
+    upcoming: list.filter((i) => i.status === 'upcoming').length,
     bidValue: list.reduce((s, i) => s + (i.currentBid || 0), 0),
     today: list.filter((i) => new Date(i.createdAt).toDateString() === new Date().toDateString()).length,
   }), [list])
@@ -178,6 +181,7 @@ export default function AdminAuctions() {
     { value: '', label: '전체' },
     { value: 'pending', label: '검수 대기', led: 'yellow', count: kpis.pending },
     { value: 'approved', label: '승인됨', led: 'blue' },
+    { value: 'upcoming', label: '예정', led: 'yellow', count: kpis.upcoming },
     { value: 'live', label: '진행 중', led: 'green', count: kpis.live },
     { value: 'ended', label: '종료' },
     { value: 'rejected', label: '거절됨', led: 'red' },
@@ -210,9 +214,9 @@ export default function AdminAuctions() {
       <StatGrid cols={4}>
         <StatCard label="검수 대기" value={kpis.pending} sub="클릭 → 인박스" icon="flame" tone="red" urgent={kpis.pending > 0}
           onClick={() => navigate('/admin/auctions/review')} />
-        <StatCard label="진행 중" value={kpis.live} sub="실시간 입찰 중" icon="trophy" tone="emerald" />
+        <StatCard label="진행 중" value={kpis.live} sub="동시 LIVE 1건 권장" icon="trophy" tone="emerald" />
+        <StatCard label="예정" value={kpis.upcoming} sub="대기열 — 일정 확정됨" icon="clock" tone="amber" />
         <StatCard label="누적 입찰가" value={`₩${(kpis.bidValue / 10000).toFixed(0)}만`} sub="현재 최고가 합" icon="package" />
-        <StatCard label="오늘 신청" value={kpis.today} sub="신규 등록" icon="cart" tone="blue" />
       </StatGrid>
 
       <FilterBar>
@@ -233,6 +237,7 @@ export default function AdminAuctions() {
         actions={
           <>
             <BulkButton tone="success" onClick={() => handleBulk('approved')}>일괄 승인</BulkButton>
+            <BulkButton tone="info"    onClick={() => handleBulk('upcoming')}>예정으로</BulkButton>
             <BulkButton tone="success" onClick={() => handleBulk('live')}>경매 시작</BulkButton>
             <BulkButton tone="danger"  onClick={() => handleBulk('rejected')}>거절</BulkButton>
           </>
@@ -251,6 +256,11 @@ export default function AdminAuctions() {
         onRowClick={(r) => setDrawer(r)}
         empty={<EmptyState icon="flame" title="해당 건이 없습니다" />}
         columns={[
+          { key: 'lotOrder', label: 'LOT', align: 'center', sortable: true, render: (r) =>
+            r.lotOrder
+              ? <span className="font-mono text-[11px] font-extrabold tabular-nums px-1.5 py-0.5 rounded bg-ink text-electric border border-ink">#{r.lotOrder}</span>
+              : <span className="text-mute text-[11px]">—</span>
+          },
           { key: 'user', label: '신청자', render: (r) =>
             <Cell primary={r.user?.name} secondary={r.user?.email} />
           },
@@ -343,7 +353,9 @@ function AuctionDrawer({ item, onClose, onStatusChange, onDelete, onEdit }) {
     saleType: item.saleType || 'auction',
     startPrice: item.startPrice ?? '',
     buyNowPrice: item.buyNowPrice ?? '',
-    endsAt: item.endsAt ? new Date(item.endsAt).toISOString().slice(0, 16) : '',
+    startsAt: item.startsAt ? toLocalInput(item.startsAt) : '',
+    endsAt: item.endsAt ? toLocalInput(item.endsAt) : '',
+    lotOrder: item.lotOrder ?? '',
     minIncrement: item.minIncrement ?? '',
     description: item.description || '',
   })
@@ -365,7 +377,9 @@ function AuctionDrawer({ item, onClose, onStatusChange, onDelete, onEdit }) {
       saleType: form.saleType,
       startPrice: form.startPrice === '' ? undefined : Number(form.startPrice),
       buyNowPrice: form.buyNowPrice === '' || form.buyNowPrice == null ? null : Number(form.buyNowPrice),
+      startsAt: form.startsAt || null,
       endsAt: form.endsAt || null,
+      lotOrder: form.lotOrder === '' || form.lotOrder == null ? 0 : Number(form.lotOrder),
       minIncrement: form.minIncrement === '' ? undefined : Number(form.minIncrement),
       description: form.description,
       adminNote: note,
@@ -434,10 +448,12 @@ function AuctionDrawer({ item, onClose, onStatusChange, onDelete, onEdit }) {
           </DSection>
           <DSection title="판매 조건">
             <KV k="유형" v={item.saleType === 'auction' ? '경매' : '즉시 구매'} />
+            {item.lotOrder ? <KV k="LOT 순번" v={`#${item.lotOrder}`} mono highlight /> : null}
             <KV k="시작가" v={`₩${item.startPrice?.toLocaleString()}`} mono />
             {item.buyNowPrice && <KV k="즉시낙찰" v={`₩${item.buyNowPrice?.toLocaleString()}`} mono />}
             <KV k="최소호가" v={`₩${item.minIncrement?.toLocaleString()}`} mono />
-            {item.endsAt && <KV k="종료" v={new Date(item.endsAt).toLocaleString('ko-KR')} />}
+            {item.startsAt && <KV k="시작 일정" v={new Date(item.startsAt).toLocaleString('ko-KR')} />}
+            {item.endsAt && <KV k="종료 일정" v={new Date(item.endsAt).toLocaleString('ko-KR')} />}
           </DSection>
         </div>
       ) : (
@@ -466,18 +482,23 @@ function AuctionDrawer({ item, onClose, onStatusChange, onDelete, onEdit }) {
           <DSection title="판매 조건 (수정)">
             {hasBids && (
               <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 mb-2">
-                ⚠️ 입찰이 진행 중 — 시작가/판매유형은 변경 불가. 즉시낙찰가/종료시각은 조정 가능.
+                ⚠️ 입찰이 진행 중 — 시작가/판매유형은 변경 불가. 즉시낙찰가/시작·종료시각은 조정 가능.
               </p>
             )}
             <div className="grid grid-cols-2 gap-2">
               <DSelect label="유형" value={form.saleType} onChange={setF('saleType')} disabled={hasBids}
                 options={[{value:'auction',label:'경매'},{value:'buynow',label:'즉시구매'}]} />
+              <DInput label="LOT 순번 (1·2·3…)" type="number" value={form.lotOrder} onChange={setF('lotOrder')} />
               <DInput label="시작가 (원)" type="number" value={form.startPrice} onChange={setF('startPrice')} disabled={hasBids} />
               <DInput label="즉시낙찰가 (원, 비우면 해제)" type="number" value={form.buyNowPrice} onChange={setF('buyNowPrice')} />
               <DInput label="최소 호가 (원)" type="number" value={form.minIncrement} onChange={setF('minIncrement')} />
-              <div className="col-span-2">
+              <div className="col-span-2 grid grid-cols-2 gap-2">
+                <DInput label="시작 시각" type="datetime-local" value={form.startsAt} onChange={setF('startsAt')} />
                 <DInput label="종료 시각" type="datetime-local" value={form.endsAt} onChange={setF('endsAt')} />
               </div>
+              <p className="col-span-2 text-[10px] text-mute leading-relaxed">
+                정책: 동시 LIVE 1건. 다른 LOT을 LIVE로 올리기 전 현재 LIVE를 ended로 내리거나, 이 LOT을 'upcoming'으로 두고 시작 시각을 미리 정해두세요.
+              </p>
             </div>
           </DSection>
           <DSection title="설명 (수정)">
@@ -530,6 +551,15 @@ function AuctionDrawer({ item, onClose, onStatusChange, onDelete, onEdit }) {
       )}
     </Drawer>
   )
+}
+
+// Date|string → datetime-local input 값 (로컬 타임존, "YYYY-MM-DDTHH:mm")
+function toLocalInput(d) {
+  if (!d) return ''
+  const dt = new Date(d)
+  if (Number.isNaN(dt.getTime())) return ''
+  const off = dt.getTimezoneOffset() * 60000
+  return new Date(dt.getTime() - off).toISOString().slice(0, 16)
 }
 
 function DInput({ label, value, onChange, type = 'text', disabled = false }) {

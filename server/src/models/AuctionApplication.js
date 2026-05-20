@@ -37,8 +37,12 @@ const auctionApplicationSchema = new mongoose.Schema(
     },
     startPrice: { type: Number, required: [true, "시작가는 필수입니다."], min: 0 },
     buyNowPrice: { type: Number, default: null },
+    // 경매 일정 — startsAt이 미래이면 'upcoming', 도달하면 어드민이 'live'로 전환.
+    startsAt: { type: Date, default: null },
     endsAt: { type: Date, default: null },
     minIncrement: { type: Number, default: 1000000 },
+    // 동시에 LIVE 1건만 — 작은 수가 먼저 무대에 오름. 어드민이 수동 부여.
+    lotOrder: { type: Number, default: 0 },
 
     // 사진
     photos: { type: [String], default: [] },
@@ -47,9 +51,15 @@ const auctionApplicationSchema = new mongoose.Schema(
     description: { type: String, trim: true, default: "" },
 
     // 신청 상태
+    //   pending  : 검수 대기
+    //   approved : 승인 후 일정 미정
+    //   upcoming : 일정 확정 — startsAt 미래, 사이트엔 예고편으로 노출
+    //   live     : 현재 무대 위, 입찰 진행
+    //   ended    : 종료/낙찰
+    //   rejected : 반려
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected", "live", "ended"],
+      enum: ["pending", "approved", "upcoming", "rejected", "live", "ended"],
       default: "pending",
     },
 

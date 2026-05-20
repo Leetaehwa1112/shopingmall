@@ -3,7 +3,8 @@ const Product = require("../models/Product");
 
 // AuctionApplication → Product 매핑.
 // price 필수: buynow면 buyNowPrice||startPrice, auction이면 startPrice.
-function buildProductFromApplication(app) {
+// productStatus: 'active'(LIVE) 또는 'upcoming'(예고편) 둘 다 사이트에 노출됨.
+function buildProductFromApplication(app, productStatus = "active") {
   const isBuyNow = app.saleType === "buynow";
   const price = isBuyNow
     ? (app.buyNowPrice || app.startPrice)
@@ -31,11 +32,13 @@ function buildProductFromApplication(app) {
     price,
     startPrice: app.startPrice,
     buyNowPrice: app.buyNowPrice || null,
+    startsAt: app.startsAt || null,
     endsAt: app.endsAt,
+    lotOrder: app.lotOrder || 0,
     images: app.photos || [],
     description: app.description || "",
     stock: 1,
-    status: "active",
+    status: productStatus,
     created_by: app.user,
   };
 }
@@ -166,12 +169,14 @@ const getApplicationById = async (req, res) => {
   }
 };
 
-// [PATCH] /api/auctions/:id/status - 상태 변경 (어드민: 승인/거절/live/ended)
-//   'live' 전환 시 자동으로 Product를 생성해 사이트에 게시. 멱등 보장.
+// [PATCH] /api/auctions/:id/status - 상태 변경 (어드민)
+//   'live'   : LIVE 무대 위, 사이트에서 입찰 가능
+//   'upcoming': 일정 확정 — 사이트에 예고편(카운트다운)으로 노출
+//   'live'/'upcoming' 전환 시 Product 자동 게시 (멱등).
 const updateStatus = async (req, res) => {
   try {
     const { status, adminNote } = req.body;
-    const allowed = ["pending", "approved", "rejected", "live", "ended"];
+    const allowed = ["pending", "approved", "upcoming", "rejected", "live", "ended"];
     if (!allowed.includes(status)) {
       return res.status(400).json({ success: false, message: "유효하지 않은 상태값입니다." });
     }
@@ -184,19 +189,30 @@ const updateStatus = async (req, res) => {
     application.status = status;
     if (adminNote !== undefined) application.adminNote = adminNote;
 
-    // 'live' 전환 시 Product 자동 게시 — 이미 publish된 경우는 skip (멱등)
-    if (status === "live" && !application.publishedProduct) {
-      const product = await Product.create(buildProductFromApplication(application));
+    // Application 상태 → Product.status 매핑
+    const productStatusForApp =
+      status === "live" ? "active" :
+      status === "upcoming" ? "upcoming" :
+      status === "ended" ? "sold_out" : "hidden";
+
+    // 'live' / 'upcoming' 전환 시 Product 자동 게시 (멱등) —
+    // 이전엔 'live'만 publish했지만, upcoming도 사이트 예고편으로 노출해야 하므로 동시 처리.
+    if ((status === "live" || status === "upcoming") && !application.publishedProduct) {
+      const product = await Product.create(
+        buildProductFromApplication(application, productStatusForApp)
+      );
       application.publishedProduct = product._id;
     }
 
-    // 이미 게시된 Product가 있다면 신청 상태에 맞춰 Product.status 동기화 —
-    // 거절/대기/승인은 'hidden'(사이트 비노출), live는 'active', ended는 'sold_out'.
+    // 이미 게시된 Product가 있다면 status 동기화.
+    // upcoming/live는 일정/순번 변경분도 함께 반영 (어드민이 status 전환과 동시에 일정 조정 가능).
     if (application.publishedProduct) {
-      const productStatus =
-        status === "live" ? "active" :
-        status === "ended" ? "sold_out" : "hidden";
-      await Product.findByIdAndUpdate(application.publishedProduct, { status: productStatus });
+      await Product.findByIdAndUpdate(application.publishedProduct, {
+        status: productStatusForApp,
+        startsAt: application.startsAt || null,
+        endsAt: application.endsAt || null,
+        lotOrder: application.lotOrder || 0,
+      });
     }
 
     await application.save();
@@ -228,7 +244,7 @@ const updateApplication = async (req, res) => {
     const {
       name, nameKo, set, year, number,
       gradeCompany, gradeScore, gradeCert, cardCountry,
-      saleType, startPrice, buyNowPrice, endsAt, minIncrement,
+      saleType, startPrice, buyNowPrice, startsAt, endsAt, lotOrder, minIncrement,
       photos, description, adminNote,
     } = req.body;
 
@@ -283,8 +299,15 @@ const updateApplication = async (req, res) => {
         }
       }
     }
+    if (startsAt !== undefined) {
+      application.startsAt = startsAt ? new Date(startsAt) : null;
+    }
     if (endsAt !== undefined) {
       application.endsAt = endsAt ? new Date(endsAt) : null;
+    }
+    if (lotOrder !== undefined) {
+      const v = Number(lotOrder);
+      application.lotOrder = Number.isFinite(v) ? v : 0;
     }
     if (minIncrement !== undefined) {
       const v = Number(minIncrement);
@@ -300,7 +323,7 @@ const updateApplication = async (req, res) => {
 
     await application.save();
 
-    // 게시된 Product가 있으면 동기화 (live/ended 상태 모두)
+    // 게시된 Product가 있으면 동기화 (live/upcoming/ended 상태 모두)
     if (application.publishedProduct) {
       const isBuyNow = application.saleType === "buynow";
       const productUpdate = {
@@ -315,7 +338,9 @@ const updateApplication = async (req, res) => {
           : application.startPrice,
         startPrice: application.startPrice,
         buyNowPrice: application.buyNowPrice || null,
-        endsAt: application.endsAt,
+        startsAt: application.startsAt || null,
+        endsAt: application.endsAt || null,
+        lotOrder: application.lotOrder || 0,
         images: application.photos || [],
         description: application.description || "",
         grade: {

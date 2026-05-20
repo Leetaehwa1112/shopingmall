@@ -34,7 +34,11 @@ const productSchema = new mongoose.Schema(
     currentBid:  { type: Number },
     bidCount:   { type: Number, default: 0 },
     watchers:   { type: Number, default: 0 },
+    // 경매 일정 — startsAt이 비어있으면 즉시 시작(legacy). 미래값이면 'upcoming'으로 노출.
+    startsAt:   { type: Date },
     endsAt:     { type: Date },
+    // 동시 LIVE 경매는 1건 — 어드민이 손으로 순번 부여, 작은 수가 먼저.
+    lotOrder:   { type: Number, default: 0 },
     population: { type: mongoose.Schema.Types.Mixed, default: {} },
 
     // 입찰 내역 — 최근 입찰부터 unshift, 최대 50건 유지
@@ -61,7 +65,8 @@ const productSchema = new mongoose.Schema(
     stock:       { type: Number, default: 1, min: 0 },
 
     sale_type: { type: String, enum: ["buynow", "auction"], default: "buynow" },
-    status:    { type: String, enum: ["active", "sold_out", "hidden"], default: "active" },
+    // active: LIVE 진행 중 / upcoming: 시작 전 예약 / sold_out: 낙찰·재고소진 / hidden: 비공개
+    status:    { type: String, enum: ["active", "upcoming", "sold_out", "hidden"], default: "active" },
     created_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true }
