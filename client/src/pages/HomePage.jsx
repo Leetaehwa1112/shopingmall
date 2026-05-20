@@ -12,7 +12,6 @@ import GradeBadge from '@/components/common/GradeBadge'
 import Button from '@/components/common/Button'
 import Pokeball from '@/components/common/Pokeball'
 import Icon from '@/components/common/Icon'
-import GreetingDropdown from '@/components/common/GreetingDropdown'
 import Eyebrow from '@/components/common/Eyebrow'
 import Sparkles from '@/components/common/Sparkles'
 import SectionHead from '@/components/common/SectionHead'
@@ -63,8 +62,6 @@ export default function HomePage() {
     <main className="bg-bone">
       {/* === 가상계좌 입금 대기 배너 (최상단 고정) === */}
       <PendingDepositBanner />
-
-      <GreetingDropdown />
 
       {/* === 글로벌 에러 배너 === */}
       {error && !loading && (

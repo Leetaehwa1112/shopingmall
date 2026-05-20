@@ -16,7 +16,7 @@ export default function GreetingDropdown() {
         if (!n) return
         setName(n)
         setVisible(true)
-        timerRef.current = setTimeout(() => setVisible(false), 3000)
+        timerRef.current = setTimeout(() => setVisible(false), 6000)
       })
       .catch(() => {})
 
