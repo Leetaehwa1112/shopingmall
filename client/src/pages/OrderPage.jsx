@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useCartStore from '@/store/cartStore'
 import useToastStore from '@/store/toastStore'
@@ -11,6 +11,24 @@ const STORE_ID = 'store-43aecd40-673f-4953-8fd3-6aa4882eff27'
 
 // 마지막 성공 주문 주소 저장 키. 다음 OrderPage 방문 시 자동 채움.
 const SAVED_ADDR_KEY = 'pokevault:lastAddress'
+
+// Daum(카카오) 우편번호 서비스 — 한국 표준 주소 검색.
+// 무료, key 불필요, popup 차단 회피 위해 embed 사용.
+const DAUM_POSTCODE_SRC = '//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js'
+let daumScriptPromise = null
+const loadDaumPostcode = () => {
+  if (window.daum?.Postcode) return Promise.resolve()
+  if (daumScriptPromise) return daumScriptPromise
+  daumScriptPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script')
+    s.src = DAUM_POSTCODE_SRC
+    s.async = true
+    s.onload = resolve
+    s.onerror = () => { daumScriptPromise = null; reject(new Error('postcode load failed')) }
+    document.head.appendChild(s)
+  })
+  return daumScriptPromise
+}
 
 // ─── 필드별 검증자 ─────────────────────────────────────────────
 // 서버 orderController.createOrder와 동일 규칙. 값이 비었으면 null 반환
@@ -61,6 +79,39 @@ export default function OrderPage() {
   })
   const [paying, setPaying] = useState(false)
   const hasSavedAddr = !!(savedAddr.name && savedAddr.addr1)
+
+  // ─── 우편번호 검색 모달 ──────────────────────────────────────
+  const [postcodeOpen, setPostcodeOpen] = useState(false)
+  const postcodeRef = useRef(null)
+
+  useEffect(() => {
+    if (!postcodeOpen) return
+    let cancelled = false
+    loadDaumPostcode()
+      .then(() => {
+        if (cancelled || !postcodeRef.current) return
+        // embed mode — popup 차단 없음, ESC/외부 클릭으로 닫힘은 자체 구현.
+        new window.daum.Postcode({
+          oncomplete: (data) => {
+            // 도로명 우선, 없으면 지번 폴백
+            const street = data.roadAddress || data.jibunAddress || ''
+            setForm((f) => ({ ...f, zip: data.zonecode, addr1: street }))
+            setPostcodeOpen(false)
+            // 모달 닫힌 후 상세 주소 input에 포커스 — 흐름이 자연스럽게
+            setTimeout(() => {
+              document.querySelector('input[data-addr2]')?.focus()
+            }, 50)
+          },
+          width: '100%',
+          height: '100%',
+        }).embed(postcodeRef.current)
+      })
+      .catch(() => {
+        toast({ type: 'error', message: '주소 검색을 불러오지 못했어요. 잠시 후 다시 시도해주세요.' })
+        setPostcodeOpen(false)
+      })
+    return () => { cancelled = true }
+  }, [postcodeOpen, toast])
 
   useEffect(() => {
     if (requireBrinks && form.shipping !== 'brinks') {
@@ -255,10 +306,21 @@ export default function OrderPage() {
               <Field label="수령인" value={form.name} onChange={(v) => setForm({...form, name: v})} validate={validators.name} required />
               <Field label="이메일" value={form.email} onChange={(v) => setForm({...form, email: v})} validate={validators.email} required placeholder="example@email.com" type="email" />
               <Field label="연락처" value={form.phone} onChange={(v) => setForm({...form, phone: v})} validate={validators.phone} required placeholder="010-0000-0000" />
-              <Field label="우편번호" value={form.zip} onChange={(v) => setForm({...form, zip: v})} validate={validators.zip} required placeholder="06236" />
-              <div />
-              <div className="col-span-2"><Field label="기본 주소" value={form.addr1} onChange={(v) => setForm({...form, addr1: v})} validate={validators.addr1} required /></div>
-              <div className="col-span-2"><Field label="상세 주소" value={form.addr2} onChange={(v) => setForm({...form, addr2: v})} /></div>
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <Field label="우편번호" value={form.zip} onChange={(v) => setForm({...form, zip: v})} validate={validators.zip} required placeholder="06236" readOnly />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPostcodeOpen(true)}
+                  className="h-[42px] px-4 rounded-lg bg-ink text-paper text-xs font-bold border-2 border-ink shadow-[0_2px_0_#1a1a1a] hover:-translate-y-0.5 hover:shadow-[0_3px_0_#1a1a1a] transition-all whitespace-nowrap inline-flex items-center gap-1.5"
+                >
+                  <Icon name="search" size={13} strokeWidth={2.4} />
+                  주소 검색
+                </button>
+              </div>
+              <div className="col-span-2"><Field label="기본 주소" value={form.addr1} onChange={(v) => setForm({...form, addr1: v})} validate={validators.addr1} required placeholder="우편번호 검색으로 자동 입력돼요" readOnly /></div>
+              <div className="col-span-2"><Field label="상세 주소" value={form.addr2} onChange={(v) => setForm({...form, addr2: v})} placeholder="동/호수 등" data-addr2 /></div>
             </div>
           </Section>
 
@@ -358,6 +420,35 @@ export default function OrderPage() {
           </div>
         </aside>
       </form>
+
+      {/* 우편번호 검색 모달 — Daum/카카오 postcode embed */}
+      {postcodeOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setPostcodeOpen(false)}
+        >
+          <div
+            className="w-full max-w-lg bg-paper rounded-2xl border-2 border-ink shadow-[0_6px_0_#1a1a1a] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-3 border-b-2 border-ink/15 bg-bone-2">
+              <div className="font-display font-bold text-ink inline-flex items-center gap-2">
+                <Icon name="search" size={16} strokeWidth={2.4} />
+                주소 검색
+              </div>
+              <button
+                type="button"
+                onClick={() => setPostcodeOpen(false)}
+                className="w-8 h-8 rounded-full hover:bg-paper border-2 border-transparent hover:border-ink/20 inline-flex items-center justify-center text-ink/60 hover:text-ink"
+                aria-label="닫기"
+              >
+                ✕
+              </button>
+            </div>
+            <div ref={postcodeRef} style={{ height: 460 }} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -370,11 +461,11 @@ function Section({ title, children }) {
     </div>
   )
 }
-function Field({ label, value, onChange, validate, required, ...rest }) {
+function Field({ label, value, onChange, validate, required, readOnly, ...rest }) {
   const [touched, setTouched] = useState(false)
-  // 검증 메시지: blur 후, 또는 값이 있을 때 실시간 표시.
-  // 빈 값은 입력 도중 빨갛게 만들지 않음 (UX 거슬림). blur 후엔 필수 표시.
-  const showError = touched || (value && value.length > 0)
+  // readOnly 필드(주소/우편번호 등)는 사용자가 직접 입력 못함 → 빈 값 에러 띄우지 않음.
+  // 비-readOnly: blur 후 또는 값이 있으면 검증.
+  const showError = !readOnly && (touched || (value && value.length > 0))
   const error = showError && validate ? validate(value) : null
   const invalid = !!error
 
@@ -388,12 +479,15 @@ function Field({ label, value, onChange, validate, required, ...rest }) {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onBlur={() => setTouched(true)}
+        readOnly={readOnly}
         aria-invalid={invalid}
         {...rest}
         className={`w-full rounded-lg px-4 py-2.5 text-sm text-ink outline-none transition-colors font-medium border-2 ${
           invalid
             ? 'bg-rose-50 border-dex focus:border-dex'
-            : 'bg-bone-2 border-ink/20 focus:border-ink focus:bg-paper'
+            : readOnly
+              ? 'bg-bone-2/60 border-ink/15 cursor-default text-ink/80'
+              : 'bg-bone-2 border-ink/20 focus:border-ink focus:bg-paper'
         }`}
       />
       {invalid && (
