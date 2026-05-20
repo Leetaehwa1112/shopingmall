@@ -130,13 +130,181 @@ export const POKEDEX = [
       C('neo1-9',     'Neo Genesis', 2000, '9/111', 'Holo Rare', TCG('neo1', 9),     ['lugia neo']),
     ],
   },
+
+  // ─── 추가 도감 (Gen 1 · 151 set) ───────────────────────────
+  // sv3pt5 카드 번호 == 전국 도감 번호. 일부는 base set 추가.
+  {
+    id: 3, name: 'Venusaur', nameKo: '이상해꽃', types: ['풀', '독'], gen: 1,
+    height: 2.0, weight: 100.0,
+    desc: '등에 핀 꽃에서 좋은 향기가 난다. 향기는 적의 전의를 잃게 한다.',
+    cards: [
+      C('base1-15',  'Base Set', 1999, '15/102',  'Holo Rare', TCG('base1', 15),   ['venusaur base']),
+      C('sv3pt5-3',  '151',      2023, '003/165', 'Holo Rare', TCG('sv3pt5', 3),   ['venusaur 151']),
+    ],
+  },
+  {
+    id: 9, name: 'Blastoise', nameKo: '거북왕', types: ['물'], gen: 1,
+    height: 1.6, weight: 85.5,
+    desc: '몸 안에 있는 물을 강력하게 분사한다. 강철판도 뚫는다.',
+    cards: [
+      C('base1-2',   'Base Set', 1999, '2/102',   'Holo Rare', TCG('base1', 2),    ['blastoise base']),
+      C('sv3pt5-9',  '151',      2023, '009/165', 'Holo Rare', TCG('sv3pt5', 9),   ['blastoise 151']),
+    ],
+  },
+  {
+    id: 26, name: 'Raichu', nameKo: '라이츄', types: ['전기'], gen: 1,
+    height: 0.8, weight: 30.0,
+    desc: '꼬리로 땅에서 전기를 모은다. 전기를 너무 모으면 위험하다.',
+    cards: [
+      C('sv3pt5-26', '151',      2023, '026/165', 'Rare',      TCG('sv3pt5', 26),  ['raichu 151']),
+    ],
+  },
+  {
+    id: 35, name: 'Clefairy', nameKo: '삐삐', types: ['페어리'], gen: 1,
+    height: 0.6, weight: 7.5,
+    desc: '달밤에 무리 지어 춤을 춘다. 보름달이 뜨면 활동이 활발해진다.',
+    cards: [
+      C('base1-5',   'Base Set', 1999, '5/102',   'Holo Rare', TCG('base1', 5),    ['clefairy base']),
+      C('sv3pt5-35', '151',      2023, '035/165', 'Rare',      TCG('sv3pt5', 35),  ['clefairy 151']),
+    ],
+  },
+  {
+    id: 39, name: 'Jigglypuff', nameKo: '푸린', types: ['노말', '페어리'], gen: 1,
+    height: 0.5, weight: 5.5,
+    desc: '커다란 눈동자로 상대를 응시하며 자장가를 부른다. 들으면 잠들어 버린다.',
+    cards: [
+      C('sv3pt5-39', '151',      2023, '039/165', 'Common',    TCG('sv3pt5', 39),  ['jigglypuff 151']),
+    ],
+  },
+  {
+    id: 59, name: 'Arcanine', nameKo: '윈디', types: ['불꽃'], gen: 1,
+    height: 1.9, weight: 155.0,
+    desc: '전설로 전해지는 포켓몬. 화살처럼 빠르게 달리며 만 킬로미터를 하룻밤에 달린다.',
+    cards: [
+      C('sv3pt5-59', '151',      2023, '059/165', 'Holo Rare', TCG('sv3pt5', 59),  ['arcanine 151']),
+    ],
+  },
+  {
+    id: 65, name: 'Alakazam', nameKo: '후딘', types: ['에스퍼'], gen: 1,
+    height: 1.5, weight: 48.0,
+    desc: 'IQ 5000을 자랑하는 천재 포켓몬. 출생부터 죽을 때까지 모든 기억을 가지고 있다.',
+    cards: [
+      C('base1-1',   'Base Set', 1999, '1/102',   'Holo Rare', TCG('base1', 1),    ['alakazam base']),
+      C('sv3pt5-65', '151',      2023, '065/165', 'Holo Rare', TCG('sv3pt5', 65),  ['alakazam 151']),
+    ],
+  },
+  {
+    id: 68, name: 'Machamp', nameKo: '괴력몬', types: ['격투'], gen: 1,
+    height: 1.6, weight: 130.0,
+    desc: '네 개의 팔을 가진 격투가. 1초에 천 번의 펀치를 날릴 수 있다.',
+    cards: [
+      C('base1-8',   'Base Set', 1999, '8/102',   'Holo Rare', TCG('base1', 8),    ['machamp base']),
+      C('sv3pt5-68', '151',      2023, '068/165', 'Holo Rare', TCG('sv3pt5', 68),  ['machamp 151']),
+    ],
+  },
+  {
+    id: 81, name: 'Magnemite', nameKo: '코일', types: ['전기', '강철'], gen: 1,
+    height: 0.3, weight: 6.0,
+    desc: '강한 자기장을 발생시키며 공중에 떠다닌다. 금속에 끌려 들러붙는 일이 잦다.',
+    cards: [
+      C('sv3pt5-81', '151',      2023, '081/165', 'Common',    TCG('sv3pt5', 81),  ['magnemite 151']),
+    ],
+  },
+  {
+    id: 92, name: 'Gastly', nameKo: '고오스', types: ['고스트', '독'], gen: 1,
+    height: 1.3, weight: 0.1,
+    desc: '대부분이 가스로 이루어져 있다. 강한 바람이 불면 휙 날아가 버린다.',
+    cards: [
+      C('sv3pt5-92', '151',      2023, '092/165', 'Common',    TCG('sv3pt5', 92),  ['gastly 151']),
+    ],
+  },
+  {
+    id: 95, name: 'Onix', nameKo: '롱스톤', types: ['바위', '땅'], gen: 1,
+    height: 8.8, weight: 210.0,
+    desc: '땅속을 시속 80km로 파고든다. 갈수록 몸의 돌이 단단해진다.',
+    cards: [
+      C('sv3pt5-95', '151',      2023, '095/165', 'Rare',      TCG('sv3pt5', 95),  ['onix 151']),
+    ],
+  },
+  {
+    id: 122, name: 'Mr. Mime', nameKo: '마임맨', types: ['에스퍼', '페어리'], gen: 1,
+    height: 1.3, weight: 54.5,
+    desc: '팬터마임의 명수. 보이지 않는 벽이나 물건을 만들어내 적을 막는다.',
+    cards: [
+      C('sv3pt5-122','151',      2023, '122/165', 'Rare',      TCG('sv3pt5', 122), ['mr mime 151']),
+    ],
+  },
+  {
+    id: 131, name: 'Lapras', nameKo: '라프라스', types: ['물', '얼음'], gen: 1,
+    height: 2.5, weight: 220.0,
+    desc: '사람을 매우 좋아하는 다정한 포켓몬. 사람을 등에 태우고 바다를 건너기도 한다.',
+    cards: [
+      C('sv3pt5-131','151',      2023, '131/165', 'Holo Rare', TCG('sv3pt5', 131), ['lapras 151']),
+    ],
+  },
+  {
+    id: 134, name: 'Vaporeon', nameKo: '샤미드', types: ['물'], gen: 1,
+    height: 1.0, weight: 29.0,
+    desc: '물 분자와 동화하는 능력을 가지고 있다. 수중에 녹아들면 보이지 않게 된다.',
+    cards: [
+      C('sv3pt5-134','151',      2023, '134/165', 'Rare',      TCG('sv3pt5', 134), ['vaporeon 151']),
+    ],
+  },
+  {
+    id: 135, name: 'Jolteon', nameKo: '쥬피썬더', types: ['전기'], gen: 1,
+    height: 0.8, weight: 24.5,
+    desc: '몸의 세포가 발전기 역할을 한다. 털을 곤두세워 천 볼트의 번개를 일으킨다.',
+    cards: [
+      C('sv3pt5-135','151',      2023, '135/165', 'Rare',      TCG('sv3pt5', 135), ['jolteon 151']),
+    ],
+  },
+  {
+    id: 136, name: 'Flareon', nameKo: '부스터', types: ['불꽃'], gen: 1,
+    height: 0.9, weight: 25.0,
+    desc: '폐 속에 화염 주머니가 있다. 화염을 뿜으면 1700도의 불꽃이 된다.',
+    cards: [
+      C('sv3pt5-136','151',      2023, '136/165', 'Rare',      TCG('sv3pt5', 136), ['flareon 151']),
+    ],
+  },
+  {
+    id: 144, name: 'Articuno', nameKo: '프리져', types: ['얼음', '비행'], gen: 1,
+    height: 1.7, weight: 55.4,
+    desc: '얼음을 다루는 전설의 새. 깃털을 흩날리면 눈이 내린다.',
+    cards: [
+      C('sv3pt5-144','151',      2023, '144/165', 'Holo Rare', TCG('sv3pt5', 144), ['articuno 151']),
+    ],
+  },
+  {
+    id: 145, name: 'Zapdos', nameKo: '썬더', types: ['전기', '비행'], gen: 1,
+    height: 1.6, weight: 52.6,
+    desc: '먹구름 속에 살고 있는 전설의 새. 번개를 자유자재로 다룬다.',
+    cards: [
+      C('sv3pt5-145','151',      2023, '145/165', 'Holo Rare', TCG('sv3pt5', 145), ['zapdos 151']),
+    ],
+  },
+  {
+    id: 146, name: 'Moltres', nameKo: '파이어', types: ['불꽃', '비행'], gen: 1,
+    height: 2.0, weight: 60.0,
+    desc: '불꽃을 다루는 전설의 새. 날갯짓에 의해 불꽃이 흩날린다.',
+    cards: [
+      C('sv3pt5-146','151',      2023, '146/165', 'Holo Rare', TCG('sv3pt5', 146), ['moltres 151']),
+    ],
+  },
+  {
+    id: 147, name: 'Dratini', nameKo: '미뇽', types: ['드래곤'], gen: 1,
+    height: 1.8, weight: 3.3,
+    desc: '오랫동안 환상의 포켓몬이었다. 작은 체구지만 깊은 호수 속에 산다고 한다.',
+    cards: [
+      C('sv3pt5-147','151',      2023, '147/165', 'Common',    TCG('sv3pt5', 147), ['dratini 151']),
+    ],
+  },
 ]
 
 // PokeAPI 공식 아트워크 CDN
 export const ARTWORK_URL = (id) =>
   `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`
 
-// 한글 타입 → 컬러 토큰
+// 한글 타입 → 컬러 토큰 (Tailwind 토큰)
 export const TYPE_TOKEN = {
   불꽃:   'fire',
   물:     'water',
@@ -153,6 +321,9 @@ export const TYPE_TOKEN = {
   땅:     'electric',
   드래곤: 'psychic',
   고스트: 'psychic',
+  페어리: 'rose',
+  강철:   'mute',
+  악:     'mute',
 }
 
 export const TYPE_CHIP = {
@@ -183,8 +354,11 @@ export const TYPE_INFO = {
   격투:   { symbol: '🥊', hex: '#dc2626', desc: '근육과 격투기술로 정면 승부하는 포켓몬. 한방의 위력이 강해요.', strong: ['노말','바위','얼음'], weak: ['비행','에스퍼'] },
   바위:   { symbol: '🪨', hex: '#a8a29e', desc: '돌·바위처럼 단단한 방어력을 자랑하는 포켓몬.', strong: ['불꽃','비행','벌레','얼음'], weak: ['물','풀','격투','땅'] },
   땅:     { symbol: '🌍', hex: '#b45309', desc: '대지를 흔드는 힘을 가진 포켓몬. 지면으로부터 에너지를 얻어요.', strong: ['불꽃','전기','독','바위'], weak: ['물','풀','얼음'] },
-  드래곤: { symbol: '🐉', hex: '#7c3aed', desc: '전설의 드래곤 포켓몬. 거대한 체구와 압도적인 힘을 가졌어요.', strong: ['드래곤'], weak: ['얼음','드래곤'] },
-  고스트: { symbol: '👻', hex: '#5b21b6', desc: '유령처럼 형체가 흐릿한 포켓몬. 상대의 정신을 공격해요.', strong: ['에스퍼','고스트'], weak: ['고스트'] },
+  드래곤: { symbol: '🐉', hex: '#7c3aed', desc: '전설의 드래곤 포켓몬. 거대한 체구와 압도적인 힘을 가졌어요.', strong: ['드래곤'], weak: ['얼음','드래곤','페어리'] },
+  고스트: { symbol: '👻', hex: '#5b21b6', desc: '유령처럼 형체가 흐릿한 포켓몬. 상대의 정신을 공격해요.', strong: ['에스퍼','고스트'], weak: ['고스트','악'] },
+  페어리: { symbol: '🧚', hex: '#f0a8d0', desc: '신비롭고 사랑스러운 페어리 포켓몬. 드래곤·격투·악 타입에 강해요.', strong: ['드래곤','격투','악'], weak: ['독','강철'] },
+  강철:   { symbol: '⚙️', hex: '#9ca3af', desc: '금속으로 이루어진 단단한 포켓몬. 방어력이 매우 높아요.', strong: ['얼음','바위','페어리'], weak: ['불꽃','격투','땅'] },
+  악:     { symbol: '🌑', hex: '#1f2937', desc: '어두운 면을 무기로 쓰는 포켓몬. 기습과 책략에 능해요.', strong: ['에스퍼','고스트'], weak: ['격투','벌레','페어리'] },
 }
 
 export const TYPE_BG_SOFT = {

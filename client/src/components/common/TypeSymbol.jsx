@@ -19,6 +19,7 @@ const SLUG = {
   에스퍼: 'psychic', 비행: 'flying', 독: 'poison', 벌레: 'bug',
   노말: 'normal', 얼음: 'ice', 격투: 'fighting', 바위: 'rock',
   땅: 'ground', 드래곤: 'dragon', 고스트: 'ghost',
+  페어리: 'fairy', 강철: 'steel', 악: 'dark',
 }
 
 const CDN = (slug) =>
