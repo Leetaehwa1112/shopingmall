@@ -516,6 +516,11 @@ function AuctionLivePage({ lots, loading, error }) {
           0%   { transform: translateX(0); }
           100% { transform: translateX(-50%); }
         }
+        /* 미니 플레이어 등장 — 살짝 튀어오르듯 */
+        @keyframes mini-pop {
+          from { transform: translateY(20px) scale(0.92); opacity: 0; }
+          to   { transform: translateY(0) scale(1); opacity: 1; }
+        }
         .focus-ring:focus-visible {
           outline: none;
           box-shadow: 0 0 0 3px #facc15, 0 0 0 5px #0d1730;
@@ -593,6 +598,30 @@ function BroadcastStream({ lot, liveCount, onBid }) {
   // UI-only 컨트롤 (음소거/풀스크린은 표현용 토글 — 실제 영상 X)
   const [muted, setMuted] = useState(true)
 
+  // ── 미니 플레이어 : 본 방송이 화면 밖으로 스크롤되면 우하단으로 핀 ──
+  const containerRef = useRef(null)
+  const [pinned, setPinned] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        const rect = entry.boundingClientRect
+        // 본 화면이 헤더 아래쪽으로 충분히 사라진 경우에만 핀
+        setPinned(rect.bottom < 80)
+      },
+      { threshold: 0 }
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+  // LOT 바뀌면 닫기 상태 리셋 — 새 LOT은 다시 보여줘야 함
+  useEffect(() => { setDismissed(false) }, [lot.id])
+  const expand = () => {
+    containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   const current = lot.currentBid || lot.startingBid || 0
   const nextMin = Math.round(current * 1.05 / 1000) * 1000 || current + 1000
   const t = lot.endsAt ? timeUntil(lot.endsAt) : null
@@ -606,7 +635,9 @@ function BroadcastStream({ lot, liveCount, onBid }) {
     : `${t.d > 0 ? `${t.d}D ` : ''}${String(t.h).padStart(2, '0')}:${String(t.m).padStart(2, '0')}:${String(t.s).padStart(2, '0')}`
 
   return (
+    <>
     <section
+      ref={containerRef}
       className="mt-4 relative rounded-2xl border-[3px] border-ink shadow-[0_8px_0_#1a1a1a] overflow-hidden"
       aria-label="라이브 방송 화면"
       style={{
@@ -926,6 +957,193 @@ function BroadcastStream({ lot, liveCount, onBid }) {
         </div>
       </div>
     </section>
+
+    {/* 미니 플레이어 — 본 화면이 화면 밖으로 스크롤되면 우하단으로 핀 */}
+    {pinned && !dismissed && (
+      <MiniBroadcastPlayer
+        lot={lot}
+        viewers={viewers}
+        current={current}
+        clockText={clockText}
+        isCritical={isCritical}
+        isUrgent={isUrgent}
+        onBid={onBid}
+        onClose={() => setDismissed(true)}
+        onExpand={expand}
+      />
+    )}
+    </>
+  )
+}
+
+// ─── 미니 플레이어 (YouTube/네이버 쇼핑라이브 톤) ──────────────
+//   - lg+ 에서만 노출 (mobile은 이미 sticky CTA가 있음)
+//   - 우하단 고정, 280px 폭, 16:9 미니 비디오
+//   - 클릭 → 본 방송으로 부드럽게 스크롤
+//   - X 버튼 → 세션 동안 숨김 (LOT 바뀌면 다시 등장)
+//   - 미니 안 "지금 입찰" 빨강 버튼 → 동일 시트
+function MiniBroadcastPlayer({
+  lot, viewers, current, clockText, isCritical, isUrgent, onBid, onClose, onExpand,
+}) {
+  const img = lot.images?.[0] || lot.image
+  return (
+    <div
+      className="hidden lg:block fixed bottom-4 right-4 z-50 w-[300px] rounded-xl border-2 border-ink overflow-hidden"
+      style={{
+        background: '#0a0a0a',
+        boxShadow: '0 10px 30px rgba(0,0,0,0.55), 0 0 0 1px rgba(250,204,21,0.12)',
+        animation: 'mini-pop 0.28s ease-out',
+      }}
+      role="region"
+      aria-label="라이브 미니 플레이어"
+    >
+      {/* 상단 베젤 — LIVE + 컨트롤 */}
+      <div className="px-2.5 py-1.5 flex items-center justify-between gap-2 bg-ink border-b border-electric/15">
+        <span
+          className="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded font-mono text-[9px] font-extrabold uppercase tracking-[0.2em] text-paper"
+          style={{
+            background: '#dc2626',
+            boxShadow: '0 0 8px rgba(220,38,38,0.7)',
+            animation: 'pulse-live 1.6s ease-in-out infinite',
+          }}
+        >
+          ● LIVE
+        </span>
+        <span className="font-mono text-[9.5px] font-extrabold uppercase tracking-[0.18em] text-electric/70 tabular-nums">
+          <Icon name="eye" size={9} strokeWidth={2.6} className="inline -mt-0.5 mr-0.5 text-electric/80" />
+          {viewers.toLocaleString()}
+        </span>
+        <div className="inline-flex items-center gap-1">
+          <button
+            type="button"
+            onClick={onExpand}
+            aria-label="원래 크기로 보기"
+            className="focus-ring w-6 h-6 rounded inline-flex items-center justify-center border border-electric/30 hover:bg-ink/60 transition-colors"
+          >
+            <span className="text-electric/85 text-[11px] font-extrabold" aria-hidden="true">⤢</span>
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="미니 플레이어 닫기"
+            className="focus-ring w-6 h-6 rounded inline-flex items-center justify-center border border-electric/30 hover:bg-ink/60 transition-colors"
+          >
+            <Icon name="close" size={9} strokeWidth={3} className="text-electric/85" />
+          </button>
+        </div>
+      </div>
+
+      {/* 미니 비디오 — 클릭하면 본 방송으로 스크롤 */}
+      <button
+        type="button"
+        onClick={onExpand}
+        className="focus-ring relative block w-full overflow-hidden text-left"
+        style={{ aspectRatio: '16 / 9' }}
+        aria-label="라이브 방송 펼치기"
+      >
+        {/* 스튜디오 백드롭 */}
+        <span
+          aria-hidden="true"
+          className="absolute inset-0"
+          style={{
+            background:
+              'radial-gradient(120% 90% at 50% -10%, #1a2747 0%, #0a1126 60%, #050912 100%)',
+          }}
+        />
+        {/* 핀스팟 */}
+        <span
+          aria-hidden="true"
+          className="absolute left-1/2 top-0 -translate-x-1/2 pointer-events-none"
+          style={{
+            width: '60%',
+            height: '95%',
+            background:
+              'conic-gradient(from 270deg at 50% 0%, transparent 0deg, rgba(250,204,21,0.16) 10deg, rgba(255,255,255,0.28) 14deg, rgba(250,204,21,0.16) 18deg, transparent 26deg)',
+            filter: 'blur(4px)',
+            animation: 'heal-breathe 4s ease-in-out infinite',
+            transformOrigin: 'top center',
+          }}
+        />
+        {/* 카드 이미지 */}
+        {img && (
+          <div className="absolute inset-0 flex items-center justify-center p-3">
+            <img
+              src={img}
+              alt=""
+              className="max-h-full rounded border border-paper/40"
+              style={{ boxShadow: '0 6px 14px rgba(0,0,0,0.55)' }}
+            />
+          </div>
+        )}
+        {/* 스캔라인 */}
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none mix-blend-overlay"
+          style={{
+            backgroundImage:
+              'repeating-linear-gradient(180deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 3px)',
+          }}
+        />
+        {/* 좌상단 NOW BIDDING 작은 칩 */}
+        <span className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8.5px] font-mono font-extrabold uppercase tracking-[0.18em] bg-ink/80 text-electric border border-electric/30">
+          <LiveDot size={4} color="#facc15" />
+          NOW BIDDING
+        </span>
+      </button>
+
+      {/* 미니 자막 + 가격 */}
+      <div className="px-2.5 py-2 bg-ink border-t border-electric/10">
+        <div className="font-display text-[12.5px] font-extrabold text-paper truncate">
+          {lot.nameKo || lot.name}
+        </div>
+        <div className="mt-0.5 flex items-baseline justify-between gap-2">
+          <span
+            className="font-mono font-extrabold tabular-nums"
+            style={{
+              color: '#ffb347',
+              textShadow: '0 0 6px rgba(255,179,71,0.6)',
+              fontSize: '13.5px',
+            }}
+          >
+            {formatKRWFull(current).replace('₩', '₩ ')}
+          </span>
+          <span
+            className="font-mono text-[10px] font-extrabold tabular-nums"
+            style={{
+              color: isCritical ? '#ff6b6b' : isUrgent ? '#ffb347' : '#facc15',
+              textShadow: isCritical
+                ? '0 0 6px rgba(255,107,107,0.6)'
+                : '0 0 6px rgba(250,204,21,0.5)',
+              animation: isCritical ? 'shake-soft 0.6s ease-in-out infinite' : undefined,
+            }}
+          >
+            ⏱ {clockText}
+          </span>
+        </div>
+      </div>
+
+      {/* 미니 CTA */}
+      {onBid && (
+        <button
+          type="button"
+          onClick={onBid}
+          className="focus-ring relative overflow-hidden w-full inline-flex items-center justify-center gap-1.5 py-2.5 font-extrabold text-sm border-t-2 border-ink bg-fire text-paper hover:bg-fire/90 active:bg-fire/80 transition-colors"
+          aria-label="지금 입찰 참여하기"
+        >
+          <Icon name="gavel" size={13} strokeWidth={2.6} />
+          지금 입찰하기
+          <span
+            aria-hidden="true"
+            className="absolute top-0 left-0 h-full w-1/3 pointer-events-none"
+            style={{
+              background:
+                'linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)',
+              animation: 'shine-sweep 3.4s ease-in-out infinite',
+            }}
+          />
+        </button>
+      )}
+    </div>
   )
 }
 
