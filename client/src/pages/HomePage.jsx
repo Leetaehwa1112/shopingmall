@@ -230,14 +230,15 @@ export default function HomePage() {
           <div className="max-w-7xl mx-auto">
             <div className="flex items-end justify-between gap-4 mb-8">
               <div>
-                <Eyebrow tone="fire" dot dotColor="red" className="mb-3">
-                  오늘의 메인 카드
+                <Eyebrow tone="ink" dotColor="yellow" className="mb-3">
+                  AUCTION CATALOG · 큐레이션
                 </Eyebrow>
                 <h2 className="font-display text-3xl lg:text-[42px] font-bold text-ink tracking-tight leading-[1.05]">
-                  하루 단 한 점, <span className="text-dex">놓치면 끝!</span>
+                  이 카드, <span className="text-dex">자세히 들여다봐요</span>
                 </h2>
                 <p className="text-[15px] text-mute mt-2 font-medium">
-                  포켓덱스가 오늘 봉인한 가장 특별한 카드를 만나보세요.
+                  Pokédex 카탈로그 모듈로 오늘의 LOT을 박물관 전시처럼.
+                  스펙·인증·보관 이력까지 한 화면에.
                 </p>
               </div>
             </div>
@@ -305,18 +306,13 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  <div className="mt-auto">
-                    <div className="flex justify-between items-baseline mb-2">
-                      <span className="pixel-label text-ink/70">BID PROGRESS</span>
-                      <span className="pixel-label text-ink/50">{TOP_LOT.bidCount}회</span>
-                    </div>
-                    <div className="hp-bar" role="progressbar" aria-valuenow={77} aria-valuemin={0} aria-valuemax={100}>
-                      <div className="hp-bar-fill" style={{ width: '77%' }} />
-                    </div>
-                    <div className="flex justify-between mt-2 text-xs font-mono text-ink/60">
-                      <span>시작가 {formatKRW(TOP_LOT.startPrice)}</span>
-                      <span className="text-ink font-bold">현재 {formatKRW(TOP_LOT.currentBid)}</span>
-                    </div>
+                  {/* 박물관 풋노트 — 카드 가치/희소성에 대한 큐레이터 한 줄. */}
+                  <div className="mt-auto pt-2 border-t border-dashed border-ink/15">
+                    <div className="pixel-label text-ink/55 mb-1.5">CURATOR'S NOTE</div>
+                    <p className="text-[11px] text-ink/80 leading-relaxed font-medium italic">
+                      "{TOP_LOT.set || ''} {TOP_LOT.nameKo || TOP_LOT.name}는 컬렉터들이 가장 갖고 싶어하는 그레일 카드.
+                      이 컨디션·인증으로는 시장에 거의 풀리지 않습니다."
+                    </p>
                   </div>
                 </div>
 
@@ -344,46 +340,57 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {(() => {
-                  const lotEnded = TOP_LOT.endsAt && timeUntil(TOP_LOT.endsAt).ended
-                  return (
-                    <div className="bg-paper border-2 border-ink rounded-2xl p-5 space-y-4 order-3 lg:order-none lg:col-start-2 lg:row-start-2 shadow-[0_4px_0_#1a1a1a]">
-                      <div>
-                        <div className="text-[10px] font-bold tracking-[0.18em] uppercase text-dex mb-1">
-                          {lotEnded ? '최종 입찰가' : '🔥 현재 입찰가'}
-                        </div>
-                        <div className="font-display text-[40px] font-bold text-ink leading-none tabular-nums">
-                          {formatKRW(TOP_LOT.currentBid)}
-                        </div>
-                        <div className="text-xs font-mono text-mute mt-1.5">
-                          입찰 {TOP_LOT.bidCount}회 · {TOP_LOT.watchers}명이 노리는 중
-                        </div>
-                      </div>
-                      <div className={`rounded-xl p-3.5 border-2 ${lotEnded ? 'bg-bone-2 text-mute border-line' : 'bg-ink text-white border-ink'}`}>
-                        <div className={`text-[10px] font-bold tracking-[0.18em] uppercase mb-2 inline-flex items-center gap-1.5 ${lotEnded ? 'text-mute' : 'text-electric'}`}>
-                          <Icon name="clock" size={10} strokeWidth={2.5} aria-hidden="true" />
-                          {lotEnded ? '경매 종료' : '마감까지'}
-                        </div>
-                        {lotEnded ? (
-                          <div className="font-mono text-sm font-bold tracking-wider">CLOSED</div>
-                        ) : (
-                          <Countdown endsAt={TOP_LOT.endsAt} size="sm" label={false} />
-                        )}
-                      </div>
-                      {lotEnded ? (
-                        <Button variant="secondary" size="lg" className="w-full" disabled aria-disabled="true">
-                          입찰 종료
-                        </Button>
-                      ) : (
-                        <Link to={`/products/${TOP_LOT.id}`} className="block" aria-label={`${TOP_LOT.nameKo} 입찰 페이지로 이동`}>
-                          <Button variant="pop" size="lg" className="w-full">
-                            지금 두근두근 입찰! <Icon name="arrow" size={14} strokeWidth={2.5} />
-                          </Button>
-                        </Link>
-                      )}
+                {/* 박물관 큐레이터 라벨 — 입찰 정보(가격/마감/CTA)는 히어로 LIVE 패널에 양보.
+                    여기는 카드의 출처·보관·전시 메타데이터에만 집중. */}
+                <div className="bg-paper border-2 border-ink rounded-2xl p-5 order-3 lg:order-none lg:col-start-2 lg:row-start-2 shadow-[0_4px_0_#1a1a1a]">
+                  <div className="pixel-label text-ink/55 mb-3 inline-flex items-center gap-1.5">
+                    <Icon name="package" size={11} strokeWidth={2.5} className="text-ink/55" aria-hidden="true" />
+                    CURATOR NOTE
+                  </div>
+                  <dl className="space-y-2 text-[12px] font-mono">
+                    <div className="flex justify-between items-baseline border-b border-dotted border-ink/15 pb-1.5">
+                      <dt className="text-ink/55 text-[10px] tracking-wide uppercase">Origin</dt>
+                      <dd className="text-ink font-bold">
+                        {TOP_LOT.grade?.country === 'JPN' ? '🇯🇵 Japan' : TOP_LOT.grade?.country === 'KOR' ? '🇰🇷 Korea' : '🇺🇸 USA'}
+                      </dd>
                     </div>
-                  )
-                })()}
+                    <div className="flex justify-between items-baseline border-b border-dotted border-ink/15 pb-1.5">
+                      <dt className="text-ink/55 text-[10px] tracking-wide uppercase">Grading</dt>
+                      <dd className="text-ink font-bold">
+                        {TOP_LOT.grade?.company} {TOP_LOT.grade?.score}
+                      </dd>
+                    </div>
+                    {TOP_LOT.grade?.cert && (
+                      <div className="flex justify-between items-baseline border-b border-dotted border-ink/15 pb-1.5">
+                        <dt className="text-ink/55 text-[10px] tracking-wide uppercase">Cert #</dt>
+                        <dd className="text-ink font-bold">#{TOP_LOT.grade.cert}</dd>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-baseline border-b border-dotted border-ink/15 pb-1.5">
+                      <dt className="text-ink/55 text-[10px] tracking-wide uppercase">Vault</dt>
+                      <dd className="text-grass font-bold inline-flex items-center gap-1">
+                        <Icon name="shield" size={10} strokeWidth={2.5} aria-hidden="true" />
+                        보관 중
+                      </dd>
+                    </div>
+                    <div className="flex justify-between items-baseline">
+                      <dt className="text-ink/55 text-[10px] tracking-wide uppercase">Owners</dt>
+                      <dd className="text-ink font-bold">단일 소유주</dd>
+                    </div>
+                  </dl>
+                  <Link
+                    to={`/products/${TOP_LOT.id}`}
+                    className="focus-ring mt-4 inline-flex w-full items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg bg-bone-2 text-ink border-2 border-ink/15 hover:border-ink hover:bg-electric/20 transition-colors font-extrabold text-[12px]"
+                    aria-label={`${TOP_LOT.nameKo} 상세 페이지로 이동`}
+                  >
+                    <Icon name="eye" size={12} strokeWidth={2.4} />
+                    카드 상세 보기
+                    <Icon name="arrow" size={11} strokeWidth={2.5} />
+                  </Link>
+                  <p className="mt-2 text-[10px] text-mute text-center font-medium leading-relaxed">
+                    입찰은 히어로의 LIVE 패널 또는 상세 페이지에서.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
