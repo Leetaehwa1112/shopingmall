@@ -252,7 +252,7 @@ export default function AdminOrders() {
             const more = (o.items?.length || 0) - 1
             const qty = o.items?.reduce((s, i) => s + i.qty, 0)
             return <Cell
-              primary={`${f?.product?.nameKo || f?.product?.name || '—'}${more > 0 ? ` 외 ${more}` : ''}`}
+              primary={`${f?.product?.nameKo || f?.product?.name || f?.pack?.nameKo || f?.pack?.name || '—'}${more > 0 ? ` 외 ${more}` : ''}`}
               secondary={`${qty || 0}개`}
             />
           }},
@@ -588,7 +588,7 @@ function OrderDrawer({ order, onClose, onStatusChange, onTrackingUpdate, actor }
       <DSection title="상품 목록">
         {order.items?.map((it, idx) => (
           <div key={idx} className="flex justify-between items-center bg-bone-2/40 border border-gray-900/8 rounded-md px-3 py-2 text-xs mb-1">
-            <div className="font-bold text-ink truncate">{it.product?.nameKo || it.product?.name || '-'}</div>
+            <div className="font-bold text-ink truncate">{it.product?.nameKo || it.product?.name || it.pack?.nameKo || it.pack?.name || '-'}</div>
             <div className="font-mono text-mute ml-2 flex-shrink-0">{formatKRWFull(it.unitPrice)} × {it.qty}</div>
           </div>
         ))}
