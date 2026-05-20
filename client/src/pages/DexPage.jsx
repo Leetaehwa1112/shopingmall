@@ -397,6 +397,27 @@ function DexControlPanel({
             const info = TYPE_INFO[t] || TYPE_INFO['전체']
             const isActive = typeFilter === t
             const isAll = t === '전체'
+            // ALL은 라벨 버튼, 나머지는 유리알 jewel 자체가 버튼.
+            if (isAll) {
+              return (
+                <button
+                  key={t}
+                  role="radio"
+                  aria-checked={isActive}
+                  onClick={() => onType(t)}
+                  style={{
+                    backgroundColor: isActive ? '#facc15' : 'rgba(0,0,0,0.45)',
+                    color: isActive ? '#1a1a1a' : '#8ec25a',
+                    borderColor: isActive ? '#1a1a1a' : 'rgba(142,194,90,0.4)',
+                  }}
+                  className={`shrink-0 inline-flex items-center justify-center rounded-full border-2 h-10 px-4 text-[11px] font-bold tracking-wider uppercase transition-all ${
+                    isActive ? 'shadow-[0_3px_0_#1a1a1a] -translate-y-0.5' : 'hover:-translate-y-0.5'
+                  }`}
+                >
+                  ALL · 전체
+                </button>
+              )
+            }
             return (
               <button
                 key={t}
@@ -405,18 +426,19 @@ function DexControlPanel({
                 aria-label={t}
                 title={t}
                 onClick={() => onType(t)}
-                style={{
-                  backgroundColor: isActive ? info.hex : '#fffaf2',
-                  borderColor: isActive ? '#1a1a1a' : 'rgba(13,23,48,0.18)',
-                  color: isActive ? '#fff' : '#1a1a1a',
-                }}
-                className={`shrink-0 inline-flex items-center justify-center rounded-full border-2 transition-all ${
+                className={`shrink-0 inline-flex items-center justify-center rounded-full transition-all ${
                   isActive
-                    ? 'shadow-[0_3px_0_#1a1a1a] -translate-y-0.5'
-                    : 'hover:border-ink hover:-translate-y-0.5 hover:shadow-[0_2px_0_#1a1a1a]'
-                } ${isAll ? 'h-10 px-4 text-[11px] font-bold tracking-wider uppercase' : 'w-10 h-10'}`}
+                    ? '-translate-y-0.5'
+                    : 'opacity-70 hover:opacity-100 hover:-translate-y-0.5'
+                }`}
+                style={{
+                  // 활성: 황금 글로우 / 비활성: 살짝 그림자만
+                  filter: isActive
+                    ? `drop-shadow(0 0 8px ${info.hex}cc) drop-shadow(0 2px 4px rgba(0,0,0,0.5))`
+                    : 'drop-shadow(0 2px 3px rgba(0,0,0,0.4))',
+                }}
               >
-                {isAll ? 'ALL · 전체' : <TypeSymbol type={t} size={22} variant="plain" />}
+                <TypeSymbol type={t} size={26} variant="jewel" />
               </button>
             )
           })}
