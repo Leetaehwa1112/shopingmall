@@ -726,6 +726,26 @@ function SpecimenEntry({ poke, owned, onToggleOwned, onSelect }) {
   )
 }
 
+// LCD 스탯 표시 한 줄 — HEIGHT/WEIGHT/GEN 데이터
+function DexStatLine({ label, value }) {
+  return (
+    <div
+      className="rounded-md px-2 py-1.5"
+      style={{
+        background: 'rgba(0,0,0,0.35)',
+        boxShadow: 'inset 0 0 0 1px rgba(142,194,90,0.25)',
+      }}
+    >
+      <div className="font-mono text-[9px] font-bold tracking-[0.18em] uppercase" style={{ color: 'rgba(142,194,90,0.7)' }}>
+        {label}
+      </div>
+      <div className="font-display text-base font-bold tabular-nums leading-tight" style={{ color: '#cfe9b0', textShadow: '0 0 6px rgba(142,194,90,0.4)' }}>
+        {value}
+      </div>
+    </div>
+  )
+}
+
 // ═══════════════════════════════════════════════════════════
 // CATALOGUE MODAL ── 박물관 카탈로그 페이지
 // ═══════════════════════════════════════════════════════════
@@ -758,86 +778,247 @@ function CatalogueModal({ poke, owned, onToggleOwned, onClose }) {
       aria-labelledby="catalogue-title"
     >
       <div
-        className="bg-bone rounded-3xl border-2 border-ink shadow-[0_8px_0_#1a1a1a] max-w-4xl w-full overflow-hidden max-h-[94vh] flex flex-col"
+        className="rounded-3xl border-2 border-ink shadow-[0_8px_0_#1a1a1a] max-w-4xl w-full overflow-hidden max-h-[94vh] flex flex-col bg-bone"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ── 카탈로그 헤더 (디바이스 상단 모티프) ───────── */}
+        {/* ── 도감 디바이스 헤더 (포켓몬 스캔 모드) ───────── */}
         <header
-          className="relative bg-dex text-white px-6 sm:px-8 pt-6 pb-5 shrink-0 overflow-hidden"
+          className="relative shrink-0 overflow-hidden"
           style={{
-            backgroundImage:
-              'radial-gradient(circle at 12% 30%, rgba(255,255,255,0.10) 0%, transparent 45%)',
+            background: `linear-gradient(180deg, var(--pdx-shell-hl) 0%, var(--pdx-shell) 18%, var(--pdx-shell) 70%, var(--pdx-shell-d) 100%)`,
+            boxShadow: [
+              'inset 0 2px 0 rgba(255,255,255,0.4)',
+              'inset 0 -3px 0 rgba(0,0,0,0.25)',
+              'inset 0 0 0 2px var(--pdx-rim)',
+            ].join(', '),
           }}
         >
-          <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1 bg-ink/40" />
+          {/* 본체 상단 광택 줄 */}
+          <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[3px] pointer-events-none"
+                style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.55) 50%, transparent)' }} />
+          {/* 코너 4개 리벳/스크류 */}
+          {[
+            'top-3 left-3', 'top-3 right-3', 'bottom-3 left-3', 'bottom-3 right-3',
+          ].map((pos, i) => (
+            <span key={i} aria-hidden="true"
+                  className={`absolute ${pos} w-2.5 h-2.5 rounded-full pointer-events-none z-10`}
+                  style={{
+                    background: 'radial-gradient(circle at 35% 30%, #4a4a4a, #1a1a1a 65%, #000)',
+                    boxShadow: 'inset 0 0.5px 0 rgba(255,255,255,0.25), 0 1px 2px rgba(0,0,0,0.5)',
+                  }} />
+          ))}
 
-          {/* LED row */}
-          <div className="flex items-center gap-2.5 mb-4">
-            <DexLed color="blue" size={22} pulse className="ring-2 ring-paper/50" />
-            <DexLed color="red" size={7} />
-            <DexLed color="yellow" size={7} />
-            <DexLed color="green" size={7} pulse />
+          {/* === 디바이스 컨트롤 패널 (LED + 닫기 + 라벨) === */}
+          <div className="px-5 sm:px-7 pt-5 pb-3 flex items-center gap-3">
+            {/* 큰 파란 LED */}
+            <div className="relative shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full"
+                   style={{
+                     background: 'radial-gradient(circle at 32% 28%, var(--pdx-led-blue-hl) 0%, var(--pdx-led-blue) 40%, #0f7aa3 100%)',
+                     boxShadow: [
+                       'inset 0 2px 4px rgba(255,255,255,0.7)',
+                       'inset 0 -3px 6px rgba(0,0,0,0.4)',
+                       'inset 0 0 0 2px #0a1a1f',
+                       '0 0 14px rgba(98,202,240,0.6)',
+                       '0 2px 4px rgba(0,0,0,0.4)',
+                     ].join(', '),
+                   }} aria-hidden="true" />
+              <span aria-hidden="true" className="absolute pointer-events-none rounded-full"
+                    style={{ top: '15%', left: '20%', width: '40%', height: '30%',
+                             background: 'radial-gradient(ellipse, rgba(255,255,255,0.85), transparent 65%)' }} />
+            </div>
+            {/* 작은 LED 3개 */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {['#dc2626', '#facc15', '#16a34a'].map((c, i) => (
+                <div key={i} className="w-2.5 h-2.5 rounded-full"
+                     style={{
+                       background: `radial-gradient(circle at 35% 30%, ${c} 0%, ${c} 60%, rgba(0,0,0,0.6) 100%)`,
+                       boxShadow: `inset 0 0.5px 0 rgba(255,255,255,0.7), 0 0 4px ${c}80`,
+                     }} aria-hidden="true" />
+              ))}
+            </div>
+            {/* 라벨 */}
+            <div className="ml-auto mr-2 text-right">
+              <div className="font-display text-base sm:text-lg leading-none tracking-wide"
+                   style={{ color: '#fff', textShadow: '0 2px 0 rgba(0,0,0,0.45)', letterSpacing: '0.06em' }}>
+                POKÉDEX
+              </div>
+              <div className="font-mono text-[9px] mt-0.5 font-bold tracking-[0.18em] uppercase"
+                   style={{ color: 'rgba(255,255,255,0.85)' }}>
+                ENTRY · 스캔
+              </div>
+            </div>
+            {/* 닫기 버튼 */}
             <button
               ref={closeRef}
               onClick={onClose}
               aria-label="닫기"
-              className="ml-auto w-9 h-9 rounded-full bg-ink/50 hover:bg-ink/75 text-white flex items-center justify-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-electric"
+              className="w-9 h-9 rounded-full flex items-center justify-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-electric"
+              style={{
+                background: 'radial-gradient(circle at 32% 28%, #5a5a5a, #1a1a1a 70%, #000)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25), inset 0 -2px 3px rgba(0,0,0,0.6), 0 2px 0 #000',
+                color: 'rgba(255,255,255,0.8)',
+              }}
             >
-              <Icon name="close" size={16} strokeWidth={2.4} />
+              <Icon name="close" size={14} strokeWidth={2.6} />
             </button>
           </div>
 
-          <div className="grid sm:grid-cols-[1fr_auto] gap-5 items-start">
-            {/* 좌: 메타 */}
-            <div className="min-w-0">
-              <CatalogueLabel id={poke.id} name={poke.name} className="!text-white/70 mb-2" />
-              <h2 id="catalogue-title" className="font-display text-3xl sm:text-4xl font-bold text-white leading-tight mb-2">
-                {poke.nameKo}
-              </h2>
-              <div className="flex gap-1.5 flex-wrap mb-3">
-                {poke.types.map((t) => <TypeChip key={t} type={t} />)}
-              </div>
-              <p className="text-[13px] text-white/85 font-medium leading-relaxed max-w-md italic">
-                "{poke.desc}"
-              </p>
-            </div>
-            {/* 우: 일러스트 + spec */}
-            <div className="flex sm:flex-col items-center sm:items-end gap-3">
-              <img
-                src={ARTWORK_URL(poke.id)}
-                alt={`${poke.nameKo} 일러스트`}
-                className="w-24 h-24 sm:w-32 sm:h-32 object-contain drop-shadow-[0_8px_8px_rgba(0,0,0,0.35)] shrink-0"
-              />
-              <dl className="font-mono text-[10px] text-white/60 grid grid-cols-3 sm:grid-cols-1 gap-x-3 gap-y-0.5 tracking-wider uppercase">
-                <div><dt className="inline">키 </dt><dd className="inline text-white/90 font-bold">{poke.height}m</dd></div>
-                <div><dt className="inline">무게 </dt><dd className="inline text-white/90 font-bold">{poke.weight}kg</dd></div>
-                <div><dt className="inline">세대 </dt><dd className="inline text-white/90 font-bold">{poke.gen}</dd></div>
-              </dl>
-            </div>
+          {/* 본체 중앙 음각 라인 */}
+          <div className="px-5 sm:px-7 -mt-1 mb-2" aria-hidden="true">
+            <div className="h-[2px] rounded-full"
+                 style={{ background: 'linear-gradient(90deg, transparent, rgba(0,0,0,0.35) 15%, rgba(0,0,0,0.35) 85%, transparent)' }} />
           </div>
 
-          {/* 액션 바: 소장 + 판매 요약 */}
-          <div className="flex flex-wrap items-center justify-between gap-3 mt-5 pt-4 border-t border-paper/20">
-            <DexButton
-              variant={owned ? 'primary' : 'ghost'}
-              size="sm"
-              onClick={onToggleOwned}
-              aria-pressed={owned}
-              className={owned ? '' : '!bg-transparent !text-white !border-paper/40 hover:!bg-paper/10'}
+          {/* === LCD 스크린: 포켓몬 스캔 화면 === */}
+          <div
+            className="mx-3 sm:mx-5 mb-4 rounded-2xl p-2 sm:p-2.5"
+            style={{
+              background: 'linear-gradient(180deg, #1c1c1c, #0a0a0a)',
+              boxShadow: 'inset 0 2px 3px rgba(0,0,0,0.7), 0 1px 0 rgba(255,255,255,0.15)',
+            }}
+          >
+            <div
+              className="relative overflow-hidden rounded-xl px-4 sm:px-6 py-4 sm:py-5"
+              style={{
+                background: `
+                  radial-gradient(ellipse at top, rgba(255,255,255,0.04), transparent 60%),
+                  linear-gradient(180deg, #0e2410 0%, #07170a 100%)
+                `,
+                boxShadow: 'inset 0 0 30px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(142,194,90,0.12)',
+              }}
             >
-              <span aria-hidden="true">{owned ? '★' : '☆'}</span>
-              {owned ? '내 컬렉션' : '컬렉션에 담기'}
-            </DexButton>
-            <div className="font-mono text-[11px] font-bold uppercase tracking-wider text-white/70">
-              {poke.onSaleCount > 0 ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <DexLed color="green" size={8} pulse />
-                  <span className="text-grass">In Stock {String(poke.onSaleCount).padStart(2, '0')}</span>
-                  <span className="text-white/40">/ {String(poke.cards.length).padStart(2, '0')}</span>
+              {/* 스캔라인 */}
+              <div aria-hidden="true" className="absolute inset-0 pointer-events-none mix-blend-overlay opacity-30"
+                   style={{ backgroundImage: 'repeating-linear-gradient(0deg, rgba(255,255,255,0.06) 0px, rgba(255,255,255,0.06) 1px, transparent 1px, transparent 3px)' }} />
+              {/* 비네트 */}
+              <div aria-hidden="true" className="absolute inset-0 pointer-events-none"
+                   style={{ boxShadow: 'inset 0 0 80px rgba(0,0,0,0.5)' }} />
+
+              {/* 상단 LCD 헤더 */}
+              <div className="relative flex items-center justify-between mb-3 pb-2"
+                   style={{ borderBottom: '1px dashed rgba(142,194,90,0.35)' }}>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full animate-pulse"
+                        style={{ backgroundColor: '#8ec25a', boxShadow: '0 0 6px #8ec25a' }} aria-hidden="true" />
+                  <span className="font-mono text-[10px] font-bold tracking-[0.22em] uppercase"
+                        style={{ color: '#8ec25a' }}>
+                    DEX ENTRY · #{String(poke.id).padStart(3, '0')}
+                  </span>
+                </div>
+                <span className="font-mono text-[10px] font-bold tracking-wider uppercase"
+                      style={{ color: '#8ec25a' }}>
+                  {poke.name}
                 </span>
-              ) : (
-                <span className="text-white/45">Catalogued · No Stock</span>
-              )}
+              </div>
+
+              <div className="relative grid grid-cols-1 sm:grid-cols-[160px_1fr] gap-4 sm:gap-5">
+                {/* 좌측: 포켓몬 표본 윈도우 */}
+                <div className="shrink-0">
+                  <div
+                    className="relative w-36 h-36 sm:w-40 sm:h-40 mx-auto rounded-lg flex items-center justify-center overflow-hidden"
+                    style={{
+                      background: `
+                        radial-gradient(circle at 50% 35%, rgba(142,194,90,0.12) 0%, transparent 60%),
+                        linear-gradient(180deg, #0d1f0d, #07170a)
+                      `,
+                      boxShadow: 'inset 0 0 0 2px rgba(142,194,90,0.35), inset 0 0 24px rgba(0,0,0,0.7), inset 0 0 12px rgba(142,194,90,0.15)',
+                    }}
+                  >
+                    {/* 4코너 마커 */}
+                    {['top-2 left-2', 'top-2 right-2', 'bottom-2 left-2', 'bottom-2 right-2'].map((pos, i) => (
+                      <span key={i} aria-hidden="true" className={`absolute ${pos} w-2.5 h-2.5`}
+                            style={{
+                              borderTop: i < 2 ? '2px solid #8ec25a' : 'none',
+                              borderBottom: i >= 2 ? '2px solid #8ec25a' : 'none',
+                              borderLeft: i % 2 === 0 ? '2px solid #8ec25a' : 'none',
+                              borderRight: i % 2 === 1 ? '2px solid #8ec25a' : 'none',
+                              opacity: 0.75,
+                            }} />
+                    ))}
+                    <img
+                      src={ARTWORK_URL(poke.id)}
+                      alt={`${poke.nameKo} 일러스트`}
+                      className="relative w-28 h-28 sm:w-32 sm:h-32 object-contain"
+                      style={{ filter: 'drop-shadow(0 0 12px rgba(142,194,90,0.25)) drop-shadow(0 4px 6px rgba(0,0,0,0.5))' }}
+                    />
+                    {/* 스캔 라인 */}
+                    <span aria-hidden="true" className="absolute inset-0 pointer-events-none opacity-20 mix-blend-overlay"
+                          style={{ backgroundImage: 'repeating-linear-gradient(0deg, rgba(255,255,255,0.08) 0px, rgba(255,255,255,0.08) 1px, transparent 1px, transparent 3px)' }} />
+                  </div>
+                  <div className="mt-1.5 font-mono text-[9px] font-bold tracking-[0.2em] uppercase text-center"
+                       style={{ color: '#8ec25a' }}>
+                    SPEC · {String(poke.id).padStart(3, '0')}
+                  </div>
+                </div>
+
+                {/* 우측: 이름·타입·설명·스탯 */}
+                <div className="min-w-0">
+                  <h2 id="catalogue-title"
+                      className="font-display text-3xl sm:text-4xl leading-none mb-2"
+                      style={{ color: '#cfe9b0', textShadow: '0 0 10px rgba(142,194,90,0.5)' }}>
+                    {poke.nameKo}
+                  </h2>
+                  {/* 타입 — 유리알 jewel */}
+                  <div className="flex gap-2 flex-wrap mb-3">
+                    {poke.types.map((t) => (
+                      <span key={t} className="inline-flex items-center gap-1.5 pl-1 pr-2.5 py-0.5 rounded-full"
+                            style={{
+                              background: 'rgba(0,0,0,0.4)',
+                              boxShadow: `inset 0 0 0 1px ${(TYPE_INFO[t]?.hex || '#fff')}66`,
+                              color: TYPE_INFO[t]?.hex || '#fff',
+                            }}>
+                        <TypeSymbol type={t} size={14} variant="solid" />
+                        <span className="font-bold text-[11px]">{t}</span>
+                      </span>
+                    ))}
+                  </div>
+
+                  <p className="text-sm font-medium leading-relaxed italic mb-3"
+                     style={{ color: 'rgba(207,233,176,0.85)' }}>
+                    "{poke.desc}"
+                  </p>
+
+                  {/* 스탯 LCD 데이터 라인 */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <DexStatLine label="HEIGHT" value={`${poke.height}m`} />
+                    <DexStatLine label="WEIGHT" value={`${poke.weight}kg`} />
+                    <DexStatLine label="GEN" value={poke.gen} />
+                  </div>
+                </div>
+              </div>
+
+              {/* 하단 LCD 액션 바 */}
+              <div className="relative mt-4 pt-3 flex flex-wrap items-center justify-between gap-3"
+                   style={{ borderTop: '1px dashed rgba(142,194,90,0.35)' }}>
+                <button
+                  onClick={onToggleOwned}
+                  aria-pressed={owned}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all"
+                  style={{
+                    background: owned ? 'rgba(192,132,252,0.2)' : 'rgba(0,0,0,0.35)',
+                    boxShadow: owned
+                      ? 'inset 0 0 0 1px rgba(192,132,252,0.7), 0 0 8px rgba(192,132,252,0.3)'
+                      : 'inset 0 0 0 1px rgba(142,194,90,0.35)',
+                    color: owned ? '#e9d5ff' : '#8ec25a',
+                  }}
+                >
+                  <span aria-hidden="true">{owned ? '★' : '☆'}</span>
+                  {owned ? 'IN COLLECTION · 내 도감' : 'ADD TO DEX · 컬렉션에 담기'}
+                </button>
+                <div className="font-mono text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1.5"
+                     style={{ color: '#8ec25a' }}>
+                  {poke.onSaleCount > 0 ? (
+                    <>
+                      <span className="w-1.5 h-1.5 rounded-full animate-pulse"
+                            style={{ backgroundColor: '#8ec25a', boxShadow: '0 0 6px #8ec25a' }} />
+                      <span>IN STOCK {String(poke.onSaleCount).padStart(2, '0')} / {String(poke.cards.length).padStart(2, '0')}</span>
+                    </>
+                  ) : (
+                    <span style={{ color: 'rgba(142,194,90,0.55)' }}>CATALOGUED · NO STOCK</span>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </header>
