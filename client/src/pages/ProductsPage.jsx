@@ -413,9 +413,9 @@ function AuctionLivePage({ lots, loading, error }) {
         disabled={loading || sorted.length === 0}
       />
 
-      {/* === 2. LED 전광판 — 페이지 최대 비주얼 / 방송 중계용 === */}
+      {/* === 2. 라이브 방송 플레이어 — 페이지 최대 비주얼 === */}
       {!error && !loading && featured && (
-        <BroadcastScoreboard lot={featured} liveCount={sorted.length} />
+        <BroadcastStream lot={featured} liveCount={sorted.length} />
       )}
 
       {/* === 3. 상태별 본문 === */}
@@ -493,6 +493,11 @@ function AuctionLivePage({ lots, loading, error }) {
           0%, 100% { box-shadow: 0 0 0 0 rgba(255,122,69,0); }
           50%      { box-shadow: 0 0 0 4px rgba(255,122,69,0.28); }
         }
+        /* 방송 하단 티커 (보조 데이터 마키) */
+        @keyframes ticker-slide {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
         .focus-ring:focus-visible {
           outline: none;
           box-shadow: 0 0 0 3px #facc15, 0 0 0 5px #0d1730;
@@ -534,66 +539,25 @@ function CounterPokeballs({ liveCount }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 📺 LED 전광판 (BroadcastScoreboard)
+// 📺 라이브 방송 스트림 (BroadcastStream)
 // ───────────────────────────────────────────────────────────────
-//  스포츠 경기장 / 옥션 하우스의 LED 디스플레이를 모티프로
-//  - 두꺼운 흑색 베젤 + 코너 브래킷 (산업 디스플레이)
-//  - LED 도트 매트릭스 백그라운드 + CRT 스캔라인
-//  - 메인 : CURRENT BID 거대한 amber LED 숫자
-//  - 좌/우 : TIME LEFT (HH:MM:SS) · BIDS / VIEWERS
-//  - 상단 : LIVE · LOT 시리얼 · 카드명 마키
-//  - 하단 : NEXT MIN BID + bidCount 보조 라인
+//  실제 라이브 커머스 / 옥션 방송 플레이어를 그대로 재현
+//  - 16:9 비디오 영역 (TV 베젤 프레임)
+//  - 상단 컨트롤바 : ● LIVE · CH · 시청자 · 음소거 · 풀스크린
+//  - 메인 비디오 : Featured 카드를 스튜디오 핀스팟 아래 비춤
+//  - PIP 카메라 : 우상단 작은 진행자 캠 (포켓볼 마크)
+//  - 로어서드 자막 : 카드명 / LOT 시리얼 / 현재가 LED / 카운트다운
+//  - 하단 티커 : 다음 최소가 · 입찰 수 · 시청자 마키
 // ═══════════════════════════════════════════════════════════════
-function CornerBracket({ position }) {
-  const cls = {
-    tl: 'top-2 left-2 border-t-4 border-l-4',
-    tr: 'top-2 right-2 border-t-4 border-r-4',
-    bl: 'bottom-2 left-2 border-b-4 border-l-4',
-    br: 'bottom-2 right-2 border-b-4 border-r-4',
-  }[position]
-  return (
-    <span
-      aria-hidden="true"
-      className={`absolute ${cls} w-5 h-5 border-electric/60 pointer-events-none`}
-    />
-  )
-}
 
-function ScoreboardPanel({ label, children, accent = 'amber', align = 'center' }) {
-  // accent: amber | electric | rose
-  const tone = {
-    amber: { fg: '#ffb347', glow: 'rgba(255,179,71,0.55)' },
-    electric: { fg: '#facc15', glow: 'rgba(250,204,21,0.55)' },
-    rose: { fg: '#ff6b6b', glow: 'rgba(255,107,107,0.55)' },
-  }[accent]
-  const alignCls = align === 'left' ? 'items-start text-left' : align === 'right' ? 'items-end text-right' : 'items-center text-center'
-  return (
-    <div className={`relative flex flex-col ${alignCls} gap-1 px-2 sm:px-3`}>
-      <span className="font-mono text-[9px] sm:text-[10px] font-extrabold uppercase tracking-[0.22em] text-electric/70">
-        {label}
-      </span>
-      <span
-        className="font-mono font-extrabold tabular-nums leading-none"
-        style={{
-          color: tone.fg,
-          textShadow: `0 0 8px ${tone.glow}, 0 0 16px ${tone.glow}`,
-          letterSpacing: '0.02em',
-        }}
-      >
-        {children}
-      </span>
-    </div>
-  )
-}
-
-function BroadcastScoreboard({ lot, liveCount }) {
+function BroadcastStream({ lot, liveCount }) {
   const [, setNow] = useState(Date.now())
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(id)
   }, [])
 
-  // 시청자 — 라이브 분위기
+  // 시청자 카운터
   const seedViewers = useMemo(
     () => 80 + ((lot.id?.charCodeAt?.(0) || 7) * 13) % 240,
     [lot.id]
@@ -608,30 +572,31 @@ function BroadcastScoreboard({ lot, liveCount }) {
     return () => clearInterval(id)
   }, [lot.id, seedViewers])
 
+  // UI-only 컨트롤 (음소거/풀스크린은 표현용 토글 — 실제 영상 X)
+  const [muted, setMuted] = useState(true)
+
   const current = lot.currentBid || lot.startingBid || 0
   const nextMin = Math.round(current * 1.05 / 1000) * 1000 || current + 1000
   const t = lot.endsAt ? timeUntil(lot.endsAt) : null
   const isCritical = t && !t.ended && t.totalMs < 1000 * 60 * 10
   const isUrgent = t && !t.ended && t.totalMs < 1000 * 60 * 60
-  const timeAccent = isCritical ? 'rose' : isUrgent ? 'amber' : 'electric'
-
+  const img = lot.images?.[0] || lot.image
   const clockText = !t
-    ? '— —:—'
+    ? '상시 진행'
     : t.ended
-    ? 'CLOSED'
+    ? '방송 종료'
     : `${t.d > 0 ? `${t.d}D ` : ''}${String(t.h).padStart(2, '0')}:${String(t.m).padStart(2, '0')}:${String(t.s).padStart(2, '0')}`
 
   return (
     <section
-      className="mt-4 relative rounded-2xl border-[3px] border-ink shadow-[0_8px_0_#1a1a1a]"
-      aria-label="라이브 경매 전광판"
+      className="mt-4 relative rounded-2xl border-[3px] border-ink shadow-[0_8px_0_#1a1a1a] overflow-hidden"
+      aria-label="라이브 방송 화면"
       style={{
-        background:
-          'linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%)',
+        background: 'linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%)',
       }}
     >
-      {/* 상단 베젤 — 방송 헤더 */}
-      <div className="relative px-3 sm:px-4 py-2 flex items-center justify-between gap-2 border-b-2 border-electric/15">
+      {/* ── 상단 컨트롤 바 (TV 베젤 위) ────────────────────────── */}
+      <div className="relative px-3 sm:px-4 py-2 flex items-center justify-between gap-2 border-b-2 border-electric/15 bg-ink">
         <div className="inline-flex items-center gap-2 min-w-0">
           <span
             className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded font-mono text-[10px] font-extrabold uppercase tracking-[0.22em] text-paper"
@@ -650,150 +615,276 @@ function BroadcastScoreboard({ lot, liveCount }) {
             LOT-{String(lot.id || '').slice(-4).toUpperCase() || '0000'}
           </SerialTag>
         </div>
-        <div className="hidden sm:inline-flex items-center gap-2">
-          <span className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-electric/60">
-            BROADCAST
+
+        <div className="inline-flex items-center gap-1.5 sm:gap-2.5">
+          <span className="hidden sm:inline-flex items-center gap-1.5 font-mono text-[10.5px] font-extrabold text-paper/90 tabular-nums">
+            <Icon name="eye" size={11} strokeWidth={2.6} className="text-electric/80" />
+            {viewers.toLocaleString()}
           </span>
-          {/* 신호 막대 */}
-          <span aria-hidden="true" className="inline-flex items-end gap-0.5 h-3">
-            <span className="w-1 h-1 bg-electric/40" />
-            <span className="w-1 h-2 bg-electric/65" />
-            <span className="w-1 h-2.5 bg-electric/85" />
-            <span className="w-1 h-3 bg-electric" />
-          </span>
+          <button
+            type="button"
+            onClick={() => setMuted((v) => !v)}
+            aria-label={muted ? '음소거 해제' : '음소거'}
+            className="focus-ring w-7 h-7 rounded-md inline-flex items-center justify-center border border-electric/30 bg-ink hover:bg-ink/70 transition-colors"
+          >
+            <span className="text-electric/85 text-xs font-extrabold" aria-hidden="true">
+              {muted ? '🔇' : '🔊'}
+            </span>
+          </button>
+          <button
+            type="button"
+            aria-label="전체 화면"
+            className="focus-ring w-7 h-7 rounded-md inline-flex items-center justify-center border border-electric/30 bg-ink hover:bg-ink/70 transition-colors"
+          >
+            <span className="text-electric/85 text-xs font-extrabold" aria-hidden="true">⛶</span>
+          </button>
         </div>
       </div>
 
-      {/* 메인 디스플레이 — 도트 매트릭스 + 코너 브래킷 */}
+      {/* ── 16:9 비디오 영역 ──────────────────────────────────── */}
       <div
-        className="relative px-3 sm:px-5 py-5 sm:py-7 overflow-hidden"
+        className="relative w-full overflow-hidden"
         style={{
+          aspectRatio: '16 / 9',
           background:
-            'radial-gradient(120% 90% at 50% -10%, #0d1730 0%, #050912 100%)',
+            'radial-gradient(120% 90% at 50% -10%, #1a2747 0%, #0a1126 60%, #050912 100%)',
         }}
       >
-        <CornerBracket position="tl" />
-        <CornerBracket position="tr" />
-        <CornerBracket position="bl" />
-        <CornerBracket position="br" />
-
-        {/* LED 도트 매트릭스 백그라운드 */}
+        {/* 스튜디오 핀스팟 — 천장 빛 */}
         <span
           aria-hidden="true"
-          className="absolute inset-0 pointer-events-none opacity-40"
+          className="absolute left-1/2 top-0 -translate-x-1/2 pointer-events-none"
           style={{
-            backgroundImage:
-              'radial-gradient(circle, rgba(250,204,21,0.18) 0.6px, transparent 1px)',
-            backgroundSize: '6px 6px',
+            width: '65%',
+            height: '95%',
+            background:
+              'conic-gradient(from 270deg at 50% 0%, transparent 0deg, rgba(250,204,21,0.16) 8deg, rgba(255,255,255,0.28) 12deg, rgba(250,204,21,0.16) 16deg, transparent 24deg)',
+            filter: 'blur(6px)',
+            animation: 'heal-breathe 4s ease-in-out infinite',
+            transformOrigin: 'top center',
           }}
         />
+        {/* 스튜디오 바닥 그라데이션 */}
+        <span
+          aria-hidden="true"
+          className="absolute bottom-0 left-0 right-0 h-1/3 pointer-events-none"
+          style={{
+            background:
+              'linear-gradient(180deg, transparent 0%, rgba(255,122,69,0.08) 60%, rgba(255,122,69,0.18) 100%)',
+          }}
+        />
+
+        {/* 메인: 카드 (화면에 비춰지는 것처럼) */}
+        <div className="absolute inset-0 flex items-center justify-center p-4 sm:p-6">
+          {img ? (
+            <div className="relative">
+              {/* 헤일로 */}
+              <span
+                aria-hidden="true"
+                className="absolute inset-0 -m-10 rounded-3xl pointer-events-none"
+                style={{
+                  background:
+                    'radial-gradient(ellipse at center, rgba(255,255,255,0.4) 0%, rgba(250,204,21,0.18) 30%, transparent 65%)',
+                  filter: 'blur(12px)',
+                }}
+              />
+              <img
+                src={img}
+                alt={lot.nameKo || lot.name}
+                className="relative rounded-lg border-2 border-ink"
+                style={{
+                  maxHeight: 'min(58vh, 380px)',
+                  boxShadow:
+                    '0 18px 36px rgba(0,0,0,0.55), 0 0 0 4px #ffffff, 0 0 0 5.5px #1a1a1a',
+                }}
+              />
+              {/* 발판 */}
+              <div
+                aria-hidden="true"
+                className="absolute -bottom-5 left-1/2 -translate-x-1/2 w-[90%] h-3 rounded-full"
+                style={{
+                  background:
+                    'radial-gradient(ellipse at center, rgba(0,0,0,0.55), transparent 70%)',
+                }}
+              />
+            </div>
+          ) : (
+            <div className="w-40 h-56 rounded-lg bg-bone-2 border-2 border-ink" />
+          )}
+        </div>
+
         {/* CRT 스캔라인 */}
         <span
           aria-hidden="true"
           className="absolute inset-0 pointer-events-none mix-blend-overlay"
           style={{
             backgroundImage:
-              'repeating-linear-gradient(180deg, rgba(255,255,255,0.05) 0 1px, transparent 1px 4px)',
+              'repeating-linear-gradient(180deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 3px)',
           }}
         />
-        {/* CRT flicker */}
+        {/* 비네팅 */}
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              'radial-gradient(120% 120% at 50% 50%, transparent 55%, rgba(0,0,0,0.35) 100%)',
+          }}
+        />
+        {/* flicker */}
         <span
           aria-hidden="true"
           className="absolute inset-0 pointer-events-none bg-electric/5"
           style={{ animation: 'crt-flicker 4s steps(1) infinite' }}
         />
 
-        {/* 카드명 마키 (상단) */}
-        <div className="relative z-10 mb-3 sm:mb-4 flex items-center gap-2 flex-wrap min-w-0">
-          <span className="font-mono text-[9px] sm:text-[10px] font-extrabold uppercase tracking-[0.22em] text-electric/60">
-            NOW BIDDING
-          </span>
-          <span className="font-display text-base sm:text-lg lg:text-xl font-extrabold text-paper truncate">
-            {lot.nameKo || lot.name}
-          </span>
-          {lot.grade?.grade != null && (
-            <span
-              className="font-mono text-[9.5px] font-extrabold px-1.5 py-0.5 rounded border-2 border-electric/50 text-electric"
-              style={{ textShadow: '0 0 6px rgba(250,204,21,0.55)' }}
-            >
-              {lot.grade.cert || 'PSA'} {lot.grade.grade}
-            </span>
-          )}
-        </div>
-
-        {/* 메인 3분할 — CURRENT BID / TIME / BIDS */}
-        <div
-          className="relative z-10 grid items-center"
-          style={{
-            gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, auto)',
-            columnGap: '12px',
-          }}
-        >
-          {/* CURRENT BID — 가장 큰 amber LED 숫자 */}
-          <ScoreboardPanel label="CURRENT BID · KRW" accent="amber" align="left">
-            <span style={{ fontSize: 'clamp(34px, 7.5vw, 72px)' }}>
-              {formatKRWFull(current).replace('₩', '').trim()}
-            </span>
-          </ScoreboardPanel>
-
-          {/* 구분선 */}
-          <span
-            aria-hidden="true"
-            className="hidden sm:block h-16 sm:h-20 w-px"
+        {/* PIP: 우상단 진행자 캠 (포켓볼 마크) */}
+        <div className="absolute top-3 right-3 z-10">
+          <div
+            className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-lg border-2 border-paper/85 overflow-hidden shadow-[0_3px_8px_rgba(0,0,0,0.6)]"
             style={{
               background:
-                'linear-gradient(180deg, transparent, rgba(250,204,21,0.35), transparent)',
+                'radial-gradient(circle at 50% 30%, #2a3a6a 0%, #0d1730 70%)',
             }}
-          />
-
-          {/* TIME LEFT */}
-          <ScoreboardPanel label="TIME LEFT" accent={timeAccent} align="right">
-            <span
-              style={{ fontSize: 'clamp(20px, 3.6vw, 34px)' }}
-              className={isCritical ? 'inline-block' : ''}
-            >
-              {clockText}
-            </span>
-          </ScoreboardPanel>
-        </div>
-
-        {/* 하단 보조 라인 */}
-        <div className="relative z-10 mt-4 sm:mt-5 pt-3 border-t border-electric/15 flex items-center justify-between gap-3 flex-wrap">
-          <div className="inline-flex items-center gap-4 sm:gap-6 flex-wrap">
-            <span className="inline-flex items-center gap-1.5 font-mono text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.18em] text-electric/75">
-              NEXT MIN
-              <span
-                className="text-electric tabular-nums"
-                style={{ textShadow: '0 0 6px rgba(250,204,21,0.5)' }}
-              >
-                {formatKRWFull(nextMin)}
-              </span>
-            </span>
-            <span className="inline-flex items-center gap-1.5 font-mono text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.18em] text-electric/75">
-              BIDS
-              <span className="text-paper tabular-nums">{lot.bidCount || 0}</span>
-            </span>
-            <span className="inline-flex items-center gap-1.5 font-mono text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.18em] text-electric/75">
-              <Icon name="eye" size={11} strokeWidth={2.6} />
-              VIEWERS
-              <span className="text-paper tabular-nums">{viewers.toLocaleString()}</span>
+          >
+            <div className="absolute inset-0 flex items-center justify-center">
+              <PokeballMark size={40} />
+            </div>
+            <span className="absolute bottom-0 inset-x-0 bg-ink/85 text-paper text-[8.5px] font-mono font-extrabold tracking-[0.18em] uppercase text-center py-0.5">
+              진행자
             </span>
           </div>
-          <span className="font-mono text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.22em] text-electric/45 tabular-nums">
-            ALL LOTS · {String(liveCount).padStart(2, '0')}
+        </div>
+
+        {/* 좌상단 NOW BIDDING 칩 (현장감) */}
+        <div className="absolute top-3 left-3 z-10">
+          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md font-mono text-[10px] font-extrabold uppercase tracking-[0.18em] bg-ink/75 backdrop-blur-sm text-electric border border-electric/40">
+            <LiveDot size={5} color="#facc15" />
+            NOW BIDDING
           </span>
+        </div>
+
+        {/* ── 로어서드 자막 — 방송 TV 톤 ──────────────────────── */}
+        <div className="absolute left-0 right-0 bottom-0 z-10 px-3 sm:px-5 py-3 sm:py-4">
+          <div className="flex items-end justify-between gap-3 flex-wrap">
+            {/* 좌: 카드명 + 등급 */}
+            <div className="min-w-0">
+              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-fire text-paper font-mono text-[10px] font-extrabold uppercase tracking-[0.22em] border-2 border-ink">
+                {lot.set || lot.setShort || 'POKÉMON TCG'}
+              </div>
+              <h2
+                className="mt-1 font-display font-extrabold text-paper leading-tight truncate drop-shadow-[0_2px_0_#000]"
+                style={{ fontSize: 'clamp(20px, 3.4vw, 30px)' }}
+              >
+                {lot.nameKo || lot.name}
+                {lot.grade?.grade != null && (
+                  <span
+                    className="ml-2 align-middle font-mono text-[12px] sm:text-sm font-extrabold px-1.5 py-0.5 rounded border-2 border-electric text-electric"
+                    style={{ textShadow: '0 0 6px rgba(250,204,21,0.55)' }}
+                  >
+                    {lot.grade.cert || 'PSA'} {lot.grade.grade}
+                  </span>
+                )}
+              </h2>
+            </div>
+
+            {/* 우: BID + TIME LED */}
+            <div className="inline-flex items-stretch gap-2 sm:gap-3">
+              <div
+                className="rounded-md border-2 border-ink px-2.5 sm:px-3 py-1.5 sm:py-2"
+                style={{
+                  background: 'rgba(0,0,0,0.65)',
+                  backdropFilter: 'blur(2px)',
+                }}
+              >
+                <div className="font-mono text-[9px] sm:text-[10px] font-extrabold uppercase tracking-[0.22em] text-electric/70 text-right">
+                  CURRENT BID
+                </div>
+                <div
+                  className="font-mono font-extrabold tabular-nums leading-none text-right"
+                  style={{
+                    color: '#ffb347',
+                    textShadow: '0 0 10px rgba(255,179,71,0.7), 0 0 18px rgba(255,179,71,0.45)',
+                    fontSize: 'clamp(20px, 4vw, 32px)',
+                  }}
+                >
+                  {formatKRWFull(current).replace('₩', '₩ ')}
+                </div>
+              </div>
+
+              <div
+                className="rounded-md border-2 border-ink px-2.5 sm:px-3 py-1.5 sm:py-2"
+                style={{
+                  background: 'rgba(0,0,0,0.65)',
+                  backdropFilter: 'blur(2px)',
+                  animation: isCritical ? 'shake-soft 0.6s ease-in-out infinite' : undefined,
+                }}
+              >
+                <div className="font-mono text-[9px] sm:text-[10px] font-extrabold uppercase tracking-[0.22em] text-electric/70 text-right">
+                  TIME LEFT
+                </div>
+                <div
+                  className="font-mono font-extrabold tabular-nums leading-none text-right"
+                  style={{
+                    color: isCritical ? '#ff6b6b' : isUrgent ? '#ffb347' : '#facc15',
+                    textShadow: isCritical
+                      ? '0 0 10px rgba(255,107,107,0.7)'
+                      : '0 0 10px rgba(250,204,21,0.55)',
+                    fontSize: 'clamp(18px, 3vw, 26px)',
+                  }}
+                >
+                  {clockText}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* 바닥 베젤 — 빛 반사 */}
-      <div
-        aria-hidden="true"
-        className="h-1.5 rounded-b-xl"
-        style={{
-          background:
-            'linear-gradient(180deg, rgba(250,204,21,0.12), transparent)',
-        }}
-      />
+      {/* ── 하단 티커 (마키 형식 보조 데이터) ────────────────── */}
+      <div className="relative bg-ink border-t-2 border-electric/15 overflow-hidden">
+        <div
+          className="flex items-center gap-8 px-4 py-2 whitespace-nowrap font-mono text-[11px] font-extrabold uppercase tracking-[0.18em] text-electric/85"
+          style={{ animation: 'ticker-slide 28s linear infinite' }}
+        >
+          <span>
+            <span className="text-electric/60">NEXT MIN BID</span>{' '}
+            <span className="text-electric tabular-nums" style={{ textShadow: '0 0 6px rgba(250,204,21,0.5)' }}>
+              {formatKRWFull(nextMin)}
+            </span>
+          </span>
+          <span className="text-electric/30">●</span>
+          <span>
+            <span className="text-electric/60">TOTAL BIDS</span>{' '}
+            <span className="text-paper tabular-nums">{lot.bidCount || 0}</span>
+          </span>
+          <span className="text-electric/30">●</span>
+          <span>
+            <span className="text-electric/60">VIEWERS</span>{' '}
+            <span className="text-paper tabular-nums">{viewers.toLocaleString()}</span>
+          </span>
+          <span className="text-electric/30">●</span>
+          <span>
+            <span className="text-electric/60">ALL LOTS TODAY</span>{' '}
+            <span className="text-paper tabular-nums">{String(liveCount).padStart(2, '0')}</span>
+          </span>
+          <span className="text-electric/30">●</span>
+          <span className="text-fire">
+            정품 인증 · 안전 결제 · 입찰 보호
+          </span>
+          <span className="text-electric/30">●</span>
+          {/* 한번 더 반복 (seamless loop 보조) */}
+          <span>
+            <span className="text-electric/60">NEXT MIN BID</span>{' '}
+            <span className="text-electric tabular-nums">{formatKRWFull(nextMin)}</span>
+          </span>
+          <span className="text-electric/30">●</span>
+          <span>
+            <span className="text-electric/60">TOTAL BIDS</span>{' '}
+            <span className="text-paper tabular-nums">{lot.bidCount || 0}</span>
+          </span>
+        </div>
+      </div>
     </section>
   )
 }
