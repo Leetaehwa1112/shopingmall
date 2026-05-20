@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- API 서버 + 이미지 CDN 미리 연결 (DNS+TCP+TLS 핸드셰이크 200-300ms 절약) -->
+    <link rel="preconnect" href="https://pocket-valut-883aa5e92a29.herokuapp.com" crossorigin />
+    <link rel="preconnect" href="https://res.cloudinary.com" crossorigin />
+    <link rel="dns-prefetch" href="https://pocket-valut-883aa5e92a29.herokuapp.com" />
+    <link rel="dns-prefetch" href="https://res.cloudinary.com" />
     <!-- Korean pixel/dot fonts (CDN) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri/dist/galmuri.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
