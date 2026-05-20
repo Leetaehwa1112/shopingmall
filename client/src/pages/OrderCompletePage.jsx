@@ -118,27 +118,45 @@ export default function OrderCompletePage() {
       <div className="surface-pop p-8 mb-10">
         <Eyebrow tone="water" led="blue" pulse>SHIPPING · 배송 현황</Eyebrow>
         <div className="grid grid-cols-5 gap-2 mb-4 mt-5">
-          {/* 가상계좌면 "입금 대기" 단계 추가 (활성), 아니면 주문 확정만 활성 */}
-          {(isPendingDeposit
-            ? ['입금 대기', '입금 확인', '발송 준비', '운송중', '도착']
-            : ['주문 확정', '결제 확인', '발송 준비', '운송중', '도착']
-          ).map((s, i) => {
-            const active = i === 0
-            return (
-              <div key={s} className="text-center">
-                <div className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-2 font-bold text-sm border-2 border-ink ${
-                  active
-                    ? (isPendingDeposit ? 'bg-electric text-ink shadow-[0_3px_0_#1a1a1a]' : 'bg-grass text-white shadow-[0_3px_0_#1a1a1a]')
-                    : 'bg-paper text-mute'
-                }`}>
-                  {active ? <Icon name={isPendingDeposit ? 'clock' : 'check'} size={18} strokeWidth={3} /> : i + 1}
+          {/*
+            가상계좌(미입금): step 0 "입금 대기"가 현재(시계 아이콘), 나머지 미완료.
+            카드/간편결제(완료): step 0 "주문 확정" + step 1 "결제 확인" 모두 완료(체크),
+            step 2 "발송 준비"가 현재(시계).
+          */}
+          {(() => {
+            const steps = isPendingDeposit
+              ? ['입금 대기', '입금 확인', '발송 준비', '운송중', '도착']
+              : ['주문 확정', '결제 확인', '발송 준비', '운송중', '도착']
+            // 가상계좌: currentIdx=0 / 완료=[] · 카드: currentIdx=2 / 완료=[0,1]
+            const currentIdx = isPendingDeposit ? 0 : 2
+            return steps.map((s, i) => {
+              const done = i < currentIdx
+              const current = i === currentIdx
+              const inactive = i > currentIdx
+              const circleCls = done
+                ? 'bg-grass text-white shadow-[0_3px_0_#1a1a1a]'
+                : current
+                  ? (isPendingDeposit
+                      ? 'bg-electric text-ink shadow-[0_3px_0_#1a1a1a]'
+                      : 'bg-water text-white shadow-[0_3px_0_#1a1a1a]')
+                  : 'bg-paper text-mute'
+              return (
+                <div key={s} className="text-center">
+                  <div className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-2 font-bold text-sm border-2 border-ink ${circleCls}`}>
+                    {done
+                      ? <Icon name="check" size={18} strokeWidth={3} />
+                      : current
+                        ? <Icon name="clock" size={18} strokeWidth={3} />
+                        : i + 1}
+                  </div>
+                  <div className={`text-xs font-bold ${inactive ? 'text-mute' : 'text-ink'}`}>{s}</div>
                 </div>
-                <div className={`text-xs font-bold ${active ? 'text-ink' : 'text-mute'}`}>{s}</div>
-              </div>
-            )
-          })}
+              )
+            })
+          })()}
         </div>
-        <div className="hp-bar"><div className="hp-bar-fill" style={{ width: isPendingDeposit ? '10%' : '20%' }} /></div>
+        {/* 진행률: 가상계좌 10% / 카드 50% (5단계 중 2단계 완료 + 3단계 진행중) */}
+        <div className="hp-bar"><div className="hp-bar-fill" style={{ width: isPendingDeposit ? '10%' : '50%' }} /></div>
       </div>
 
       <div className="flex gap-3 justify-center flex-wrap">
