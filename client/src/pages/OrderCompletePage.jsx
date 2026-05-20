@@ -9,49 +9,94 @@ export default function OrderCompletePage() {
   const order = JSON.parse(sessionStorage.getItem('last-order') || '{}')
   if (!order.items) return <div className="p-20 text-center text-mute font-bold">주문 내역이 없어요.</div>
 
+  // 가상계좌(bank)는 발급만 됐고 실제 입금은 사용자가 별도로 — UI 분기
+  const isPendingDeposit = order.method === 'bank'
+
   return (
     <div className="max-w-4xl mx-auto px-6 py-16 relative">
-      {/* Confetti */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {Array.from({ length: 18 }).map((_, i) => (
-          <div key={i}
-            className="absolute w-2 h-2 rounded-full"
-            style={{
-              left: `${5 + i * 5.2}%`,
-              top: `${5 + (i % 6) * 12}%`,
-              background: ['#dc2626', '#facc15', '#3ba7e8', '#7bc043', '#c084fc', '#ff7a45'][i % 6],
-              animation: `confetti 3s ease-in-out ${i * 0.1}s infinite`,
-            }} />
-        ))}
-        <style>{`@keyframes confetti { 0%,100% { opacity: 0; transform: translateY(0) rotate(0deg); } 50% { opacity: 1; transform: translateY(-28px) rotate(180deg); } }`}</style>
-      </div>
+      {/* Confetti — 가상계좌(입금 대기)는 조용한 화면이 더 맞아서 생략 */}
+      {!isPendingDeposit && (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {Array.from({ length: 18 }).map((_, i) => (
+            <div key={i}
+              className="absolute w-2 h-2 rounded-full"
+              style={{
+                left: `${5 + i * 5.2}%`,
+                top: `${5 + (i % 6) * 12}%`,
+                background: ['#dc2626', '#facc15', '#3ba7e8', '#7bc043', '#c084fc', '#ff7a45'][i % 6],
+                animation: `confetti 3s ease-in-out ${i * 0.1}s infinite`,
+              }} />
+          ))}
+          <style>{`@keyframes confetti { 0%,100% { opacity: 0; transform: translateY(0) rotate(0deg); } 50% { opacity: 1; transform: translateY(-28px) rotate(180deg); } }`}</style>
+        </div>
+      )}
 
       <div className="text-center mb-12 relative sparkle-host">
-        <Sparkles always />
+        {!isPendingDeposit && <Sparkles always />}
         <div className="inline-flex items-center justify-center gap-2 mb-5">
-          <span className="led led-green led-pulse" />
+          <span className={`led ${isPendingDeposit ? 'led-yellow' : 'led-green'} led-pulse`} />
           <span className="led led-yellow led-pulse" style={{ animationDelay: '0.2s' }} />
-          <span className="led led-red led-pulse" style={{ animationDelay: '0.4s' }} />
+          <span className={`led ${isPendingDeposit ? 'led-yellow' : 'led-red'} led-pulse`} style={{ animationDelay: '0.4s' }} />
         </div>
-        <Eyebrow tone="grass" led="green" pulse>ORDER CONFIRMED · 결제 완료!</Eyebrow>
-        <h1 className="mt-5 font-display text-5xl font-bold text-ink tracking-tight leading-[1.05]">
-          축하해요!
-          <span className="block mt-2">
-            <span className="relative inline-block">
-              <span className="relative z-10 text-grass">새 카드가 곧 도착해요</span>
-              <span className="absolute left-0 right-0 bottom-1 h-3 bg-electric/60 -z-0 rounded-sm" aria-hidden />
-            </span>
-          </span>
-        </h1>
-        <p className="text-sm text-mute mt-4 font-medium">컬렉션에 카드가 추가되었어요. 안전 포장으로 빠르게 보내드릴게요.</p>
+        {isPendingDeposit ? (
+          <>
+            <Eyebrow tone="warning" led="yellow" pulse>AWAITING DEPOSIT · 입금 대기 중</Eyebrow>
+            <h1 className="mt-5 font-display text-5xl font-bold text-ink tracking-tight leading-[1.05]">
+              가상계좌 발급 완료!
+              <span className="block mt-2">
+                <span className="relative inline-block">
+                  <span className="relative z-10 text-water">24시간 내 입금해 주세요</span>
+                  <span className="absolute left-0 right-0 bottom-1 h-3 bg-electric/60 -z-0 rounded-sm" aria-hidden />
+                </span>
+              </span>
+            </h1>
+            <p className="text-sm text-mute mt-4 font-medium leading-relaxed">
+              발급된 가상계좌 정보는 <strong className="text-ink">문자/이메일</strong>로 전송됐어요.<br />
+              입금이 확인되면 자동으로 결제 완료 처리되고, 그때부터 발송 준비를 시작합니다.
+            </p>
+          </>
+        ) : (
+          <>
+            <Eyebrow tone="grass" led="green" pulse>ORDER CONFIRMED · 결제 완료!</Eyebrow>
+            <h1 className="mt-5 font-display text-5xl font-bold text-ink tracking-tight leading-[1.05]">
+              축하해요!
+              <span className="block mt-2">
+                <span className="relative inline-block">
+                  <span className="relative z-10 text-grass">새 카드가 곧 도착해요</span>
+                  <span className="absolute left-0 right-0 bottom-1 h-3 bg-electric/60 -z-0 rounded-sm" aria-hidden />
+                </span>
+              </span>
+            </h1>
+            <p className="text-sm text-mute mt-4 font-medium">컬렉션에 카드가 추가되었어요. 안전 포장으로 빠르게 보내드릴게요.</p>
+          </>
+        )}
         <div className="font-mono text-xs text-ink/60 mt-4 font-bold">ORDER · {order.serverOrder?.orderNumber || order.orderId}</div>
       </div>
+
+      {isPendingDeposit && (
+        <div className="surface-pop p-6 mb-6 border-2 border-electric/40 bg-electric/10">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-full bg-electric border-2 border-ink flex items-center justify-center flex-shrink-0 shadow-[0_3px_0_#1a1a1a]">
+              <Icon name="info" size={22} strokeWidth={2.4} className="text-ink" />
+            </div>
+            <div className="flex-1 text-sm leading-relaxed text-ink">
+              <div className="font-bold mb-1.5">입금 안내</div>
+              <ul className="space-y-1 text-ink/85 font-medium">
+                <li>• 정확한 <strong>가상계좌 번호 · 은행 · 예금주</strong>는 PortOne에서 발송한 알림(SMS/이메일)에서 확인하세요.</li>
+                <li>• 입금 마감: <strong>발급 후 24시간</strong>. 미입금 시 자동 취소돼요.</li>
+                <li>• 입금자명은 <strong>주문자 이름과 동일</strong>해야 자동 확인됩니다.</li>
+                <li>• 입금 확인 후 결제 완료 알림을 별도로 보내드려요.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex justify-center gap-3 mb-10 flex-wrap relative sparkle-host">
         <Sparkles always />
         {order.items.map((c, idx) => (
           <div key={c._id || c.id || idx} className="float-bob">
-            <PokeCard card={c} size="sm" interactive={false} showShine={false} />
+            <PokeCard card={c} size="sm" interactive={false} showShine={false} eager />
           </div>
         ))}
       </div>
@@ -72,19 +117,28 @@ export default function OrderCompletePage() {
 
       <div className="surface-pop p-8 mb-10">
         <Eyebrow tone="water" led="blue" pulse>SHIPPING · 배송 현황</Eyebrow>
-        <div className="grid grid-cols-4 gap-2 mb-4 mt-5">
-          {['주문 확정', '발송 준비', '운송중', '도착'].map((s, i) => (
-            <div key={s} className="text-center">
-              <div className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-2 font-bold text-sm border-2 border-ink ${
-                i === 0 ? 'bg-grass text-white shadow-[0_3px_0_#1a1a1a]' : 'bg-paper text-mute'
-              }`}>
-                {i === 0 ? <Icon name="check" size={18} strokeWidth={3} /> : i + 1}
+        <div className="grid grid-cols-5 gap-2 mb-4 mt-5">
+          {/* 가상계좌면 "입금 대기" 단계 추가 (활성), 아니면 주문 확정만 활성 */}
+          {(isPendingDeposit
+            ? ['입금 대기', '입금 확인', '발송 준비', '운송중', '도착']
+            : ['주문 확정', '결제 확인', '발송 준비', '운송중', '도착']
+          ).map((s, i) => {
+            const active = i === 0
+            return (
+              <div key={s} className="text-center">
+                <div className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-2 font-bold text-sm border-2 border-ink ${
+                  active
+                    ? (isPendingDeposit ? 'bg-electric text-ink shadow-[0_3px_0_#1a1a1a]' : 'bg-grass text-white shadow-[0_3px_0_#1a1a1a]')
+                    : 'bg-paper text-mute'
+                }`}>
+                  {active ? <Icon name={isPendingDeposit ? 'clock' : 'check'} size={18} strokeWidth={3} /> : i + 1}
+                </div>
+                <div className={`text-xs font-bold ${active ? 'text-ink' : 'text-mute'}`}>{s}</div>
               </div>
-              <div className={`text-xs font-bold ${i === 0 ? 'text-ink' : 'text-mute'}`}>{s}</div>
-            </div>
-          ))}
+            )
+          })}
         </div>
-        <div className="hp-bar"><div className="hp-bar-fill" style={{ width: '25%' }} /></div>
+        <div className="hp-bar"><div className="hp-bar-fill" style={{ width: isPendingDeposit ? '10%' : '20%' }} /></div>
       </div>
 
       <div className="flex gap-3 justify-center flex-wrap">

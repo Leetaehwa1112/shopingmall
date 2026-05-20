@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, memo } from 'react'
 
-function PokeCard({ card, size = 'md', interactive = true, showShine = true }) {
+function PokeCard({ card, size = 'md', interactive = true, showShine = true, eager = false }) {
   const ref = useRef(null)
   const rafRef = useRef(0)
   const pendingRef = useRef(null)
@@ -65,7 +65,8 @@ function PokeCard({ card, size = 'md', interactive = true, showShine = true }) {
           <img
             src={Array.isArray(card.images) ? card.images[0] : (card.images || card.image)}
             alt={card.name}
-            loading="lazy"
+            loading={eager ? 'eager' : 'lazy'}
+            fetchpriority={eager ? 'high' : 'auto'}
             onLoad={() => setLoaded(true)}
             onError={() => setErr(true)}
             className={`w-full h-full object-cover transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
