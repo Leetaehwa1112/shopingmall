@@ -1,6 +1,7 @@
 // ─── 가격 포맷 ─────────────────────────────────────────────
 /** 압축 표기 — ₩1.23억 / ₩1만 / ₩1,234. 정수 떨어지면 소수점 생략 */
-const trimZero = (s) => s.replace(/\.?0+$/, '')
+// 소수점이 있을 때만 끝의 0과 점 제거 ('3000' 같은 정수는 그대로)
+const trimZero = (s) => s.includes('.') ? s.replace(/\.?0+$/, '') : s
 export const formatKRW = (n) => {
   if (n == null || isNaN(n)) return '₩0'
   if (n >= 1e12) return `₩${trimZero((n / 1e12).toFixed(2))}조`
