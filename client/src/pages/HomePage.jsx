@@ -61,10 +61,10 @@ export default function HomePage() {
 
   return (
     <main className="bg-bone">
-      <GreetingDropdown />
-
-      {/* === 가상계좌 입금 대기 배너 === */}
+      {/* === 가상계좌 입금 대기 배너 (최상단 고정) === */}
       <PendingDepositBanner />
+
+      <GreetingDropdown />
 
       {/* === 글로벌 에러 배너 === */}
       {error && !loading && (
@@ -578,8 +578,7 @@ function PendingDepositBanner() {
           <span className="led led-yellow led-pulse" aria-hidden="true" />
           <div className="text-sm text-ink leading-snug">
             <strong className="font-bold">가상계좌 입금 대기 중</strong>
-            <span className="text-ink/70 font-medium"> · 발급된 계좌로 24시간 내 입금해 주세요. </span>
-            <span className="font-mono text-xs text-ink/60">#{orderId}</span>
+            <span className="text-ink/70 font-medium"> · 발급된 계좌로 24시간 내 입금해 주세요.</span>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
