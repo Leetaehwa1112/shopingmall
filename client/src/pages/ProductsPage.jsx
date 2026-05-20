@@ -593,10 +593,10 @@ function BroadcastStream({ lot, liveCount, onBid }) {
   // UI-only 컨트롤 (음소거/풀스크린은 표현용 토글 — 실제 영상 X)
   const [muted, setMuted] = useState(true)
 
-  // ── 미니 플레이어 : 본 방송이 화면 밖으로 스크롤되면 우하단으로 핀 ──
-  //   IntersectionObserver는 threshold 교차 시점에만 발화하므로
-  //   미세한 스크롤 위치 변화에서 상태가 못 따라오는 경우가 있어서
-  //   rAF로 throttle 된 scroll 리스너로 매 프레임 정확히 판정한다.
+  // ── 미니 플레이어 : 본 방송의 "가시 비율" 기반으로 토글 ──────
+  //   - visibleRatio < 1/3  → 미니 ON  (1/3 미만 보이면 작게 띄움)
+  //   - visibleRatio >= 2/3 → 미니 OFF (2/3 이상 보이면 본 화면이 충분히 보이니까 꺼짐)
+  //   - 1/3 ~ 2/3 사이는 현재 상태 유지 → 토글 깜빡임 방지 (히스테리시스)
   const containerRef = useRef(null)
   const [pinned, setPinned] = useState(false)
   const [dismissed, setDismissed] = useState(false)
@@ -605,15 +605,23 @@ function BroadcastStream({ lot, liveCount, onBid }) {
     if (!el) return
     let raf = 0
     let lastPinned = false
-    const HEADER_OFFSET = 72 // 헤더 높이 보정 (그 아래로 사라지면 핀)
-    const HYSTERESIS = 24    // 토글 깜빡임 방지용 히스테리시스 — 핀/언핀 트리거 차이
+    const PIN_THRESHOLD = 1 / 3   // 이 이하로 보이면 미니 ON
+    const UNPIN_THRESHOLD = 2 / 3 // 이 이상 보이면 미니 OFF
     const evaluate = () => {
       const rect = el.getBoundingClientRect()
-      // 핀: 본 방송이 헤더 아래로 완전히 사라져 보이지 않을 때 (rect.bottom 가 작아짐)
-      // 언핀: 본 방송이 다시 화면에 보이기 시작할 때 (HYSTERESIS 만큼 여유)
+      const viewportH = window.innerHeight || document.documentElement.clientHeight
+      // 화면(뷰포트)에 실제로 보이는 본 방송 영역의 높이
+      const visibleHeight = Math.max(
+        0,
+        Math.min(rect.bottom, viewportH) - Math.max(rect.top, 0)
+      )
+      // 비율의 분모는 본 방송 높이와 뷰포트 높이 중 작은 쪽 (작은 화면에서도 1.0 도달 가능)
+      const denom = Math.max(1, Math.min(rect.height, viewportH))
+      const visibleRatio = visibleHeight / denom
+      // 히스테리시스 적용 — 현재 상태에 따라 임계값이 다름
       const next = lastPinned
-        ? rect.bottom < HEADER_OFFSET + HYSTERESIS  // 핀 상태 → 언핀 트리거가 약간 더 멀어야 함
-        : rect.bottom < HEADER_OFFSET                // 언핀 상태 → 더 가까이서 핀 트리거
+        ? visibleRatio < UNPIN_THRESHOLD  // 핀 상태 : 2/3 이상 보이면 끔
+        : visibleRatio < PIN_THRESHOLD    // 언핀 상태 : 1/3 미만 보이면 켬
       if (next !== lastPinned) {
         lastPinned = next
         setPinned(next)
