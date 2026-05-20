@@ -9,6 +9,20 @@ import Eyebrow from '@/components/common/Eyebrow'
 
 const STORE_ID = 'store-43aecd40-673f-4953-8fd3-6aa4882eff27'
 
+// 마지막 성공 주문 주소 저장 키. 다음 OrderPage 방문 시 자동 채움.
+const SAVED_ADDR_KEY = 'pokevault:lastAddress'
+
+// ─── 필드별 검증자 ─────────────────────────────────────────────
+// 서버 orderController.createOrder와 동일 규칙. 값이 비었으면 null 반환
+// (필수 체크는 폼 제출 시 별도로). 형식 위반만 메시지 반환.
+const validators = {
+  name:  (v) => !v?.trim() ? '수령인 이름을 입력해주세요' : (v.length > 50 ? '50자 이하로 입력' : null),
+  email: (v) => !v ? null : (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) ? '이메일 형식이 맞지 않아요' : null),
+  phone: (v) => !v?.trim() ? '연락처를 입력해주세요' : (!/^[0-9+\-\s()]{8,20}$/.test(v.trim()) ? '숫자/하이픈 8-20자 (예: 010-1234-5678)' : null),
+  zip:   (v) => !v ? '우편번호를 입력해주세요' : (!/^[0-9\-]{3,10}$/.test(String(v)) ? '3-10자리 숫자 (예: 06236)' : null),
+  addr1: (v) => !v?.trim() ? '기본 주소를 입력해주세요' : null,
+}
+
 const PAY_METHODS = [
   { id: 'card',   payMethod: 'CARD',           label: '신용/체크카드', desc: '국내 모든 카드 가능' },
   { id: 'toss',   payMethod: 'EASY_PAY',        label: '토스페이',      desc: '간편 결제',      easyPayProvider: 'TOSSPAY' },
@@ -28,13 +42,25 @@ export default function OrderPage() {
   const requireBrinks = tier === SHIPPING_TIER.BRINKS_REQUIRED
   const shippingOpts = useMemo(() => getShippingOptionsForPrice(maxPrice, isAllPacks), [maxPrice, isAllPacks])
 
+  // 저장된 주소 자동 로드 (성공 주문 시 저장된 값).
+  const savedAddr = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem(SAVED_ADDR_KEY) || '{}') }
+    catch { return {} }
+  }, [])
+
   const [form, setForm] = useState({
-    name: '', email: '', phone: '', zip: '', addr1: '', addr2: '',
+    name:  savedAddr.name  || '',
+    email: savedAddr.email || '',
+    phone: savedAddr.phone || '',
+    zip:   savedAddr.zip   || '',
+    addr1: savedAddr.addr1 || '',
+    addr2: savedAddr.addr2 || '',
     shipping: shippingOpts[0]?.id || 'standard',
     signature: true, insurance: true, memo: '',
     method: 'card',
   })
   const [paying, setPaying] = useState(false)
+  const hasSavedAddr = !!(savedAddr.name && savedAddr.addr1)
 
   useEffect(() => {
     if (requireBrinks && form.shipping !== 'brinks') {
@@ -145,6 +171,14 @@ export default function OrderPage() {
         clientItems:      items,
       })
 
+      // 성공한 주소 저장 — 다음 방문 시 자동 채움
+      try {
+        localStorage.setItem(SAVED_ADDR_KEY, JSON.stringify({
+          name: form.name, email: form.email, phone: form.phone,
+          zip: form.zip, addr1: form.addr1, addr2: form.addr2,
+        }))
+      } catch { /* localStorage 미지원 환경은 조용히 무시 */ }
+
       sessionStorage.setItem('last-order', JSON.stringify({
         items, form,
         total:       grand,
@@ -198,13 +232,32 @@ export default function OrderPage() {
       <form onSubmit={submit} className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
           <Section title="🚚 배송지">
+            {hasSavedAddr && (
+              <div className="mb-3 p-3 rounded-lg bg-electric/15 border-2 border-ink/15 flex items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 font-bold text-ink">
+                  <Icon name="check" size={14} strokeWidth={2.4} />
+                  이전 주소를 자동으로 불러왔어요. 그대로 사용하거나 수정하세요.
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    try { localStorage.removeItem(SAVED_ADDR_KEY) } catch { /* noop */ }
+                    setForm((f) => ({ ...f, name: '', email: '', phone: '', zip: '', addr1: '', addr2: '' }))
+                    toast({ type: 'info', message: '저장된 주소를 비웠어요.' })
+                  }}
+                  className="px-2.5 py-1 rounded-md border border-ink/30 hover:bg-paper font-bold text-ink/70 hover:text-ink whitespace-nowrap"
+                >
+                  비우기
+                </button>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
-              <Field label="수령인" value={form.name} onChange={(v) => setForm({...form, name: v})} required />
-              <Field label="이메일" value={form.email} onChange={(v) => setForm({...form, email: v})} required placeholder="example@email.com" type="email" />
-              <Field label="연락처" value={form.phone} onChange={(v) => setForm({...form, phone: v})} required placeholder="010-0000-0000" />
-              <Field label="우편번호" value={form.zip} onChange={(v) => setForm({...form, zip: v})} required />
+              <Field label="수령인" value={form.name} onChange={(v) => setForm({...form, name: v})} validate={validators.name} required />
+              <Field label="이메일" value={form.email} onChange={(v) => setForm({...form, email: v})} validate={validators.email} required placeholder="example@email.com" type="email" />
+              <Field label="연락처" value={form.phone} onChange={(v) => setForm({...form, phone: v})} validate={validators.phone} required placeholder="010-0000-0000" />
+              <Field label="우편번호" value={form.zip} onChange={(v) => setForm({...form, zip: v})} validate={validators.zip} required placeholder="06236" />
               <div />
-              <div className="col-span-2"><Field label="기본 주소" value={form.addr1} onChange={(v) => setForm({...form, addr1: v})} required /></div>
+              <div className="col-span-2"><Field label="기본 주소" value={form.addr1} onChange={(v) => setForm({...form, addr1: v})} validate={validators.addr1} required /></div>
               <div className="col-span-2"><Field label="상세 주소" value={form.addr2} onChange={(v) => setForm({...form, addr2: v})} /></div>
             </div>
           </Section>
@@ -317,12 +370,37 @@ function Section({ title, children }) {
     </div>
   )
 }
-function Field({ label, value, onChange, ...rest }) {
+function Field({ label, value, onChange, validate, required, ...rest }) {
+  const [touched, setTouched] = useState(false)
+  // 검증 메시지: blur 후, 또는 값이 있을 때 실시간 표시.
+  // 빈 값은 입력 도중 빨갛게 만들지 않음 (UX 거슬림). blur 후엔 필수 표시.
+  const showError = touched || (value && value.length > 0)
+  const error = showError && validate ? validate(value) : null
+  const invalid = !!error
+
   return (
     <label className="block">
-      <div className="text-[11px] text-ink font-bold mb-1.5 tracking-wide">{label}</div>
-      <input value={value} onChange={(e) => onChange(e.target.value)} {...rest}
-        className="w-full bg-bone-2 border-2 border-ink/20 rounded-lg px-4 py-2.5 text-sm text-ink focus:border-ink focus:bg-paper outline-none transition-colors font-medium" />
+      <div className="text-[11px] text-ink font-bold mb-1.5 tracking-wide flex items-center gap-1">
+        {label}
+        {required && <span className="text-dex">*</span>}
+      </div>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={() => setTouched(true)}
+        aria-invalid={invalid}
+        {...rest}
+        className={`w-full rounded-lg px-4 py-2.5 text-sm text-ink outline-none transition-colors font-medium border-2 ${
+          invalid
+            ? 'bg-rose-50 border-dex focus:border-dex'
+            : 'bg-bone-2 border-ink/20 focus:border-ink focus:bg-paper'
+        }`}
+      />
+      {invalid && (
+        <div className="text-[10px] text-dex mt-1 font-bold flex items-center gap-1">
+          <span aria-hidden>⚠</span>{error}
+        </div>
+      )}
     </label>
   )
 }
