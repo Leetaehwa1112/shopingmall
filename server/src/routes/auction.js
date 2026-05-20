@@ -6,6 +6,7 @@ const {
   getApplications,
   getApplicationById,
   updateStatus,
+  updateApplication,
   deleteApplication,
 } = require("../controllers/auctionController");
 const { protect, admin } = require("../middlewares/auth");
@@ -18,6 +19,7 @@ router.get("/me", protect, getMyApplications);
 router.get("/", ...admin, getApplications);
 router.get("/:id", ...admin, getApplicationById);
 router.patch("/:id/status", ...admin, updateStatus);
+router.patch("/:id", ...admin, updateApplication);
 router.delete("/:id", ...admin, deleteApplication);
 
 module.exports = router;

@@ -214,8 +214,132 @@ const updateStatus = async (req, res) => {
   }
 };
 
+// [PATCH] /api/auctions/:id - 신청 내역 수정 (어드민)
+//   진행 중(live) 매물도 수정 가능 — publishedProduct에 자동 동기화.
+//   입찰이 시작된 매물의 startPrice/saleType은 변경 불가 (거래 무결성 보호).
+const updateApplication = async (req, res) => {
+  try {
+    const application = await AuctionApplication.findById(req.params.id);
+    if (!application) {
+      return res.status(404).json({ success: false, message: "신청 내역을 찾을 수 없습니다." });
+    }
+
+    const {
+      name, nameKo, set, year, number,
+      gradeCompany, gradeScore, gradeCert, cardCountry,
+      saleType, startPrice, buyNowPrice, endsAt, minIncrement,
+      photos, description, adminNote,
+    } = req.body;
+
+    // 입찰이 시작된 경우 거래 무결성 보호
+    const hasBids = (application.bidCount || 0) > 0 || application.currentBid;
+    const errors = [];
+
+    if (name !== undefined) {
+      if (!name || !String(name).trim()) errors.push("카드명(영문)이 필요합니다.");
+      else application.name = String(name).trim();
+    }
+    if (nameKo !== undefined) application.nameKo = String(nameKo).trim();
+    if (set !== undefined) application.set = String(set).trim();
+    if (year !== undefined) application.year = String(year).trim();
+    if (number !== undefined) application.number = String(number).trim();
+    if (gradeCompany !== undefined) {
+      if (!["PSA", "BGS", "CGC"].includes(gradeCompany)) errors.push("등급사는 PSA/BGS/CGC 중 하나여야 합니다.");
+      else application.gradeCompany = gradeCompany;
+    }
+    if (gradeScore !== undefined) application.gradeScore = String(gradeScore);
+    if (gradeCert !== undefined) application.gradeCert = String(gradeCert).trim();
+    if (cardCountry !== undefined) {
+      if (!["USA", "JPN", "KOR"].includes(cardCountry)) errors.push("언어판은 USA/JPN/KOR 중 하나여야 합니다.");
+      else application.cardCountry = cardCountry;
+    }
+    if (saleType !== undefined) {
+      if (hasBids && saleType !== application.saleType) {
+        errors.push("입찰이 진행된 매물의 판매 유형은 변경할 수 없습니다.");
+      } else if (!["auction", "buynow"].includes(saleType)) {
+        errors.push("판매 유형은 auction/buynow 중 하나여야 합니다.");
+      } else {
+        application.saleType = saleType;
+      }
+    }
+    if (startPrice !== undefined) {
+      const v = Number(startPrice);
+      if (!Number.isFinite(v) || v < 0) errors.push("시작가는 0 이상이어야 합니다.");
+      else if (hasBids && v !== application.startPrice) errors.push("입찰이 진행된 매물의 시작가는 변경할 수 없습니다.");
+      else application.startPrice = v;
+    }
+    if (buyNowPrice !== undefined) {
+      if (buyNowPrice === null || buyNowPrice === "" || buyNowPrice === 0) {
+        application.buyNowPrice = null;
+      } else {
+        const v = Number(buyNowPrice);
+        if (!Number.isFinite(v) || v <= application.startPrice) {
+          errors.push("즉시낙찰가는 시작가보다 커야 합니다.");
+        } else if (application.currentBid && v < application.currentBid) {
+          errors.push("즉시낙찰가는 현재 최고가보다 커야 합니다.");
+        } else {
+          application.buyNowPrice = v;
+        }
+      }
+    }
+    if (endsAt !== undefined) {
+      application.endsAt = endsAt ? new Date(endsAt) : null;
+    }
+    if (minIncrement !== undefined) {
+      const v = Number(minIncrement);
+      if (Number.isFinite(v) && v > 0) application.minIncrement = v;
+    }
+    if (Array.isArray(photos)) application.photos = photos.slice(0, 10);
+    if (description !== undefined) application.description = String(description).slice(0, 5000);
+    if (adminNote !== undefined) application.adminNote = adminNote;
+
+    if (errors.length) {
+      return res.status(400).json({ success: false, message: errors });
+    }
+
+    await application.save();
+
+    // 게시된 Product가 있으면 동기화 (live/ended 상태 모두)
+    if (application.publishedProduct) {
+      const isBuyNow = application.saleType === "buynow";
+      const productUpdate = {
+        name: application.name,
+        nameKo: application.nameKo,
+        set: application.set,
+        year: Number(application.year) || undefined,
+        number: application.number,
+        sale_type: isBuyNow ? "buynow" : "auction",
+        price: isBuyNow
+          ? (application.buyNowPrice || application.startPrice)
+          : application.startPrice,
+        startPrice: application.startPrice,
+        buyNowPrice: application.buyNowPrice || null,
+        endsAt: application.endsAt,
+        images: application.photos || [],
+        description: application.description || "",
+        grade: {
+          company: application.gradeCompany,
+          score: Number(application.gradeScore),
+          country: application.cardCountry || "USA",
+          cert: application.gradeCert || "",
+        },
+      };
+      await Product.findByIdAndUpdate(application.publishedProduct, productUpdate, { runValidators: true });
+    }
+
+    await application.populate("user", "name email phone");
+    res.status(200).json({ success: true, data: application });
+  } catch (error) {
+    if (error.name === "ValidationError") {
+      const messages = Object.values(error.errors).map((e) => e.message);
+      return res.status(400).json({ success: false, message: messages });
+    }
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // [DELETE] /api/auctions/:id - 신청 삭제 (어드민)
-//   publishedProduct가 있으면 함께 삭제. 단, currentBid가 있으면 거부 (실거래 보호).
+//   publishedProduct가 있으면 함께 삭제. 입찰이 있으면 ?force=true 필요 (안전장치).
 const deleteApplication = async (req, res) => {
   try {
     const application = await AuctionApplication.findById(req.params.id);
@@ -223,13 +347,15 @@ const deleteApplication = async (req, res) => {
       return res.status(404).json({ success: false, message: "신청 내역을 찾을 수 없습니다." });
     }
 
-    // 게시된 Product에 입찰이 있으면 삭제 거부 — 거래 기록 보호
+    const force = req.query.force === "true" || req.body?.force === true;
+
     if (application.publishedProduct) {
       const product = await Product.findById(application.publishedProduct).select("bidCount currentBid");
-      if (product && (product.bidCount > 0 || product.currentBid)) {
+      if (product && (product.bidCount > 0 || product.currentBid) && !force) {
         return res.status(400).json({
           success: false,
-          message: "입찰이 진행된 매물은 삭제할 수 없습니다. 먼저 'ended'로 전환하세요.",
+          message: "입찰이 진행된 매물입니다. 강제 삭제하려면 force=true를 전달하세요.",
+          requireForce: true,
         });
       }
       if (product) await Product.findByIdAndDelete(application.publishedProduct);
@@ -248,5 +374,6 @@ module.exports = {
   getApplications,
   getApplicationById,
   updateStatus,
+  updateApplication,
   deleteApplication,
 };

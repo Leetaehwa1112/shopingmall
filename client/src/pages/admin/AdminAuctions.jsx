@@ -110,7 +110,7 @@ export default function AdminAuctions() {
   }
 
   const handleDelete = async (id) => {
-    if (!confirm('신청을 삭제할까요?\n(게시된 매물이 있으면 함께 삭제됩니다. 입찰 진행 중인 매물은 삭제 불가)')) return
+    if (!confirm('신청을 삭제할까요?\n(게시된 매물이 있으면 함께 삭제됩니다)')) return
     try {
       await api.delete(`/auctions/${id}`)
       logAudit({ actor: user?.name, action: 'auction.delete', entity: 'auction', entityId: id, summary: '신청 + 게시 매물 삭제' })
@@ -118,7 +118,34 @@ export default function AdminAuctions() {
       setDrawer(null)
       fetchList()
     } catch (err) {
+      // 입찰이 있어서 거부된 경우 — 강제 삭제 옵션 제공
+      if (err?.response?.data?.requireForce) {
+        if (!confirm('이미 입찰이 진행된 매물입니다.\n그래도 강제 삭제하시겠어요? (입찰 기록 영구 손실)')) return
+        try {
+          await api.delete(`/auctions/${id}?force=true`)
+          logAudit({ actor: user?.name, action: 'auction.force_delete', entity: 'auction', entityId: id, summary: '강제 삭제 (입찰 기록 포함)' })
+          toast({ type: 'success', title: '강제 삭제 완료', message: '신청과 입찰 기록이 영구 삭제되었습니다.' })
+          setDrawer(null)
+          fetchList()
+        } catch (e2) {
+          toast({ type: 'error', title: '강제 삭제 실패', message: e2?.response?.data?.message || '삭제할 수 없습니다.' })
+        }
+        return
+      }
       toast({ type: 'error', title: '삭제 실패', message: err?.response?.data?.message || '삭제할 수 없습니다.' })
+    }
+  }
+
+  const handleEdit = async (id, patch) => {
+    try {
+      await api.patch(`/auctions/${id}`, patch)
+      logAudit({ actor: user?.name, action: 'auction.edit', entity: 'auction', entityId: id, summary: `필드 수정: ${Object.keys(patch).join(', ')}` })
+      toast({ type: 'success', title: '수정 완료', message: '경매 정보가 업데이트되었습니다.' })
+      setDrawer(null)
+      fetchList()
+    } catch (err) {
+      const msg = err?.response?.data?.message
+      toast({ type: 'error', title: '수정 실패', message: Array.isArray(msg) ? msg.join(', ') : msg || '수정에 실패했습니다.' })
     }
   }
 
@@ -262,62 +289,174 @@ export default function AdminAuctions() {
           onClose={() => setDrawer(null)}
           onStatusChange={handleStatusChange}
           onDelete={handleDelete}
+          onEdit={handleEdit}
         />
       )}
     </div>
   )
 }
 
-function AuctionDrawer({ item, onClose, onStatusChange, onDelete }) {
+function AuctionDrawer({ item, onClose, onStatusChange, onDelete, onEdit }) {
   const [note, setNote] = useState(item.adminNote || '')
+  const [editing, setEditing] = useState(false)
+  const [form, setForm] = useState({
+    name: item.name || '',
+    nameKo: item.nameKo || '',
+    set: item.set || '',
+    year: item.year || '',
+    number: item.number || '',
+    gradeCompany: item.gradeCompany || 'PSA',
+    gradeScore: item.gradeScore || '',
+    gradeCert: item.gradeCert || '',
+    cardCountry: item.cardCountry || 'USA',
+    saleType: item.saleType || 'auction',
+    startPrice: item.startPrice ?? '',
+    buyNowPrice: item.buyNowPrice ?? '',
+    endsAt: item.endsAt ? new Date(item.endsAt).toISOString().slice(0, 16) : '',
+    minIncrement: item.minIncrement ?? '',
+    description: item.description || '',
+  })
   const s = STATUS[item.status] || STATUS.pending
+  const hasBids = (item.bidCount || 0) > 0 || item.currentBid
+  const setF = (k) => (v) => setForm((p) => ({ ...p, [k]: v }))
+
+  const submitEdit = () => {
+    const patch = {
+      name: form.name,
+      nameKo: form.nameKo,
+      set: form.set,
+      year: form.year,
+      number: form.number,
+      gradeCompany: form.gradeCompany,
+      gradeScore: form.gradeScore,
+      gradeCert: form.gradeCert,
+      cardCountry: form.cardCountry,
+      saleType: form.saleType,
+      startPrice: form.startPrice === '' ? undefined : Number(form.startPrice),
+      buyNowPrice: form.buyNowPrice === '' || form.buyNowPrice == null ? null : Number(form.buyNowPrice),
+      endsAt: form.endsAt || null,
+      minIncrement: form.minIncrement === '' ? undefined : Number(form.minIncrement),
+      description: form.description,
+      adminNote: note,
+    }
+    onEdit?.(item._id, patch)
+  }
+
   return (
     <Drawer
       open
       onClose={onClose}
       title={item.nameKo || item.name}
       subtitle={item.nameKo ? item.name : item.set}
-      width={560}
+      width={620}
       footer={
-        <>
+        <div className="flex items-center gap-2 w-full justify-between">
+          <div className="flex gap-2">
+            {!editing && (
+              <button onClick={() => setEditing(true)}
+                className="text-xs font-bold bg-ink text-white px-3 py-1.5 rounded-md hover:bg-ink/85">
+                ✎ 수정 모드
+              </button>
+            )}
+            {editing && (
+              <>
+                <button onClick={submitEdit}
+                  className="text-xs font-bold bg-emerald-600 text-white px-3 py-1.5 rounded-md hover:bg-emerald-700">
+                  💾 저장하기
+                </button>
+                <button onClick={() => setEditing(false)}
+                  className="text-xs font-bold text-mute hover:text-ink px-3 py-1.5 rounded-md hover:bg-bone-2">
+                  수정 취소
+                </button>
+              </>
+            )}
+          </div>
           <button onClick={onClose} className="text-xs font-bold text-mute hover:text-ink px-3 py-1.5 rounded-md hover:bg-bone-2">닫기</button>
-        </>
+        </div>
       }
     >
       <div className="mb-4 flex items-center gap-2">
         <StatusPill tone={s.tone} led={s.led}>{s.label}</StatusPill>
         <span className="text-[11px] text-mute font-mono">신청일 {new Date(item.createdAt).toLocaleDateString('ko-KR')}</span>
+        {hasBids && <StatusPill tone="amber" led="yellow">입찰 진행됨</StatusPill>}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <DSection title="신청자">
-          <KV k="이름" v={item.user?.name} />
-          <KV k="이메일" v={item.user?.email} />
-          {item.user?.phone && <KV k="연락처" v={item.user.phone} />}
-        </DSection>
-        <DSection title="카드 정보">
-          <KV k="영문명" v={item.name} />
-          {item.nameKo && <KV k="한글명" v={item.nameKo} />}
-          {item.set && <KV k="세트" v={item.set} />}
-          {item.year && <KV k="연도" v={item.year} />}
-          {item.number && <KV k="번호" v={item.number} mono />}
-        </DSection>
-        <DSection title="등급">
-          <KV k="언어판" v={item.cardCountry ? `${COUNTRY_FLAG[item.cardCountry]} ${item.cardCountry}` : '-'} />
-          <KV k="등급사" v={item.gradeCompany} />
-          <KV k="점수" v={item.gradeScore} mono />
-          {item.gradeCert && <KV k="인증서" v={`#${item.gradeCert}`} mono />}
-        </DSection>
-        <DSection title="판매 조건">
-          <KV k="유형" v={item.saleType === 'auction' ? '경매' : '즉시 구매'} />
-          <KV k="시작가" v={`₩${item.startPrice?.toLocaleString()}`} mono />
-          {item.buyNowPrice && <KV k="즉시낙찰" v={`₩${item.buyNowPrice?.toLocaleString()}`} mono />}
-          <KV k="최소호가" v={`₩${item.minIncrement?.toLocaleString()}`} mono />
-          {item.endsAt && <KV k="종료" v={new Date(item.endsAt).toLocaleString('ko-KR')} />}
-        </DSection>
-      </div>
+      {!editing ? (
+        <div className="grid grid-cols-2 gap-4">
+          <DSection title="신청자">
+            <KV k="이름" v={item.user?.name} />
+            <KV k="이메일" v={item.user?.email} />
+            {item.user?.phone && <KV k="연락처" v={item.user.phone} />}
+          </DSection>
+          <DSection title="카드 정보">
+            <KV k="영문명" v={item.name} />
+            {item.nameKo && <KV k="한글명" v={item.nameKo} />}
+            {item.set && <KV k="세트" v={item.set} />}
+            {item.year && <KV k="연도" v={item.year} />}
+            {item.number && <KV k="번호" v={item.number} mono />}
+          </DSection>
+          <DSection title="등급">
+            <KV k="언어판" v={item.cardCountry ? `${COUNTRY_FLAG[item.cardCountry]} ${item.cardCountry}` : '-'} />
+            <KV k="등급사" v={item.gradeCompany} />
+            <KV k="점수" v={item.gradeScore} mono />
+            {item.gradeCert && <KV k="인증서" v={`#${item.gradeCert}`} mono />}
+          </DSection>
+          <DSection title="판매 조건">
+            <KV k="유형" v={item.saleType === 'auction' ? '경매' : '즉시 구매'} />
+            <KV k="시작가" v={`₩${item.startPrice?.toLocaleString()}`} mono />
+            {item.buyNowPrice && <KV k="즉시낙찰" v={`₩${item.buyNowPrice?.toLocaleString()}`} mono />}
+            <KV k="최소호가" v={`₩${item.minIncrement?.toLocaleString()}`} mono />
+            {item.endsAt && <KV k="종료" v={new Date(item.endsAt).toLocaleString('ko-KR')} />}
+          </DSection>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <DSection title="카드 정보 (수정)">
+            <div className="grid grid-cols-2 gap-2">
+              <DInput label="영문명 *" value={form.name} onChange={setF('name')} />
+              <DInput label="한글명" value={form.nameKo} onChange={setF('nameKo')} />
+              <DInput label="세트" value={form.set} onChange={setF('set')} />
+              <DInput label="연도" value={form.year} onChange={setF('year')} />
+              <DInput label="번호" value={form.number} onChange={setF('number')} />
+            </div>
+          </DSection>
+          <DSection title="등급 (수정)">
+            <div className="grid grid-cols-3 gap-2">
+              <DSelect label="등급사" value={form.gradeCompany} onChange={setF('gradeCompany')}
+                options={[{value:'PSA',label:'PSA'},{value:'BGS',label:'BGS'},{value:'CGC',label:'CGC'}]} />
+              <DInput label="점수" value={form.gradeScore} onChange={setF('gradeScore')} />
+              <DSelect label="언어판" value={form.cardCountry} onChange={setF('cardCountry')}
+                options={[{value:'USA',label:'🇺🇸 USA'},{value:'JPN',label:'🇯🇵 JPN'},{value:'KOR',label:'🇰🇷 KOR'}]} />
+              <div className="col-span-3">
+                <DInput label="인증서 번호" value={form.gradeCert} onChange={setF('gradeCert')} />
+              </div>
+            </div>
+          </DSection>
+          <DSection title="판매 조건 (수정)">
+            {hasBids && (
+              <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 mb-2">
+                ⚠️ 입찰이 진행 중 — 시작가/판매유형은 변경 불가. 즉시낙찰가/종료시각은 조정 가능.
+              </p>
+            )}
+            <div className="grid grid-cols-2 gap-2">
+              <DSelect label="유형" value={form.saleType} onChange={setF('saleType')} disabled={hasBids}
+                options={[{value:'auction',label:'경매'},{value:'buynow',label:'즉시구매'}]} />
+              <DInput label="시작가 (원)" type="number" value={form.startPrice} onChange={setF('startPrice')} disabled={hasBids} />
+              <DInput label="즉시낙찰가 (원, 비우면 해제)" type="number" value={form.buyNowPrice} onChange={setF('buyNowPrice')} />
+              <DInput label="최소 호가 (원)" type="number" value={form.minIncrement} onChange={setF('minIncrement')} />
+              <div className="col-span-2">
+                <DInput label="종료 시각" type="datetime-local" value={form.endsAt} onChange={setF('endsAt')} />
+              </div>
+            </div>
+          </DSection>
+          <DSection title="설명 (수정)">
+            <textarea value={form.description} onChange={(e) => setF('description')(e.target.value)} rows={3}
+              className="w-full bg-bone-2/50 border border-ink/15 rounded-md px-3 py-2 text-xs text-ink focus:border-ink outline-none" />
+          </DSection>
+        </div>
+      )}
 
-      {item.status === 'live' && (
+      {!editing && item.status === 'live' && (
         <DSection title="입찰 현황">
           <KV k="현재 최고가" v={item.currentBid ? `₩${item.currentBid.toLocaleString()}` : '없음'} mono highlight />
           <KV k="총 입찰 수" v={`${item.bidCount || 0}회`} mono />
@@ -330,30 +469,55 @@ function AuctionDrawer({ item, onClose, onStatusChange, onDelete }) {
           className="w-full bg-bone-2/50 border border-ink/15 rounded-md px-3 py-2 text-xs text-ink focus:border-ink outline-none" />
       </DSection>
 
-      <DSection title="상태 변경">
-        <div className="flex flex-wrap gap-1.5">
-          {Object.entries(STATUS).filter(([k]) => k !== item.status).map(([k, v]) => (
-            <button key={k} onClick={() => onStatusChange(item._id, k, note)}
-              className={`text-[11px] font-bold px-3 py-1.5 rounded-md border ${k === 'rejected' ? 'border-red-300 text-red-700 hover:bg-red-50' : k === 'live' ? 'border-emerald-300 text-emerald-700 hover:bg-emerald-50' : k === 'approved' ? 'border-blue-300 text-blue-700 hover:bg-blue-50' : 'border-ink/15 text-mute hover:bg-bone-2'}`}>
-              → {v.label}
-            </button>
-          ))}
-        </div>
-      </DSection>
+      {!editing && (
+        <DSection title="상태 변경">
+          <div className="flex flex-wrap gap-1.5">
+            {Object.entries(STATUS).filter(([k]) => k !== item.status).map(([k, v]) => (
+              <button key={k} onClick={() => onStatusChange(item._id, k, note)}
+                className={`text-[11px] font-bold px-3 py-1.5 rounded-md border ${k === 'rejected' ? 'border-red-300 text-red-700 hover:bg-red-50' : k === 'live' ? 'border-emerald-300 text-emerald-700 hover:bg-emerald-50' : k === 'approved' ? 'border-blue-300 text-blue-700 hover:bg-blue-50' : 'border-ink/15 text-mute hover:bg-bone-2'}`}>
+                → {v.label}
+              </button>
+            ))}
+          </div>
+        </DSection>
+      )}
 
       {/* 위험 액션 영역 — 신청 + 게시 매물 영구 삭제 */}
-      <DSection title="위험 작업">
-        <button
-          type="button"
-          onClick={() => onDelete?.(item._id)}
-          className="text-[11px] font-bold px-3 py-1.5 rounded-md border border-red-500 text-white bg-red-600 hover:bg-red-700 transition-colors"
-        >
-          신청 삭제
-        </button>
-        <p className="text-[10px] text-mute mt-1.5 leading-relaxed">
-          신청 내역과 게시된 매물을 함께 영구 삭제합니다. 입찰 진행 중인 매물은 삭제할 수 없습니다.
-        </p>
-      </DSection>
+      {!editing && (
+        <DSection title="위험 작업">
+          <button
+            type="button"
+            onClick={() => onDelete?.(item._id)}
+            className="text-[11px] font-bold px-3 py-1.5 rounded-md border border-red-500 text-white bg-red-600 hover:bg-red-700 transition-colors"
+          >
+            신청 삭제
+          </button>
+          <p className="text-[10px] text-mute mt-1.5 leading-relaxed">
+            신청 내역과 게시된 매물을 함께 영구 삭제합니다. 입찰이 진행된 매물은 추가 확인 후 강제 삭제 가능합니다.
+          </p>
+        </DSection>
+      )}
     </Drawer>
+  )
+}
+
+function DInput({ label, value, onChange, type = 'text', disabled = false }) {
+  return (
+    <label className="block">
+      <div className="text-[10px] text-mute font-bold mb-1 tracking-wide">{label}</div>
+      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled}
+        className={`w-full bg-bone-2/50 border border-ink/15 rounded-md px-2.5 py-1.5 text-xs text-ink focus:border-ink outline-none ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`} />
+    </label>
+  )
+}
+function DSelect({ label, value, onChange, options, disabled = false }) {
+  return (
+    <label className="block">
+      <div className="text-[10px] text-mute font-bold mb-1 tracking-wide">{label}</div>
+      <select value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled}
+        className={`w-full bg-bone-2/50 border border-ink/15 rounded-md px-2.5 py-1.5 text-xs text-ink focus:border-ink outline-none ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
+        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    </label>
   )
 }
