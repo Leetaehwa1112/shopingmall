@@ -284,17 +284,17 @@ body {
   0%   { transform: translateX(-50%) rotate(0deg); }
   100% { transform: translateX(-50%) rotate(360deg); }
 }
-/* 카드 자체 — 360° Y축 회전 (turntable처럼 뒤로 돌면서 한 바퀴).
-   PokeCard 컴포넌트가 wrapper 안에 들어가있으므로 그것에 적용. */
+/* 카드 자체 — 좌우 살짝 회전(card-sway 방식). rotateY 360은 텍스트가
+   뒤집혀 어색하므로 ±18° 흔들기만 + turntable disc가 도는 인상으로 대체. */
 .card-stage > * {
   position: relative;
   z-index: 1;
-  animation: turntable-spin 9s linear infinite;
-  transform-style: preserve-3d;
+  animation: stage-card-sway 7s ease-in-out infinite;
+  transform-origin: center center;
 }
-@keyframes turntable-spin {
-  0%   { transform: rotateY(0deg); }
-  100% { transform: rotateY(360deg); }
+@keyframes stage-card-sway {
+  0%, 100% { transform: rotateY(-12deg) translateY(0); }
+  50%      { transform: rotateY(12deg)  translateY(-3px); }
 }
 /* hover 시 spotlight 강화 + 회전 일시 정지 (사용자가 카드 자세히 보게) */
 .group:hover .card-stage::before {

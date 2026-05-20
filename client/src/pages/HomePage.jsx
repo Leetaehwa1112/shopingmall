@@ -447,14 +447,15 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
   }, [card.id, card._id])
 
   return (
-    // 외곽 컨테이너 — 위쪽 큰 padding(카드 절반 솟음 공간). overflow visible.
-    <div className="relative pt-24 sm:pt-28">
+    // 외곽 컨테이너 — 카드 위쪽 약 60% 솟음 공간(~140px). overflow visible.
+    // 카드 sm(160×224), 위 ~140px 솟고 ~84px가 빨간 배너에 잠김(절반 입체).
+    <div className="relative pt-36">
       {/* ─── 떠있는 큰 카드 ─── 빨간 LIVE 배너 위로 절반 솟아오름.
           카드 하단은 배너 안에 잠긴 채로, 상단은 위로 입체적으로 튀어나옴.
-          turntable disc 위에서 360° 회전 (리자몽 무대 효과). */}
+          turntable disc만 회전, 카드는 좌우 살짝 흔들기(텍스트 가독성). */}
       <div
         className="absolute left-1/2 -translate-x-1/2 z-30 sparkle-host"
-        style={{ top: 0, perspective: 1400 }}
+        style={{ top: 4, perspective: 1400 }}
       >
         {/* spotlight glow — 카드 뒤 노랑+빨강 후광 */}
         <span
@@ -487,7 +488,7 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
         {/* 카드 자체 — 360° Y축 회전 (rotateY 무한). hover시 일시 정지. */}
         <div className="relative card-turntable-spin">
           <Link to={`/products/${card.id}`} className="block focus-ring" aria-label={`${card.nameKo} 경매 상세`}>
-            <PokeCard card={card} size={compact ? 'sm' : 'md'} eager interactive={false} />
+            <PokeCard card={card} size={compact ? 'xs' : 'sm'} eager interactive={false} />
           </Link>
         </div>
       </div>
@@ -645,10 +646,11 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
           0%   { transform: translateX(-120%); }
           100% { transform: translateX(260%); }
         }
-        /* 카드 자체 360 회전 — 9초 주기 rotateY 무한. hover 시 일시 정지 */
+        /* 카드 살짝 좌우 회전(card-sway 방식) — 텍스트 가독성 + 입체감.
+           turntable disc 자체 회전(stage-disc-turn)이 360 인상을 담당. */
         .card-turntable-spin {
-          animation: turntable-spin 9s linear infinite;
-          transform-style: preserve-3d;
+          animation: stage-card-sway 7s ease-in-out infinite;
+          transform-origin: center center;
         }
         .card-turntable-spin:hover { animation-play-state: paused; }
       `}</style>
