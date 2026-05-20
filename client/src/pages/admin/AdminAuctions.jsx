@@ -109,29 +109,42 @@ export default function AdminAuctions() {
     }
   }
 
-  const handleDelete = async (id) => {
-    if (!confirm('신청을 삭제할까요?\n(게시된 매물이 있으면 함께 삭제됩니다)')) return
+  const handleDelete = async (id, opts = {}) => {
+    const { skipConfirm = false, fromRow = false } = opts
+    if (!skipConfirm && !confirm('신청을 삭제할까요?\n(게시된 매물이 있으면 함께 삭제됩니다)')) return
+
+    // 낙관적 업데이트 — 화면에서 즉시 제거 (서버 실패 시 롤백)
+    const prev = list
+    setList((cur) => cur.filter((r) => r._id !== id))
+    setSelected((cur) => cur.filter((sid) => sid !== id))
+
     try {
       await api.delete(`/auctions/${id}`)
       logAudit({ actor: user?.name, action: 'auction.delete', entity: 'auction', entityId: id, summary: '신청 + 게시 매물 삭제' })
       toast({ type: 'success', title: '삭제 완료', message: '신청 내역이 삭제되었습니다.' })
-      setDrawer(null)
+      if (!fromRow) setDrawer(null)
+      // 총개수 갱신을 위해 백그라운드 리프레시
       fetchList()
     } catch (err) {
       // 입찰이 있어서 거부된 경우 — 강제 삭제 옵션 제공
       if (err?.response?.data?.requireForce) {
-        if (!confirm('이미 입찰이 진행된 매물입니다.\n그래도 강제 삭제하시겠어요? (입찰 기록 영구 손실)')) return
+        if (!confirm('이미 입찰이 진행된 매물입니다.\n그래도 강제 삭제하시겠어요? (입찰 기록 영구 손실)')) {
+          setList(prev) // 사용자가 취소 → 롤백
+          return
+        }
         try {
           await api.delete(`/auctions/${id}?force=true`)
           logAudit({ actor: user?.name, action: 'auction.force_delete', entity: 'auction', entityId: id, summary: '강제 삭제 (입찰 기록 포함)' })
           toast({ type: 'success', title: '강제 삭제 완료', message: '신청과 입찰 기록이 영구 삭제되었습니다.' })
-          setDrawer(null)
+          if (!fromRow) setDrawer(null)
           fetchList()
         } catch (e2) {
+          setList(prev) // 롤백
           toast({ type: 'error', title: '강제 삭제 실패', message: e2?.response?.data?.message || '삭제할 수 없습니다.' })
         }
         return
       }
+      setList(prev) // 롤백
       toast({ type: 'error', title: '삭제 실패', message: err?.response?.data?.message || '삭제할 수 없습니다.' })
     }
   }
@@ -273,11 +286,29 @@ export default function AdminAuctions() {
           { key: 'createdAt', label: '신청일', sortable: true, render: (r) =>
             <span className="text-[11px] text-mute font-mono">{new Date(r.createdAt).toLocaleDateString('ko-KR')}</span>
           },
-          { key: 'actions', label: '', align: 'right', render: (r) =>
-            <RowActions>
-              <IconBtn icon="arrow" label="상세" onClick={() => setDrawer(r)} />
-            </RowActions>
-          },
+          { key: 'actions', label: '', align: 'right', render: (r) => {
+            const hasBids = (r.bidCount || 0) > 0 || r.currentBid
+            const danger = r.status === 'rejected' || r.status === 'ended' || (r.status === 'pending' && !hasBids)
+            return (
+              <RowActions>
+                <IconBtn icon="arrow" label="상세" onClick={(e) => { e?.stopPropagation?.(); setDrawer(r) }} />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleDelete(r._id, { fromRow: true })
+                  }}
+                  title={danger ? '삭제' : '삭제 (입찰 진행 중일 수 있음)'}
+                  className={`inline-flex items-center justify-center w-6 h-6 rounded border text-[10px] font-bold transition-all ${
+                    danger
+                      ? 'border-red-300 text-red-700 hover:bg-red-50 hover:border-red-500'
+                      : 'border-ink/15 text-mute hover:border-red-300 hover:text-red-600'
+                  }`}
+                >
+                  ✕
+                </button>
+              </RowActions>
+            )
+          }},
         ]}
       />
 

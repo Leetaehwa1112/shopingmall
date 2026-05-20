@@ -348,10 +348,12 @@ const deleteApplication = async (req, res) => {
     }
 
     const force = req.query.force === "true" || req.body?.force === true;
+    // 거절된 신청은 정책상 무효 — 입찰 기록도 함께 삭제 (force 불필요)
+    const isRejected = application.status === "rejected";
 
     if (application.publishedProduct) {
       const product = await Product.findById(application.publishedProduct).select("bidCount currentBid");
-      if (product && (product.bidCount > 0 || product.currentBid) && !force) {
+      if (product && (product.bidCount > 0 || product.currentBid) && !force && !isRejected) {
         return res.status(400).json({
           success: false,
           message: "입찰이 진행된 매물입니다. 강제 삭제하려면 force=true를 전달하세요.",
