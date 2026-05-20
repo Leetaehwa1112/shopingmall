@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { formatKRW, formatKRWFull } from '@/api/cards'
+import { formatKRW, formatKRWFull, timeUntil } from '@/api/cards'
 import { normalizeProduct } from '@/api/normalize'
 import api from '@/api/axios'
 import PokeCard from '@/components/common/PokeCard'
@@ -14,6 +14,7 @@ import CardTile from '@/components/common/CardTile'
 import ShippingBanner from '@/components/common/ShippingBanner'
 import Icon from '@/components/common/Icon'
 import Sparkles from '@/components/common/Sparkles'
+import MiniBroadcastPlayer from '@/components/common/MiniBroadcastPlayer'
 import useCartStore from '@/store/cartStore'
 import useWishlistStore from '@/store/wishlistStore'
 import useToastStore from '@/store/toastStore'
@@ -33,6 +34,16 @@ export default function ProductDetailPage() {
   const [bidAmount, setBidAmount] = useState('')
   const [bidding, setBidding] = useState(false)
   const [view, setView] = useState('front')
+  // 미니 방송 플레이어 — LIVE 경매 상세에서 우측 하단 PiP. 닫으면 dismissed.
+  const [miniDismissed, setMiniDismissed] = useState(false)
+  const bidPanelRef = useRef(null)
+  // 매초 tick — 카운트다운 텍스트 갱신용 (card.endsAt 도달했을 때만 사용되는 라이트 tick)
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    if (!card || card.sale_type !== 'auction' || card.status !== 'active') return
+    const id = setInterval(() => setTick((x) => x + 1), 1000)
+    return () => clearInterval(id)
+  }, [card?.sale_type, card?.status])
 
   useEffect(() => {
     setLoading(true)
@@ -256,7 +267,7 @@ export default function ProductDetailPage() {
 
           {/* ═══════ Bid / Buy panel ═══════ */}
           {cardType === 'auction' ? (
-            <div className="surface-pop p-6 space-y-5 relative overflow-hidden">
+            <div ref={bidPanelRef} className="surface-pop p-6 space-y-5 relative overflow-hidden">
               {/* Price + bid count */}
               <div className="flex justify-between items-end">
                 <div>
@@ -553,6 +564,37 @@ export default function ProductDetailPage() {
           </div>
         </div>
       )}
+
+      {/* 우측 하단 미니 방송 플레이어 — LIVE 경매 상세에서 항상 표시. */}
+      {cardType === 'auction' && card.status === 'active' && !miniDismissed && (() => {
+        const t = card.endsAt ? timeUntil(card.endsAt) : null
+        if (t?.ended) return null
+        const totalMs = t?.totalMs ?? 0
+        const isCritical = totalMs > 0 && totalMs < 10 * 60 * 1000   // < 10분
+        const isUrgent   = totalMs > 0 && totalMs < 60 * 60 * 1000   // < 1시간
+        const clockText = !t ? '' : (
+          t.d > 0
+            ? `${t.d}D ${String(t.h).padStart(2, '0')}H`
+            : `${String(t.h).padStart(2, '0')}:${String(t.m).padStart(2, '0')}:${String(t.s).padStart(2, '0')}`
+        )
+        // 결정적 시청자 수 — id 기반 (페이지 진입 동안 안정적으로 유지)
+        const seed = String(cardId)
+        const viewers = 180 + ((seed.charCodeAt(seed.length - 1) || 0) * 7 + seed.length * 13) % 240
+        return (
+          <MiniBroadcastPlayer
+            visible
+            lot={card}
+            viewers={viewers}
+            current={card.currentBid || card.startPrice || 0}
+            clockText={clockText}
+            isCritical={isCritical}
+            isUrgent={isUrgent}
+            onClose={() => setMiniDismissed(true)}
+            onExpand={() => bidPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+            onBid={() => bidPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+          />
+        )
+      })()}
     </div>
   )
 }

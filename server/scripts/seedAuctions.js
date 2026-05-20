@@ -6,10 +6,11 @@ const User = require('../src/models/User');
 
 // ─── 정책: 동시 LIVE 1건. 나머지는 'upcoming'으로 예약. ─────────
 //   LOT #1 — 리자몽 (지금 LIVE, 마감까지 6시간)
-//   LOT #2 — 피카츄 일러스트레이터 (6시간 후 시작)
-//   LOT #3 — 샤이닝 리자몽 (24시간 후 시작)
-//   LOT #4 — 루기아 (48시간 후 시작)
+//   LOT #2 — 피카츄 일러스트레이터 (1일 후 시작, 7일 진행)
+//   LOT #3 — 샤이닝 리자몽 (3일 후 시작, 7일 진행)
+//   LOT #4 — 루기아 (5일 후 시작, 7일 진행)
 const HOUR = 1000 * 60 * 60;
+const DAY = 24 * HOUR;
 const now = Date.now();
 
 const MOCK_AUCTIONS = [
@@ -52,9 +53,9 @@ const MOCK_AUCTIONS = [
     startPrice: 200000000,
     minIncrement: 5000000,
     status: 'upcoming',
-    // 6시간 후 (리자몽 마감 직후) 시작 — LOT #1 끝나면 무대 인계
-    startsAt: new Date(now + 6 * HOUR),
-    endsAt: new Date(now + 6 * HOUR + 24 * HOUR),
+    // 1일 후 시작 — 7일 진행
+    startsAt: new Date(now + 1 * DAY),
+    endsAt: new Date(now + 1 * DAY + 7 * DAY),
     description: '코로코로 코믹스 일러스트 콘테스트 1998년 한정 프로모. 현존 최고가 카드.',
   },
   {
@@ -73,8 +74,9 @@ const MOCK_AUCTIONS = [
     startPrice: 9000000,
     minIncrement: 500000,
     status: 'upcoming',
-    startsAt: new Date(now + 30 * HOUR),
-    endsAt: new Date(now + 30 * HOUR + 12 * HOUR),
+    // 3일 후 시작 — 7일 진행
+    startsAt: new Date(now + 3 * DAY),
+    endsAt: new Date(now + 3 * DAY + 7 * DAY),
     description: '네오 데스티니 시크릿 레어. 일본판 BGS 9.5.',
   },
   {
@@ -93,8 +95,9 @@ const MOCK_AUCTIONS = [
     startPrice: 30000000,
     minIncrement: 1000000,
     status: 'upcoming',
-    startsAt: new Date(now + 48 * HOUR),
-    endsAt: new Date(now + 48 * HOUR + 12 * HOUR),
+    // 5일 후 시작 — 7일 진행
+    startsAt: new Date(now + 5 * DAY),
+    endsAt: new Date(now + 5 * DAY + 7 * DAY),
     description: '네오 제네시스 1st Edition. 컬렉터즈 그레일.',
   },
 ];
@@ -177,9 +180,9 @@ async function seed() {
 
   console.log(`✓ Seeded ${liveCount} LIVE + ${upcomingCount} UPCOMING auctions.`);
   console.log('  LOT #1: 리자몽 (LIVE, 마감 6시간)');
-  console.log('  LOT #2: 피카츄 일러스트레이터 (6시간 후 시작)');
-  console.log('  LOT #3: 샤이닝 리자몽 (30시간 후 시작)');
-  console.log('  LOT #4: 루기아 (48시간 후 시작)');
+  console.log('  LOT #2: 피카츄 일러스트레이터 (1일 후 시작, 7일 진행)');
+  console.log('  LOT #3: 샤이닝 리자몽 (3일 후 시작, 7일 진행)');
+  console.log('  LOT #4: 루기아 (5일 후 시작, 7일 진행)');
   process.exit(0);
 }
 

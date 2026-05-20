@@ -47,6 +47,8 @@ function CardTile({ card }) {
 
   const cardType = card.type || card.sale_type
   const auctionEnded = cardType === 'auction' && card.endsAt && card.endsAt - Date.now() <= 0
+  // upcoming: 일정 확정된 예정 경매 — 시작 전이므로 가격 대신 "경매 예정"
+  const auctionUpcoming = cardType === 'auction' && card.status === 'upcoming'
 
   return (
     <Link to={`/products/${cardId}`} className="group block surface-card holo-shine sparkle-host overflow-hidden relative">
@@ -60,7 +62,12 @@ function CardTile({ card }) {
       {/* Status strip — micro pixel label */}
       <div className="px-4 pt-4 flex justify-between items-center">
         {cardType === 'auction' ? (
-          auctionEnded ? (
+          auctionUpcoming ? (
+            <span className="inline-flex items-center gap-2">
+              <span className="led led-yellow led-pulse" style={{ width: 7, height: 7 }} />
+              <span className="pixel-label text-mute">UPCOMING · No.{lotLabel}</span>
+            </span>
+          ) : auctionEnded ? (
             <span className="inline-flex items-center gap-2">
               <span className="led" style={{ width: 7, height: 7, background: '#9aa1a8' }} />
               <span className="pixel-label text-mute">CLOSED · No.{lotLabel}</span>
@@ -114,7 +121,11 @@ function CardTile({ card }) {
 
         {/* Price block */}
         <div className="pt-3 border-t border-line">
-          {cardType === 'auction' ? <AuctionFooter card={card} /> : <BuyNowFooter card={card} />}
+          {cardType === 'auction'
+            ? auctionUpcoming
+              ? <UpcomingFooter card={card} />
+              : <AuctionFooter card={card} />
+            : <BuyNowFooter card={card} />}
         </div>
       </div>
     </Link>
@@ -174,6 +185,39 @@ function AuctionFooter({ card }) {
           <span className="text-[10px] font-mono font-bold tracking-wider">—</span>
         ) : (
           <Countdown endsAt={card.endsAt} size="sm" label={false} />
+        )}
+      </div>
+    </div>
+  )
+}
+
+// 예정 경매 — 가격(아직 입찰 없음) 대신 "경매 예정" 라벨 + 시작 카운트다운.
+function UpcomingFooter({ card }) {
+  return (
+    <div className="space-y-2.5">
+      <div className="flex justify-between items-baseline">
+        <div>
+          <div className="text-[9px] text-mute font-bold tracking-[0.15em] uppercase mb-0.5">
+            상태
+          </div>
+          <div className="font-display text-xl font-bold text-ink leading-none">
+            경매 예정
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="text-[9px] text-mute font-bold tracking-[0.15em] uppercase mb-0.5">시작가</div>
+          <div className="font-mono text-sm font-bold text-ink tabular-nums">{formatKRW(card.startPrice || card.price || 0)}</div>
+        </div>
+      </div>
+      <div className="flex items-center justify-between rounded-lg px-3 py-1.5 bg-electric/15 text-ink">
+        <span className="text-[10px] font-bold inline-flex items-center gap-1.5 tracking-wider">
+          <Icon name="clock" size={11} strokeWidth={2.2} />
+          시작까지
+        </span>
+        {card.startsAt ? (
+          <Countdown endsAt={card.startsAt} size="sm" label={false} />
+        ) : (
+          <span className="text-[10px] font-mono font-bold tracking-wider">곧</span>
         )}
       </div>
     </div>
