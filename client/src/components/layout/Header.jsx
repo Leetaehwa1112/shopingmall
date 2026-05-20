@@ -115,6 +115,13 @@ export default function Header() {
           <NavLink to="/products" className={linkCls}>희귀카드</NavLink>
           <NavLink to="/packs" className={linkCls}>카드팩</NavLink>
           <NavLink to="/dex" className={linkCls}>도감</NavLink>
+          {/* 오늘의 LOT — Pokédex 부팅 시퀀스 인트로 페이지 (별도 시네마틱 라우트). */}
+          <NavLink to="/today" className={linkCls}>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="led led-yellow led-pulse" style={{ width: 6, height: 6 }} />
+              오늘의 LOT
+            </span>
+          </NavLink>
           {isAdmin && <NavLink to="/admin" className={linkCls}>관리자</NavLink>}
         </nav>
 
