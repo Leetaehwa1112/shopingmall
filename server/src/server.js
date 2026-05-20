@@ -6,7 +6,12 @@ const connectDB = require('./config/db');
 const PORT = process.env.PORT || 5000;
 
 // ─── 필수 환경변수 검증 ─────────────────────────────────────
-const REQUIRED_ENV = ['MONGO_URI', 'JWT_SECRET'];
+// MONGODB_ATLAS_URL 또는 MONGO_URI 중 하나만 있으면 됨
+if (!process.env.MONGODB_ATLAS_URL && !process.env.MONGO_URI) {
+  console.error('[FATAL] 필수 환경변수 누락: MONGODB_ATLAS_URL 또는 MONGO_URI 중 하나가 필요합니다.');
+  process.exit(1);
+}
+const REQUIRED_ENV = ['JWT_SECRET'];
 const missing = REQUIRED_ENV.filter((k) => !process.env[k]);
 if (missing.length) {
   console.error(`[FATAL] 필수 환경변수 누락: ${missing.join(', ')}`);
