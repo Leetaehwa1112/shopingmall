@@ -222,6 +222,180 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ════════════════════════════════════════════════
+          TODAY'S TOP LOT — 현재 LIVE 경매 1건만 노출 (예정만 있을 땐 숨김)
+          ════════════════════════════════════════════════ */}
+      {!loading && FEATURED_LIVE && TOP_LOT && (
+        <section aria-label="오늘의 탑 로트" className="py-12 px-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-end justify-between gap-4 mb-8">
+              <div>
+                <Eyebrow tone="ink" dotColor="yellow" className="mb-3">
+                  AUCTION CATALOG · 큐레이션
+                </Eyebrow>
+                <h2 className="font-display text-3xl lg:text-[42px] font-bold text-ink tracking-tight leading-[1.05]">
+                  이 카드, <span className="text-dex">자세히 들여다봐요</span>
+                </h2>
+                <p className="text-[15px] text-mute mt-2 font-medium">
+                  Pokédex 카탈로그 모듈로 오늘의 LOT을 박물관 전시처럼.
+                  스펙·인증·보관 이력까지 한 화면에.
+                </p>
+              </div>
+            </div>
+
+            <div className="dex-casing p-5 sm:p-6 reveal-up holo-shine sparkle-host relative">
+              <Sparkles always />
+              <div className="flex items-center justify-between mb-5">
+                <div className="inline-flex items-center gap-2.5">
+                  <span className="led led-red led-pulse" aria-hidden="true" />
+                  <span className="pixel-label text-white">TODAY'S TOP LOT</span>
+                </div>
+                <span className="pixel-label text-white/70">No.<span className="text-electric">001</span></span>
+                <div className="hidden sm:flex gap-1.5" aria-hidden="true">
+                  <span className="led led-blue" />
+                  <span className="led led-yellow" />
+                  <span className="led led-green" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5">
+                <div className="lcd p-6 scan flex flex-col min-h-[520px] order-2 lg:order-none lg:col-start-1 lg:row-start-1 lg:row-span-2">
+                  <div className="border-b border-dashed border-ink/15 pb-4 mb-4">
+                    <div className="pixel-label text-ink/50 mb-2">AUCTION CATALOG · LOT #001</div>
+                    <h3 className="font-display text-5xl sm:text-6xl font-bold text-ink leading-[0.95] tracking-tight">
+                      {TOP_LOT.nameKo}
+                    </h3>
+                    <div className="text-lg italic text-ink/60 mt-2 font-medium">
+                      {TOP_LOT.name} <span className="text-ink/40">·</span> #{TOP_LOT.number}
+                    </div>
+                  </div>
+
+                  <div className="flex items-start justify-between gap-4 mb-5">
+                    <GradeBadge grade={TOP_LOT.grade} size="lg" />
+                    {TOP_LOT.grade?.cert && (
+                      <div className="text-right">
+                        <div className="pixel-label text-ink/50 mb-1">CERT NO.</div>
+                        <div className="font-mono text-sm font-bold text-ink">#{TOP_LOT.grade.cert}</div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-x-5 gap-y-2 mb-5 text-sm font-mono">
+                    <SpecRow k="Year" v={TOP_LOT.year ?? '—'} />
+                    <SpecRow k="Set" v={TOP_LOT.set || TOP_LOT.setShort || '—'} />
+                    <SpecRow k="Number" v={TOP_LOT.number ?? '—'} />
+                    <SpecRow k="Rarity" v={TOP_LOT.rarity || '—'} />
+                    {TOP_LOT.population && (
+                      <SpecRow k="Pop. (PSA 10)" v={`${TOP_LOT.population.psa10 ?? '—'} / ${TOP_LOT.population.total ?? '—'}`} />
+                    )}
+                    <SpecRow k="Watchers" v={TOP_LOT.watchers ?? '—'} />
+                  </div>
+
+                  <div className="bg-electric/10 rounded-xl p-4 mb-5 border-2 border-ink/15">
+                    <div className="pixel-label text-ink/70 mb-3 inline-flex items-center gap-1.5">
+                      <Icon name="shield" size={11} strokeWidth={2.5} className="text-grass" aria-hidden="true" />
+                      AUTHENTICATION
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                      <Check label="인쇄 결함 없음" />
+                      <Check label="모서리 완벽" />
+                      <Check label="센터링 55/45" />
+                      <Check label="Vault 보관" />
+                      <Check label="1st Edition 인증" />
+                      <Check label="단일 소유주" />
+                    </div>
+                  </div>
+
+                  {/* 박물관 풋노트 — 카드 가치/희소성에 대한 큐레이터 한 줄. */}
+                  <div className="mt-auto pt-2 border-t border-dashed border-ink/15">
+                    <div className="pixel-label text-ink/55 mb-1.5">CURATOR'S NOTE</div>
+                    <p className="text-[11px] text-ink/80 leading-relaxed font-medium italic">
+                      "{TOP_LOT.set || ''} {TOP_LOT.nameKo || TOP_LOT.name}는 컬렉터들이 가장 갖고 싶어하는 그레일 카드.
+                      이 컨디션·인증으로는 시장에 거의 풀리지 않습니다."
+                    </p>
+                  </div>
+                </div>
+
+                <div className="dex-casing-inset p-5 relative overflow-hidden order-1 lg:order-none lg:col-start-2 lg:row-start-1">
+                  <div className="flex items-center justify-between mb-2 relative z-10">
+                    <span className="inline-flex items-center gap-1.5 pixel-label text-white/70">
+                      <span className="led led-red led-pulse" style={{ width: 6, height: 6 }} aria-hidden="true" />
+                      PHOTO MODULE
+                    </span>
+                    <span className="pixel-label text-electric">360°</span>
+                  </div>
+                  <div className="relative flex justify-center items-center sparkle-host" style={{ height: 340, perspective: '1500px' }}>
+                    <Sparkles always />
+                    <div className="spotlight" aria-hidden="true" />
+                    <div className="turntable-disc" style={{ width: 280, height: 280, bottom: 10, left: '50%', marginLeft: -140 }} aria-hidden="true" />
+                    <div className="card-sway relative z-10">
+                      <Link to={`/products/${TOP_LOT.id}`} aria-label={`${TOP_LOT.nameKo} 상세 보기`} className="block">
+                        <PokeCard card={TOP_LOT} size="md" />
+                      </Link>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between mt-2 relative z-10">
+                    <span className="pixel-label text-white/50">SLOT-A · {TOP_LOT.year}</span>
+                    <span className="pixel-label text-white/50">QTY 1 / 1</span>
+                  </div>
+                </div>
+
+                {/* 박물관 큐레이터 라벨 — 입찰 정보(가격/마감/CTA)는 히어로 LIVE 패널에 양보.
+                    여기는 카드의 출처·보관·전시 메타데이터에만 집중. */}
+                <div className="bg-paper border-2 border-ink rounded-2xl p-5 order-3 lg:order-none lg:col-start-2 lg:row-start-2 shadow-[0_4px_0_#1a1a1a]">
+                  <div className="pixel-label text-ink/55 mb-3 inline-flex items-center gap-1.5">
+                    <Icon name="package" size={11} strokeWidth={2.5} className="text-ink/55" aria-hidden="true" />
+                    CURATOR NOTE
+                  </div>
+                  <dl className="space-y-2 text-[12px] font-mono">
+                    <div className="flex justify-between items-baseline border-b border-dotted border-ink/15 pb-1.5">
+                      <dt className="text-ink/55 text-[10px] tracking-wide uppercase">Origin</dt>
+                      <dd className="text-ink font-bold">
+                        {TOP_LOT.grade?.country === 'JPN' ? '🇯🇵 Japan' : TOP_LOT.grade?.country === 'KOR' ? '🇰🇷 Korea' : '🇺🇸 USA'}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between items-baseline border-b border-dotted border-ink/15 pb-1.5">
+                      <dt className="text-ink/55 text-[10px] tracking-wide uppercase">Grading</dt>
+                      <dd className="text-ink font-bold">
+                        {TOP_LOT.grade?.company} {TOP_LOT.grade?.score}
+                      </dd>
+                    </div>
+                    {TOP_LOT.grade?.cert && (
+                      <div className="flex justify-between items-baseline border-b border-dotted border-ink/15 pb-1.5">
+                        <dt className="text-ink/55 text-[10px] tracking-wide uppercase">Cert #</dt>
+                        <dd className="text-ink font-bold">#{TOP_LOT.grade.cert}</dd>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-baseline border-b border-dotted border-ink/15 pb-1.5">
+                      <dt className="text-ink/55 text-[10px] tracking-wide uppercase">Vault</dt>
+                      <dd className="text-grass font-bold inline-flex items-center gap-1">
+                        <Icon name="shield" size={10} strokeWidth={2.5} aria-hidden="true" />
+                        보관 중
+                      </dd>
+                    </div>
+                    <div className="flex justify-between items-baseline">
+                      <dt className="text-ink/55 text-[10px] tracking-wide uppercase">Owners</dt>
+                      <dd className="text-ink font-bold">단일 소유주</dd>
+                    </div>
+                  </dl>
+                  <Link
+                    to={`/products/${TOP_LOT.id}`}
+                    className="focus-ring mt-4 inline-flex w-full items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg bg-bone-2 text-ink border-2 border-ink/15 hover:border-ink hover:bg-electric/20 transition-colors font-extrabold text-[12px]"
+                    aria-label={`${TOP_LOT.nameKo} 상세 페이지로 이동`}
+                  >
+                    <Icon name="eye" size={12} strokeWidth={2.4} />
+                    카드 상세 보기
+                    <Icon name="arrow" size={11} strokeWidth={2.5} />
+                  </Link>
+                  <p className="mt-2 text-[10px] text-mute text-center font-medium leading-relaxed">
+                    입찰은 히어로의 LIVE 패널 또는 상세 페이지에서.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ════════════════════════════════════════════════
           UP NEXT — 다음 경매 일정 (LIVE 1건 정책 — 큐가 보여야 신뢰)
@@ -960,6 +1134,24 @@ function CategoryTile({ to, icon, label, desc, tone = 'fire', ledPulse = false, 
       </div>
       <Icon name="arrow" size={14} strokeWidth={2.5} className="hidden sm:block shrink-0 text-mute group-hover:text-ink group-hover:translate-x-1 transition-all" aria-hidden="true" />
     </Link>
+  )
+}
+
+function SpecRow({ k, v }) {
+  return (
+    <div className="flex justify-between items-baseline border-b border-dotted border-ink/15 pb-1.5">
+      <span className="text-ink/55 text-[11px] tracking-wide uppercase">{k}</span>
+      <span className="text-ink font-bold tabular-nums">{v}</span>
+    </div>
+  )
+}
+
+function Check({ label }) {
+  return (
+    <div className="flex items-center gap-1.5 text-ink/85">
+      <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-grass text-white text-[9px] font-bold border border-ink" aria-hidden="true">✓</span>
+      <span className="font-bold">{label}</span>
+    </div>
   )
 }
 

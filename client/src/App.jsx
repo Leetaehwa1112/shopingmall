@@ -26,7 +26,6 @@ const DexPage = lazy(() => import('@/pages/DexPage'))
 const InfoPage = lazy(() => import('@/pages/InfoPage'))
 const PasswordResetPage = lazy(() => import('@/pages/PasswordResetPage'))
 const VerifyEmailPage = lazy(() => import('@/pages/VerifyEmailPage'))
-const IntroPage = lazy(() => import('@/pages/IntroPage'))
 
 // ─── Admin 전체: 비-admin 사용자는 다운로드 안 함 ───────────
 const AdminLayout = lazy(() => import('@/components/layout/AdminLayout'))
@@ -93,9 +92,6 @@ export default function App() {
               <Route path="reset-password" element={<PasswordResetPage />} />
               <Route path="verify-email" element={<VerifyEmailPage />} />
             </Route>
-
-            {/* /today — 풀스크린 시네마틱 인트로 (Pokédex 부팅 시퀀스). Layout 바깥. */}
-            <Route path="/today" element={<IntroPage />} />
 
             {/* admin 로그인은 Layout(일반 헤더/푸터) 밖에서 풀스크린 */}
             <Route path="/admin/login" element={<AdminLoginPage />} />
