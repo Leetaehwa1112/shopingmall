@@ -730,10 +730,18 @@ function BroadcastStream({ lot, onBid }) {
         </div>
       </div>
 
-      {/* ── 송출 화면 인셋 — 진짜 OBS 라이브 출력 시그니처 ───────── */}
+      {/* ── 송출 화면 인셋 — 진짜 OBS 라이브 출력 시그니처 ─────────
+          기본 dex-casing-inset의 빨간 그라데이션 대신 검은 송출 화면 톤. */}
       <div
         className="dex-casing-inset relative overflow-hidden sparkle-host"
-        style={{ aspectRatio: '16 / 9', filter: glitch ? 'hue-rotate(-12deg) contrast(1.15)' : undefined, transition: 'filter 80ms' }}
+        style={{
+          aspectRatio: '16 / 9',
+          // 검은 송출 화면 — 중앙에 살짝 핀스팟 글로우만 (빨간 색 톤 완전 제거)
+          background:
+            'radial-gradient(ellipse at 50% 45%, #1a1a1a 0%, #0a0a0a 60%, #050505 100%)',
+          filter: glitch ? 'hue-rotate(-12deg) contrast(1.15)' : undefined,
+          transition: 'filter 80ms',
+        }}
       >
         <Sparkles always />
         <div className="spotlight" aria-hidden="true" />
