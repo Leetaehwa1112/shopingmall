@@ -217,24 +217,31 @@ function MarketPage({
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 경매 라이브 페이지 — Norman emotional design (Visceral · Behavioral · Reflective)
+// 경매 라이브 페이지 — 사이트 전체 톤(따뜻한 크림 + Pokédex 빨강) 통일
 // ═══════════════════════════════════════════════════════════════
 //
 // 타깃 : 포켓몬 TCG 컬렉터 (20–30대, 추억 + 자산 가치 동시 동기)
 // 감정 : 두근거림(설렘) · 신뢰 · 프리미엄 · 안정
 //
-// 디자인 시스템 :
-//   color   fire(#ff7a45) primary · electric(#facc15) accent · paper · bone · ink
-//   shape   "무대(stage)" 메타포 — 핀스팟 라이트 + 헤일로 + 발판 그림자
-//   elev    양각 그림자 [0_3px_0 · 0_5px_0 · 0_8px_0]  ※ 포켓몬센터 종이박스 톤
-//   motion  pulse-live · halo-glow · spotlight · shine-sweep · digit-tick · shake-soft
-//
-// 재사용 표현 컴포넌트 :
-//   PokeballMark · LiveDot · SerialTag · SectionHeader · DigitClock
-//   SpotlightStage · PriceDisplay · PrimaryCta · TrustGrid · MetaChip
+// 디자인 통일 원칙 (HomePage·MarketPage와 일관) :
+//   surface  bg-bone(크림) · surface-pop(종이 양각) · dex-casing(빨간 Pokédex)
+//   accent   var(--color-dex) #dc2626 · electric(#facc15) · fire(#ff7a45)
+//   motion   sparkle-host · card-sway · turntable-disc · spotlight · holo-shine
+//   buttons  .btn .btn-pop (메인) · .btn .btn-electric (보조)
+//   text     Eyebrow + font-display(Bungee) h1 + pixel-label
+//   LED      .led .led-red/blue/yellow/green .led-pulse (전체 사이트와 동일)
 //
 // 정보 위계 (5초 안에 전달) :
-//   ① 카운트다운(시간) → ② 카드(대상) → ③ 현재가(숫자) → ④ CTA → ⑤ 신뢰 → ⑥ 보조
+//   ① 카드 비주얼(Pokédex 화면 안) → ② 현재가 LCD → ③ 마감 LCD → ④ 빨간 CTA → ⑤ 신뢰
+//
+// 컴포넌트 :
+//   CompactHeroStrip  : Eyebrow + h1 + Sparkles (홈/마켓과 같은 형식)
+//   BroadcastStream   : dex-casing 빨간 외장 + dex-casing-inset 화면 안 카드 회전
+//   MiniBroadcastPlayer : 종이 양각 카드 + dex 빨간 상단 띠 + 미니 화면
+//   FeaturedLot/CounterReceipt : 종이 양각 상세 정보 + .btn-pop CTA + 신뢰 배지
+//   BidFeed           : 종이 베이스 "in-game battle log" — 도트 패턴 배경
+//   AllLotsModal      : 종이 카탈로그 모달
+//   QuickBidSheet     : 종이 시트 (.btn-pop CTA)
 // ═══════════════════════════════════════════════════════════════
 
 // ─── 공통 토큰 ────────────────────────────────────────────────
@@ -297,20 +304,6 @@ function SerialTag({ children, tone = 'paper' }) {
   )
 }
 
-// ─── 재사용: 작은 메타 칩 ─────────────────────────────────────
-function MetaChip({ icon, children, accent = false }) {
-  return (
-    <span
-      className={`inline-flex items-center gap-1 px-2 py-1 rounded-full border-2 border-ink font-mono text-[10px] font-extrabold tabular-nums ${
-        accent ? 'bg-electric text-ink' : 'bg-paper text-ink'
-      }`}
-    >
-      {icon && <Icon name={icon} size={10} strokeWidth={2.6} />}
-      {children}
-    </span>
-  )
-}
-
 // ─── 재사용: 섹션 헤더 (사이드바·피드 공통 톤) ────────────────
 function SectionHeader({ icon, title, meta, accent = false }) {
   return (
@@ -334,59 +327,6 @@ function SectionHeader({ icon, title, meta, accent = false }) {
           {meta}
         </span>
       )}
-    </div>
-  )
-}
-
-// ─── 재사용: LED 디지트 시계 (카운트다운 위계 #1) ─────────────
-function DigitGroup({ value, label }) {
-  return (
-    <span className="inline-flex flex-col items-center gap-0.5">
-      <span
-        className="inline-flex items-center justify-center min-w-[2.1rem] sm:min-w-[2.5rem] px-1.5 py-1 sm:py-1.5 rounded-md font-mono font-extrabold tabular-nums leading-none bg-ink/90 text-electric border-2 border-ink"
-        style={{
-          fontSize: 'clamp(18px, 3.5vw, 22px)',
-          letterSpacing: '0.04em',
-          boxShadow: 'inset 0 -2px 0 rgba(0,0,0,0.35), inset 0 2px 0 rgba(255,255,255,0.06)',
-        }}
-      >
-        {value}
-      </span>
-      <span className="font-mono text-[8.5px] font-extrabold uppercase tracking-[0.18em] text-paper/80">
-        {label}
-      </span>
-    </span>
-  )
-}
-function DigitClock({ t, tone = 'urgent' }) {
-  // tone: 'critical' | 'urgent' | 'calm'
-  const labelText =
-    tone === 'critical' ? '곧 마감!' : tone === 'urgent' ? '마감 임박' : '마감까지'
-  return (
-    <div className="inline-flex items-center gap-2.5 sm:gap-3 flex-wrap">
-      <span className="font-display text-xs sm:text-sm font-extrabold tracking-tight text-paper inline-flex items-center gap-1.5">
-        {tone === 'critical' ? (
-          <span aria-hidden="true">⚠️</span>
-        ) : tone === 'urgent' ? (
-          <span aria-hidden="true">🔥</span>
-        ) : (
-          <Icon name="clock" size={14} strokeWidth={2.4} />
-        )}
-        {labelText}
-      </span>
-      <span className="inline-flex items-center gap-1 sm:gap-1.5">
-        {t.d > 0 && (
-          <>
-            <DigitGroup value={String(t.d).padStart(2, '0')} label="DAYS" />
-            <span className="font-mono text-electric font-extrabold pb-2.5" aria-hidden="true">:</span>
-          </>
-        )}
-        <DigitGroup value={String(t.h).padStart(2, '0')} label="HOURS" />
-        <span className="font-mono text-electric font-extrabold pb-2.5" aria-hidden="true">:</span>
-        <DigitGroup value={String(t.m).padStart(2, '0')} label="MIN" />
-        <span className="font-mono text-electric font-extrabold pb-2.5" aria-hidden="true">:</span>
-        <DigitGroup value={String(t.s).padStart(2, '0')} label="SEC" />
-      </span>
     </div>
   )
 }
@@ -421,7 +361,7 @@ function AuctionLivePage({ lots, loading, error }) {
 
       {/* === 2. 라이브 방송 플레이어 — 페이지 최대 비주얼 === */}
       {!error && !loading && featured && (
-        <BroadcastStream lot={featured} liveCount={sorted.length} onBid={() => openBid(featured)} />
+        <BroadcastStream lot={featured} onBid={() => openBid(featured)} />
       )}
 
       {/* === 3. 상태별 본문 === */}
@@ -568,7 +508,7 @@ function CounterPokeballs({ liveCount }) {
 //  - 하단 티커 : 다음 최소가 · 입찰 수 · 시청자 마키
 // ═══════════════════════════════════════════════════════════════
 
-function BroadcastStream({ lot, liveCount, onBid }) {
+function BroadcastStream({ lot, onBid }) {
   const [, setNow] = useState(Date.now())
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000)
@@ -589,9 +529,6 @@ function BroadcastStream({ lot, liveCount, onBid }) {
     )
     return () => clearInterval(id)
   }, [lot.id, seedViewers])
-
-  // UI-only 컨트롤 (음소거/풀스크린은 표현용 토글 — 실제 영상 X)
-  const [muted, setMuted] = useState(true)
 
   // ── 미니 플레이어 : 본 방송의 "가시 비율" 기반으로 토글 ──────
   //   - visibleRatio < 1/3  → 미니 ON  (1/3 미만 보이면 작게 띄움)
@@ -671,103 +608,57 @@ function BroadcastStream({ lot, liveCount, onBid }) {
     <>
     <section
       ref={containerRef}
-      className="mt-4 relative rounded-2xl border-[3px] border-ink shadow-[0_8px_0_#1a1a1a] overflow-hidden"
+      className="dex-casing p-4 sm:p-5 relative reveal-up"
       aria-label="라이브 방송 화면"
-      style={{
-        background: 'linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%)',
-      }}
     >
-      {/* ── 상단 컨트롤 바 (TV 베젤 위) ────────────────────────── */}
-      <div className="relative px-3 sm:px-4 py-2 flex items-center justify-between gap-2 border-b-2 border-electric/15 bg-ink">
-        <div className="inline-flex items-center gap-2 min-w-0">
-          <span
-            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded font-mono text-[10px] font-extrabold uppercase tracking-[0.22em] text-paper"
-            style={{
-              background: '#dc2626',
-              boxShadow: '0 0 12px rgba(220,38,38,0.7)',
-              animation: 'pulse-live 1.6s ease-in-out infinite',
-            }}
-          >
-            ● LIVE
-          </span>
-          <span className="font-mono text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.22em] text-electric/85 truncate">
-            CH.01 · POKÉ AUCTION
-          </span>
-          <SerialTag tone="dark">
+      {/* ── Pokédex 상단 LED + 라이브 정보 라인 ────────────────── */}
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="inline-flex items-center gap-2.5 min-w-0">
+          <span className="led led-red led-pulse" aria-hidden="true" />
+          <span className="pixel-label text-white">LIVE · CH.01</span>
+          <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded font-mono text-[10px] font-extrabold uppercase tracking-[0.18em] bg-paper/15 text-paper border border-paper/25">
             LOT-{String(lot.id || '').slice(-4).toUpperCase() || '0000'}
-          </SerialTag>
+          </span>
         </div>
 
-        <div className="inline-flex items-center gap-1.5 sm:gap-2.5">
-          <span className="hidden sm:inline-flex items-center gap-1.5 font-mono text-[10.5px] font-extrabold text-paper/90 tabular-nums">
-            <Icon name="eye" size={11} strokeWidth={2.6} className="text-electric/80" />
-            {viewers.toLocaleString()}
+        <div className="inline-flex items-center gap-2 sm:gap-2.5">
+          <span className="hidden sm:inline-flex items-center gap-1.5 font-mono text-[11px] font-extrabold text-paper tabular-nums">
+            <Icon name="eye" size={12} strokeWidth={2.6} className="text-electric" />
+            {viewers.toLocaleString()}명
           </span>
-          <button
-            type="button"
-            onClick={() => setMuted((v) => !v)}
-            aria-label={muted ? '음소거 해제' : '음소거'}
-            className="focus-ring w-7 h-7 rounded-md inline-flex items-center justify-center border border-electric/30 bg-ink hover:bg-ink/70 transition-colors"
-          >
-            <span className="text-electric/85 text-xs font-extrabold" aria-hidden="true">
-              {muted ? '🔇' : '🔊'}
-            </span>
-          </button>
-          <button
-            type="button"
-            aria-label="전체 화면"
-            className="focus-ring w-7 h-7 rounded-md inline-flex items-center justify-center border border-electric/30 bg-ink hover:bg-ink/70 transition-colors"
-          >
-            <span className="text-electric/85 text-xs font-extrabold" aria-hidden="true">⛶</span>
-          </button>
+          <span className="pixel-label text-white/70 hidden sm:inline">시청중</span>
+          <div className="hidden sm:flex items-center gap-1.5" aria-hidden="true">
+            <span className="led led-blue" />
+            <span className="led led-yellow" />
+            <span className="led led-green" />
+          </div>
         </div>
       </div>
 
-      {/* ── 16:9 비디오 영역 ──────────────────────────────────── */}
+      {/* ── Pokédex 화면 인셋 — 카드가 진열된 라이브 무대 ───────── */}
       <div
-        className="relative w-full overflow-hidden"
-        style={{
-          aspectRatio: '16 / 9',
-          background:
-            'radial-gradient(120% 90% at 50% -10%, #1a2747 0%, #0a1126 60%, #050912 100%)',
-        }}
+        className="dex-casing-inset relative overflow-hidden sparkle-host"
+        style={{ aspectRatio: '16 / 9' }}
       >
-        {/* 스튜디오 핀스팟 — 천장 빛 */}
+        <Sparkles always />
+        <div className="spotlight" aria-hidden="true" />
         <span
           aria-hidden="true"
-          className="absolute left-1/2 top-0 -translate-x-1/2 pointer-events-none"
-          style={{
-            width: '65%',
-            height: '95%',
-            background:
-              'conic-gradient(from 270deg at 50% 0%, transparent 0deg, rgba(250,204,21,0.16) 8deg, rgba(255,255,255,0.28) 12deg, rgba(250,204,21,0.16) 16deg, transparent 24deg)',
-            filter: 'blur(6px)',
-            animation: 'heal-breathe 4s ease-in-out infinite',
-            transformOrigin: 'top center',
-          }}
-        />
-        {/* 스튜디오 바닥 그라데이션 */}
-        <span
-          aria-hidden="true"
-          className="absolute bottom-0 left-0 right-0 h-1/3 pointer-events-none"
-          style={{
-            background:
-              'linear-gradient(180deg, transparent 0%, rgba(255,122,69,0.08) 60%, rgba(255,122,69,0.18) 100%)',
-          }}
+          className="turntable-disc"
+          style={{ width: '52%', aspectRatio: '1', bottom: '8%', left: '50%', transform: 'translateX(-50%)' }}
         />
 
-        {/* 메인: 카드 (화면에 비춰지는 것처럼) */}
-        <div className="absolute inset-0 flex items-center justify-center p-4 sm:p-6">
+        {/* 카드 — 회전 단상 위 */}
+        <div className="absolute inset-0 flex items-center justify-center p-4 sm:p-6 z-10">
           {img ? (
-            <div className="relative">
-              {/* 헤일로 */}
+            <div className="card-sway relative">
               <span
                 aria-hidden="true"
-                className="absolute inset-0 -m-10 rounded-3xl pointer-events-none"
+                className="absolute inset-0 -m-8 rounded-3xl pointer-events-none"
                 style={{
                   background:
-                    'radial-gradient(ellipse at center, rgba(255,255,255,0.4) 0%, rgba(250,204,21,0.18) 30%, transparent 65%)',
-                  filter: 'blur(12px)',
+                    'radial-gradient(ellipse at center, rgba(255,255,255,0.45) 0%, rgba(245,184,0,0.22) 35%, transparent 70%)',
+                  filter: 'blur(10px)',
                 }}
               />
               <img
@@ -775,12 +666,11 @@ function BroadcastStream({ lot, liveCount, onBid }) {
                 alt={lot.nameKo || lot.name}
                 className="relative rounded-lg border-2 border-ink"
                 style={{
-                  maxHeight: 'min(58vh, 380px)',
+                  maxHeight: 'min(54vh, 360px)',
                   boxShadow:
-                    '0 18px 36px rgba(0,0,0,0.55), 0 0 0 4px #ffffff, 0 0 0 5.5px #1a1a1a',
+                    '0 16px 32px rgba(0,0,0,0.5), 0 0 0 4px #ffffff, 0 0 0 5.5px #1a1a1a',
                 }}
               />
-              {/* 발판 */}
               <div
                 aria-hidden="true"
                 className="absolute -bottom-5 left-1/2 -translate-x-1/2 w-[90%] h-3 rounded-full"
@@ -795,199 +685,119 @@ function BroadcastStream({ lot, liveCount, onBid }) {
           )}
         </div>
 
-        {/* CRT 스캔라인 */}
-        <span
-          aria-hidden="true"
-          className="absolute inset-0 pointer-events-none mix-blend-overlay"
-          style={{
-            backgroundImage:
-              'repeating-linear-gradient(180deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 3px)',
-          }}
-        />
-        {/* 비네팅 */}
-        <span
-          aria-hidden="true"
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background:
-              'radial-gradient(120% 120% at 50% 50%, transparent 55%, rgba(0,0,0,0.35) 100%)',
-          }}
-        />
-        {/* flicker */}
-        <span
-          aria-hidden="true"
-          className="absolute inset-0 pointer-events-none bg-electric/5"
-          style={{ animation: 'crt-flicker 4s steps(1) infinite' }}
-        />
-
-        {/* PIP: 우상단 진행자 캠 (포켓볼 마크) */}
-        <div className="absolute top-3 right-3 z-10">
-          <div
-            className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-lg border-2 border-paper/85 overflow-hidden shadow-[0_3px_8px_rgba(0,0,0,0.6)]"
-            style={{
-              background:
-                'radial-gradient(circle at 50% 30%, #2a3a6a 0%, #0d1730 70%)',
-            }}
-          >
-            <div className="absolute inset-0 flex items-center justify-center">
-              <PokeballMark size={40} />
-            </div>
-            <span className="absolute bottom-0 inset-x-0 bg-ink/85 text-paper text-[8.5px] font-mono font-extrabold tracking-[0.18em] uppercase text-center py-0.5">
-              진행자
-            </span>
-          </div>
-        </div>
-
-        {/* 좌상단 NOW BIDDING 칩 (현장감) */}
-        <div className="absolute top-3 left-3 z-10">
-          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md font-mono text-[10px] font-extrabold uppercase tracking-[0.18em] bg-ink/75 backdrop-blur-sm text-electric border border-electric/40">
-            <LiveDot size={5} color="#facc15" />
-            NOW BIDDING
+        {/* PIP: 우상단 진행자 — Pokéball 도장 (작고 부드럽게) */}
+        <div className="absolute top-2.5 right-2.5 z-20 pointer-events-none">
+          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-paper/15 backdrop-blur-sm border border-paper/30">
+            <PokeballMark size={18} animated />
+            <span className="pixel-label text-white">진행자</span>
           </span>
         </div>
 
-        {/* ── 로어서드 자막 — 방송 TV 톤 ──────────────────────── */}
-        <div className="absolute left-0 right-0 bottom-0 z-10 px-3 sm:px-5 py-3 sm:py-4">
-          <div className="flex items-end justify-between gap-3 flex-wrap">
-            {/* 좌: 카드명 + 등급 */}
-            <div className="min-w-0">
-              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-fire text-paper font-mono text-[10px] font-extrabold uppercase tracking-[0.22em] border-2 border-ink">
-                {lot.set || lot.setShort || 'POKÉMON TCG'}
-              </div>
-              <h2
-                className="mt-1 font-display font-extrabold text-paper leading-tight truncate drop-shadow-[0_2px_0_#000]"
-                style={{ fontSize: 'clamp(20px, 3.4vw, 30px)' }}
-              >
-                {lot.nameKo || lot.name}
-                {lot.grade?.grade != null && (
-                  <span
-                    className="ml-2 align-middle font-mono text-[12px] sm:text-sm font-extrabold px-1.5 py-0.5 rounded border-2 border-electric text-electric"
-                    style={{ textShadow: '0 0 6px rgba(250,204,21,0.55)' }}
-                  >
-                    {lot.grade.cert || 'PSA'} {lot.grade.grade}
-                  </span>
-                )}
-              </h2>
+        {/* 좌상단 NOW BIDDING 칩 — 부드러운 톤 */}
+        <div className="absolute top-2.5 left-2.5 z-20 pointer-events-none">
+          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-paper/15 backdrop-blur-sm border border-paper/30">
+            <span className="led led-yellow led-pulse" style={{ width: 6, height: 6 }} aria-hidden="true" />
+            <span className="pixel-label text-electric">NOW BIDDING</span>
+          </span>
+        </div>
+
+        {/* ── 로어서드 자막 (카드명 + 등급) ─────────────────── */}
+        <div className="absolute left-0 right-0 bottom-0 z-10 px-3 sm:px-5 py-3 pointer-events-none">
+          <div className="inline-block">
+            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded chip-type chip-type-fire" style={{ boxShadow: '0 2px 0 #1a1a1a' }}>
+              {lot.set || lot.setShort || 'POKÉMON TCG'}
             </div>
-
-            {/* 우: BID + TIME LED */}
-            <div className="inline-flex items-stretch gap-2 sm:gap-3">
-              <div
-                className="rounded-md border-2 border-ink px-2.5 sm:px-3 py-1.5 sm:py-2"
-                style={{
-                  background: 'rgba(0,0,0,0.65)',
-                  backdropFilter: 'blur(2px)',
-                }}
-              >
-                <div className="font-mono text-[9px] sm:text-[10px] font-extrabold uppercase tracking-[0.22em] text-electric/70 text-right">
-                  CURRENT BID
-                </div>
-                <div
-                  className="font-mono font-extrabold tabular-nums leading-none text-right"
-                  style={{
-                    color: '#ffb347',
-                    textShadow: '0 0 10px rgba(255,179,71,0.7), 0 0 18px rgba(255,179,71,0.45)',
-                    fontSize: 'clamp(20px, 4vw, 32px)',
-                  }}
-                >
-                  {formatKRWFull(current).replace('₩', '₩ ')}
-                </div>
-              </div>
-
-              <div
-                className="rounded-md border-2 border-ink px-2.5 sm:px-3 py-1.5 sm:py-2"
-                style={{
-                  background: 'rgba(0,0,0,0.65)',
-                  backdropFilter: 'blur(2px)',
-                  animation: isCritical ? 'shake-soft 0.6s ease-in-out infinite' : undefined,
-                }}
-              >
-                <div className="font-mono text-[9px] sm:text-[10px] font-extrabold uppercase tracking-[0.22em] text-electric/70 text-right">
-                  TIME LEFT
-                </div>
-                <div
-                  className="font-mono font-extrabold tabular-nums leading-none text-right"
-                  style={{
-                    color: isCritical ? '#ff6b6b' : isUrgent ? '#ffb347' : '#facc15',
-                    textShadow: isCritical
-                      ? '0 0 10px rgba(255,107,107,0.7)'
-                      : '0 0 10px rgba(250,204,21,0.55)',
-                    fontSize: 'clamp(18px, 3vw, 26px)',
-                  }}
-                >
-                  {clockText}
-                </div>
-              </div>
-
-              {/* 방송 화면 안 큰 입찰 CTA (현장 즉시 입찰) */}
-              {onBid && (
-                <button
-                  type="button"
-                  onClick={onBid}
-                  className="focus-ring relative overflow-hidden inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-md font-extrabold text-sm sm:text-base border-2 border-ink shadow-[0_3px_0_#1a1a1a] hover:-translate-y-0.5 hover:shadow-[0_4px_0_#1a1a1a] active:translate-y-0 active:shadow-[0_1px_0_#1a1a1a] transition-all bg-fire text-paper"
-                  aria-label="지금 입찰 참여하기"
-                >
-                  <Icon name="gavel" size={14} strokeWidth={2.6} />
-                  지금 입찰
-                  <span
-                    aria-hidden="true"
-                    className="absolute top-0 left-0 h-full w-1/3 pointer-events-none"
-                    style={{
-                      background:
-                        'linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)',
-                      animation: 'shine-sweep 3.4s ease-in-out infinite',
-                    }}
-                  />
-                </button>
+            <h2
+              className="mt-1.5 font-display font-bold text-paper leading-tight truncate drop-shadow-[0_2px_0_rgba(0,0,0,0.7)]"
+              style={{ fontSize: 'clamp(20px, 3.2vw, 30px)' }}
+            >
+              {lot.nameKo || lot.name}
+              {lot.grade?.grade != null && (
+                <span className="ml-2 align-middle inline-flex items-center px-1.5 py-0.5 rounded bg-electric text-ink font-mono text-[12px] font-extrabold border-2 border-ink">
+                  {lot.grade.cert || 'PSA'} {lot.grade.grade}
+                </span>
               )}
-            </div>
+            </h2>
           </div>
         </div>
       </div>
 
-      {/* ── 하단 티커 (마키 형식 보조 데이터) ────────────────── */}
-      <div className="relative bg-ink border-t-2 border-electric/15 overflow-hidden">
+      {/* ── 화면 아래: 가격 / 시간 / 입찰 CTA — Pokédex 컨트롤 패널 ── */}
+      <div className="mt-4 grid sm:grid-cols-[1fr_1fr_auto] gap-3 items-stretch">
+        {/* 현재 입찰가 */}
+        <div className="lcd p-3 scan flex flex-col justify-center min-h-[72px]">
+          <div className="pixel-label text-ink/55 mb-1">CURRENT BID</div>
+          <div
+            className="font-mono font-extrabold tabular-nums leading-none text-ink"
+            style={{ fontSize: 'clamp(20px, 4vw, 30px)' }}
+          >
+            {formatKRWFull(current)}
+          </div>
+        </div>
+
+        {/* 마감까지 */}
         <div
-          className="flex items-center gap-8 px-4 py-2 whitespace-nowrap font-mono text-[11px] font-extrabold uppercase tracking-[0.18em] text-electric/85"
-          style={{ animation: 'ticker-slide 28s linear infinite' }}
+          className={`lcd p-3 scan flex flex-col justify-center min-h-[72px] ${
+            isCritical ? 'ring-2 ring-dex' : ''
+          }`}
+          style={isCritical ? { animation: 'shake-soft 0.6s ease-in-out infinite' } : undefined}
         >
-          <span>
-            <span className="text-electric/60">NEXT MIN BID</span>{' '}
-            <span className="text-electric tabular-nums" style={{ textShadow: '0 0 6px rgba(250,204,21,0.5)' }}>
+          <div className="pixel-label text-ink/55 mb-1 inline-flex items-center gap-1.5">
+            <Icon name="clock" size={10} strokeWidth={2.5} />
+            {!t ? '상시 진행' : t.ended ? '경매 종료' : isCritical ? '곧 마감!' : '마감까지'}
+          </div>
+          <div
+            className={`font-mono font-extrabold tabular-nums leading-none ${
+              isCritical ? 'text-dex' : isUrgent ? 'text-fire' : 'text-ink'
+            }`}
+            style={{ fontSize: 'clamp(16px, 3vw, 22px)' }}
+          >
+            {clockText}
+          </div>
+        </div>
+
+        {/* 입찰 CTA — Button variant="pop" 톤 */}
+        {onBid && (
+          <button
+            type="button"
+            onClick={onBid}
+            className="btn btn-pop btn-lg relative overflow-hidden whitespace-nowrap sm:min-w-[140px]"
+            aria-label="지금 입찰 참여하기"
+          >
+            <Icon name="gavel" size={16} strokeWidth={2.6} />
+            지금 입찰
+            <span
+              aria-hidden="true"
+              className="absolute top-0 left-0 h-full w-1/3 pointer-events-none"
+              style={{
+                background:
+                  'linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)',
+                animation: 'shine-sweep 3.4s ease-in-out infinite',
+              }}
+            />
+          </button>
+        )}
+      </div>
+
+      {/* ── 하단 보조 정보 라인 (티커 대체 — 정적, 친근한 톤) ── */}
+      <div className="mt-3 flex items-center justify-between gap-3 flex-wrap text-[11px] font-bold">
+        <div className="inline-flex items-center gap-3 flex-wrap text-paper/85">
+          <span className="inline-flex items-center gap-1.5">
+            <Icon name="arrow" size={11} strokeWidth={2.6} className="text-electric" />
+            다음 최소 입찰{' '}
+            <span className="font-mono font-extrabold text-electric tabular-nums">
               {formatKRWFull(nextMin)}
             </span>
           </span>
-          <span className="text-electric/30">●</span>
-          <span>
-            <span className="text-electric/60">TOTAL BIDS</span>{' '}
-            <span className="text-paper tabular-nums">{lot.bidCount || 0}</span>
-          </span>
-          <span className="text-electric/30">●</span>
-          <span>
-            <span className="text-electric/60">VIEWERS</span>{' '}
-            <span className="text-paper tabular-nums">{viewers.toLocaleString()}</span>
-          </span>
-          <span className="text-electric/30">●</span>
-          <span>
-            <span className="text-electric/60">ALL LOTS TODAY</span>{' '}
-            <span className="text-paper tabular-nums">{String(liveCount).padStart(2, '0')}</span>
-          </span>
-          <span className="text-electric/30">●</span>
-          <span className="text-fire">
-            정품 인증 · 안전 결제 · 입찰 보호
-          </span>
-          <span className="text-electric/30">●</span>
-          {/* 한번 더 반복 (seamless loop 보조) */}
-          <span>
-            <span className="text-electric/60">NEXT MIN BID</span>{' '}
-            <span className="text-electric tabular-nums">{formatKRWFull(nextMin)}</span>
-          </span>
-          <span className="text-electric/30">●</span>
-          <span>
-            <span className="text-electric/60">TOTAL BIDS</span>{' '}
-            <span className="text-paper tabular-nums">{lot.bidCount || 0}</span>
+          <span className="text-paper/40">·</span>
+          <span className="inline-flex items-center gap-1.5">
+            <Icon name="user" size={11} strokeWidth={2.6} className="text-paper/70" />
+            <span className="font-mono tabular-nums">{lot.bidCount || 0}</span>회 입찰
           </span>
         </div>
+        <span className="pixel-label text-electric">
+          정품인증 · 안전결제 · 입찰보호
+        </span>
       </div>
     </section>
 
@@ -1021,33 +831,23 @@ function MiniBroadcastPlayer({
   const img = lot.images?.[0] || lot.image
   return (
     <div
-      className={`hidden lg:block fixed bottom-4 right-4 z-50 w-[300px] rounded-xl border-2 border-ink overflow-hidden transition-all duration-300 ease-out ${
+      className={`hidden lg:block fixed bottom-4 right-4 z-50 w-[300px] rounded-2xl border-2 border-ink bg-paper overflow-hidden transition-all duration-300 ease-out ${
         visible
-          ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
-          : 'opacity-0 translate-y-4 scale-95 pointer-events-none'
+          ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto shadow-[0_6px_0_#1a1a1a,0_12px_30px_rgba(13,23,48,0.25)]'
+          : 'opacity-0 translate-y-4 scale-95 pointer-events-none shadow-none'
       }`}
-      style={{
-        background: '#0a0a0a',
-        boxShadow: visible ? '0 10px 30px rgba(0,0,0,0.55), 0 0 0 1px rgba(250,204,21,0.12)' : 'none',
-      }}
       role="region"
       aria-label="라이브 미니 플레이어"
       aria-hidden={!visible}
     >
-      {/* 상단 베젤 — LIVE + 컨트롤 */}
-      <div className="px-2.5 py-1.5 flex items-center justify-between gap-2 bg-ink border-b border-electric/15">
-        <span
-          className="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded font-mono text-[9px] font-extrabold uppercase tracking-[0.2em] text-paper"
-          style={{
-            background: '#dc2626',
-            boxShadow: '0 0 8px rgba(220,38,38,0.7)',
-            animation: 'pulse-live 1.6s ease-in-out infinite',
-          }}
-        >
-          ● LIVE
+      {/* 상단 — Pokédex 빨간 띠 (LED + 시청자 + 컨트롤) */}
+      <div className="dex-casing px-2.5 py-1.5 flex items-center justify-between gap-2" style={{ borderRadius: 0, border: 'none', borderBottom: '2px solid #1a1a1a' }}>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="led led-red led-pulse" style={{ width: 7, height: 7 }} aria-hidden="true" />
+          <span className="pixel-label text-white">LIVE</span>
         </span>
-        <span className="font-mono text-[9.5px] font-extrabold uppercase tracking-[0.18em] text-electric/70 tabular-nums">
-          <Icon name="eye" size={9} strokeWidth={2.6} className="inline -mt-0.5 mr-0.5 text-electric/80" />
+        <span className="font-mono text-[10px] font-extrabold text-paper tabular-nums inline-flex items-center gap-1">
+          <Icon name="eye" size={10} strokeWidth={2.6} className="text-electric" />
           {viewers.toLocaleString()}
         </span>
         <div className="inline-flex items-center gap-1">
@@ -1055,116 +855,88 @@ function MiniBroadcastPlayer({
             type="button"
             onClick={onExpand}
             aria-label="원래 크기로 보기"
-            className="focus-ring w-6 h-6 rounded inline-flex items-center justify-center border border-electric/30 hover:bg-ink/60 transition-colors"
+            className="focus-ring w-6 h-6 rounded inline-flex items-center justify-center bg-paper/20 hover:bg-paper/35 transition-colors text-paper"
           >
-            <span className="text-electric/85 text-[11px] font-extrabold" aria-hidden="true">⤢</span>
+            <span className="text-[11px] font-extrabold" aria-hidden="true">⤢</span>
           </button>
           <button
             type="button"
             onClick={onClose}
             aria-label="미니 플레이어 닫기"
-            className="focus-ring w-6 h-6 rounded inline-flex items-center justify-center border border-electric/30 hover:bg-ink/60 transition-colors"
+            className="focus-ring w-6 h-6 rounded inline-flex items-center justify-center bg-paper/20 hover:bg-paper/35 transition-colors text-paper"
           >
-            <Icon name="close" size={9} strokeWidth={3} className="text-electric/85" />
+            <Icon name="close" size={10} strokeWidth={3} />
           </button>
         </div>
       </div>
 
-      {/* 미니 비디오 — 클릭하면 본 방송으로 스크롤 */}
+      {/* 미니 화면 — Pokédex 화면 인셋 + 카드 회전 단상 */}
       <button
         type="button"
         onClick={onExpand}
-        className="focus-ring relative block w-full overflow-hidden text-left"
+        className="focus-ring relative block w-full overflow-hidden text-left sparkle-host"
         style={{ aspectRatio: '16 / 9' }}
         aria-label="라이브 방송 펼치기"
       >
-        {/* 스튜디오 백드롭 */}
         <span
           aria-hidden="true"
           className="absolute inset-0"
           style={{
-            background:
-              'radial-gradient(120% 90% at 50% -10%, #1a2747 0%, #0a1126 60%, #050912 100%)',
+            background: 'linear-gradient(180deg, var(--color-dex-d) 0%, var(--color-dex-dd) 100%)',
           }}
         />
-        {/* 핀스팟 */}
+        <Sparkles always />
+        <div className="spotlight" aria-hidden="true" />
         <span
           aria-hidden="true"
-          className="absolute left-1/2 top-0 -translate-x-1/2 pointer-events-none"
-          style={{
-            width: '60%',
-            height: '95%',
-            background:
-              'conic-gradient(from 270deg at 50% 0%, transparent 0deg, rgba(250,204,21,0.16) 10deg, rgba(255,255,255,0.28) 14deg, rgba(250,204,21,0.16) 18deg, transparent 26deg)',
-            filter: 'blur(4px)',
-            animation: 'heal-breathe 4s ease-in-out infinite',
-            transformOrigin: 'top center',
-          }}
+          className="turntable-disc"
+          style={{ width: '55%', aspectRatio: '1', bottom: '5%', left: '50%', transform: 'translateX(-50%)' }}
         />
-        {/* 카드 이미지 */}
         {img && (
-          <div className="absolute inset-0 flex items-center justify-center p-3">
-            <img
-              src={img}
-              alt=""
-              className="max-h-full rounded border border-paper/40"
-              style={{ boxShadow: '0 6px 14px rgba(0,0,0,0.55)' }}
-            />
+          <div className="absolute inset-0 flex items-center justify-center p-3 z-10">
+            <div className="card-sway">
+              <img
+                src={img}
+                alt=""
+                className="max-h-full rounded border-2 border-ink"
+                style={{ boxShadow: '0 8px 16px rgba(0,0,0,0.5), 0 0 0 2px #ffffff' }}
+              />
+            </div>
           </div>
         )}
-        {/* 스캔라인 */}
-        <span
-          aria-hidden="true"
-          className="absolute inset-0 pointer-events-none mix-blend-overlay"
-          style={{
-            backgroundImage:
-              'repeating-linear-gradient(180deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 3px)',
-          }}
-        />
-        {/* 좌상단 NOW BIDDING 작은 칩 */}
-        <span className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8.5px] font-mono font-extrabold uppercase tracking-[0.18em] bg-ink/80 text-electric border border-electric/30">
-          <LiveDot size={4} color="#facc15" />
-          NOW BIDDING
+        <span className="absolute top-1.5 left-1.5 z-20 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-paper/15 backdrop-blur-sm border border-paper/30">
+          <span className="led led-yellow led-pulse" style={{ width: 4, height: 4 }} aria-hidden="true" />
+          <span className="pixel-label text-electric" style={{ fontSize: 8 }}>NOW BIDDING</span>
         </span>
       </button>
 
-      {/* 미니 자막 + 가격 */}
-      <div className="px-2.5 py-2 bg-ink border-t border-electric/10">
-        <div className="font-display text-[12.5px] font-extrabold text-paper truncate">
+      {/* 자막 + 가격 — 종이 베이스 */}
+      <div className="px-3 py-2.5 bg-paper">
+        <div className="font-display text-[13px] font-bold text-ink truncate leading-tight">
           {lot.nameKo || lot.name}
         </div>
-        <div className="mt-0.5 flex items-baseline justify-between gap-2">
-          <span
-            className="font-mono font-extrabold tabular-nums"
-            style={{
-              color: '#ffb347',
-              textShadow: '0 0 6px rgba(255,179,71,0.6)',
-              fontSize: '13.5px',
-            }}
-          >
-            {formatKRWFull(current).replace('₩', '₩ ')}
+        <div className="mt-1 flex items-baseline justify-between gap-2">
+          <span className="font-display text-[15px] font-extrabold text-ink tabular-nums leading-none">
+            {formatKRWFull(current)}
           </span>
           <span
-            className="font-mono text-[10px] font-extrabold tabular-nums"
-            style={{
-              color: isCritical ? '#ff6b6b' : isUrgent ? '#ffb347' : '#facc15',
-              textShadow: isCritical
-                ? '0 0 6px rgba(255,107,107,0.6)'
-                : '0 0 6px rgba(250,204,21,0.5)',
-              animation: isCritical ? 'shake-soft 0.6s ease-in-out infinite' : undefined,
-            }}
+            className={`inline-flex items-center gap-1 font-mono text-[10.5px] font-extrabold tabular-nums ${
+              isCritical ? 'text-dex' : isUrgent ? 'text-fire' : 'text-mute'
+            }`}
+            style={isCritical ? { animation: 'shake-soft 0.6s ease-in-out infinite' } : undefined}
           >
-            ⏱ {clockText}
+            <Icon name="clock" size={10} strokeWidth={2.6} />
+            {clockText}
           </span>
         </div>
       </div>
 
-      {/* 미니 CTA */}
+      {/* CTA — btn-pop 톤 */}
       {onBid && (
         <button
           type="button"
           onClick={onBid}
-          className="focus-ring relative overflow-hidden w-full inline-flex items-center justify-center gap-1.5 py-2.5 font-extrabold text-sm border-t-2 border-ink bg-fire text-paper hover:bg-fire/90 active:bg-fire/80 transition-colors"
+          className="focus-ring relative overflow-hidden w-full inline-flex items-center justify-center gap-1.5 py-2.5 font-extrabold text-sm border-t-2 border-ink bg-dex text-paper hover:bg-dex-d transition-colors"
           aria-label="지금 입찰 참여하기"
         >
           <Icon name="gavel" size={13} strokeWidth={2.6} />
@@ -1187,31 +959,33 @@ function MiniBroadcastPlayer({
 function CompactHeroStrip({ liveCount, onOpenAll, disabled }) {
   return (
     <header
-      className="relative overflow-hidden rounded-2xl border-2 border-ink bg-paper shadow-[0_4px_0_#1a1a1a]"
+      className="relative sparkle-host mb-6"
       aria-label="라이브 경매장 헤더"
     >
-      <div className="bg-fire px-4 sm:px-5 py-3 flex items-center justify-between gap-3 flex-wrap border-b-2 border-ink">
-        <div className="flex items-center gap-3 min-w-0">
-          <PokeballMark size={40} />
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-[0.18em] bg-paper text-fire border-2 border-ink">
-                <LiveDot size={5} color="#ff7a45" />
-                ON AIR
-              </span>
-              <span className="font-mono text-[10px] font-extrabold tracking-[0.18em] uppercase text-paper/85">
-                LIVE AUCTION · 정품 인증
-              </span>
-            </div>
-            <h1 className="mt-0.5 font-display text-xl sm:text-2xl font-extrabold text-paper tracking-tight leading-tight">
-              두근두근 라이브 경매장
-            </h1>
-            <div className="mt-0.5 inline-flex items-center gap-2 text-[11px] font-bold text-paper/85">
-              <CounterPokeballs liveCount={liveCount} />
-              <span>
-                지금 <span className="text-paper font-extrabold tabular-nums">{liveCount}</span>건이 진행 중이에요
-              </span>
-            </div>
+      <Sparkles always className="hidden lg:block" />
+
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+        <div>
+          <Eyebrow tone="ink" dot dotColor="red" className="mb-4">
+            LIVE AUCTION · 두근두근 진행 중
+          </Eyebrow>
+          <h1 className="font-display text-3xl sm:text-4xl lg:text-[44px] font-bold text-ink tracking-tight leading-[1.05]">
+            오늘의 라이브 경매장,{' '}
+            <span className="relative inline-block">
+              <span className="relative z-10">{liveCount}건</span>
+              <span className="absolute -bottom-1 left-0 right-0 h-3 bg-electric -z-0 rounded-full" aria-hidden="true" />
+            </span>{' '}
+            진행 중
+          </h1>
+          <p className="mt-3 text-[14px] sm:text-[15px] text-mute leading-relaxed font-medium max-w-xl">
+            정품 인증된 카드만 LIVE 입찰로 진행해요.{' '}
+            <span className="text-ink font-bold">한 번 두근거려보실래요?</span>
+          </p>
+          <div className="mt-4 inline-flex items-center gap-2 text-[12px] font-bold text-ink/70">
+            <CounterPokeballs liveCount={liveCount} />
+            <span>
+              지금 <span className="text-dex font-extrabold tabular-nums">{liveCount}</span>건이 카운터에 올라와 있어요
+            </span>
           </div>
         </div>
 
@@ -1219,152 +993,17 @@ function CompactHeroStrip({ liveCount, onOpenAll, disabled }) {
           type="button"
           onClick={onOpenAll}
           disabled={disabled}
-          className="focus-ring relative inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-ink text-electric border-2 border-ink shadow-[0_3px_0_#1a1a1a] hover:-translate-y-0.5 hover:shadow-[0_4px_0_#1a1a1a] disabled:opacity-50 disabled:cursor-not-allowed transition-all font-extrabold text-sm"
+          className="focus-ring relative inline-flex items-center gap-2 px-5 py-3 rounded-full bg-paper text-ink border-2 border-ink shadow-[0_3px_0_#1a1a1a] hover:-translate-y-0.5 hover:shadow-[0_4px_0_#1a1a1a] hover:bg-electric/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-extrabold text-sm shrink-0 self-start md:self-auto"
           aria-label={`전체 LOT 보기, ${liveCount}건`}
         >
           <Icon name="layers" size={14} strokeWidth={2.4} />
-          오늘의 LOT
-          <span className="ml-0.5 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 rounded-full bg-electric text-ink font-mono text-[10.5px] font-bold tabular-nums border-2 border-electric">
+          오늘의 LOT 전체보기
+          <span className="ml-0.5 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 rounded-full bg-dex text-paper font-mono text-[10.5px] font-bold tabular-nums border-2 border-ink">
             {liveCount}
           </span>
         </button>
       </div>
     </header>
-  )
-}
-
-// ═══════════════════════════════════════════════════════════════
-// 회복기(Healing Machine) 도크 — 포켓몬센터 카운터 뒤편 회복기 모티프
-//   - 천장에서 떨어지는 빛 기둥 (콘 그라데이션)
-//   - 카드 좌우 회복 포드 2개 (포켓볼 슬롯처럼)
-//   - 발판(plinth) 그림자 + 빛 반사
-//   - 시청자 수 칩 (라이브 분위기)
-// ═══════════════════════════════════════════════════════════════
-function HealingStage({ img, alt, viewers, lotId }) {
-  return (
-    <div
-      className="relative aspect-[4/5] sm:aspect-auto sm:min-h-[440px] overflow-hidden border-b-2 sm:border-b-0 sm:border-r-2 border-ink"
-      style={{
-        background: `
-          radial-gradient(120% 80% at 50% -10%, rgba(255,122,69,0.22) 0%, transparent 55%),
-          linear-gradient(180deg, #fff6e8 0%, #fbf7ec 55%, #f1e9d5 100%)
-        `,
-      }}
-    >
-      {/* 천장 빛 기둥 — 회복기 위쪽에서 떨어지는 핀스팟 */}
-      <span
-        aria-hidden="true"
-        className="absolute left-1/2 top-0 -translate-x-1/2 pointer-events-none"
-        style={{
-          width: '70%',
-          height: '90%',
-          background:
-            'conic-gradient(from 270deg at 50% 0%, transparent 0deg, rgba(250,204,21,0.16) 8deg, rgba(255,255,255,0.32) 12deg, rgba(250,204,21,0.16) 16deg, transparent 24deg)',
-          filter: 'blur(6px)',
-          animation: 'heal-breathe 3.6s ease-in-out infinite',
-          transformOrigin: 'top center',
-        }}
-      />
-      {/* 부드러운 살구색 스캔 */}
-      <span
-        className="absolute left-0 right-0 h-24 pointer-events-none"
-        style={{
-          background: 'linear-gradient(180deg, transparent, rgba(255,122,69,0.18), transparent)',
-          animation: 'scan-soft 6s linear infinite',
-        }}
-        aria-hidden="true"
-      />
-
-      {/* 상단 좌측 — 시청자 수 (라이브 분위기) */}
-      <div className="absolute top-3 left-3 z-10">
-        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full font-mono text-[10px] font-bold text-ink bg-paper/95 border-2 border-ink shadow-[0_2px_0_#1a1a1a]">
-          <Icon name="eye" size={11} strokeWidth={2.4} />
-          <span className="tabular-nums">{viewers.toLocaleString()}</span>
-          <span className="text-mute">명 시청</span>
-        </span>
-      </div>
-
-      {/* 상단 우측 — LOT 일련번호 (감정서 톤) */}
-      <div className="absolute top-3 right-3 z-10">
-        <SerialTag>
-          LOT-{String(lotId || '').slice(-4).toUpperCase() || '0000'}
-        </SerialTag>
-      </div>
-
-      {/* 회복 포드 좌우 2개 — 카드 양옆 작은 빛 도트 (포켓볼 슬롯) */}
-      <span
-        aria-hidden="true"
-        className="absolute left-[14%] top-1/2 -translate-y-1/2 z-0 w-3 h-3 rounded-full border-2 border-ink"
-        style={{
-          background: POKEBALL_BG,
-          boxShadow: '0 0 0 3px rgba(255,122,69,0.18), 0 0 14px rgba(255,122,69,0.45)',
-          animation: 'counter-glow 2s ease-in-out infinite',
-        }}
-      />
-      <span
-        aria-hidden="true"
-        className="absolute right-[14%] top-1/2 -translate-y-1/2 z-0 w-3 h-3 rounded-full border-2 border-ink"
-        style={{
-          background: POKEBALL_BG,
-          boxShadow: '0 0 0 3px rgba(255,122,69,0.18), 0 0 14px rgba(255,122,69,0.45)',
-          animation: 'counter-glow 2s ease-in-out 0.6s infinite',
-        }}
-      />
-
-      {/* 카드 이미지 — 중앙 큰 비주얼 */}
-      <div className="absolute inset-0 flex items-center justify-center p-5 sm:p-6 z-[5]">
-        {img ? (
-          <div className="relative">
-            {/* 헤일로 */}
-            <span
-              aria-hidden="true"
-              className="absolute inset-0 -m-6 rounded-2xl pointer-events-none"
-              style={{
-                background:
-                  'radial-gradient(ellipse at center, rgba(255,255,255,0.55) 0%, rgba(255,122,69,0.18) 35%, transparent 70%)',
-                filter: 'blur(8px)',
-              }}
-            />
-            <img
-              src={img}
-              alt={alt}
-              className="relative max-h-[320px] sm:max-h-[360px] rounded-lg border-2 border-ink"
-              style={{
-                boxShadow:
-                  '0 14px 28px rgba(13,23,48,0.28), 0 0 0 4px #ffffff, 0 0 0 5.5px #1a1a1a',
-              }}
-            />
-            {/* 발판 — 회복기 도크 받침 */}
-            <div
-              aria-hidden="true"
-              className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-[88%] h-3 rounded-full"
-              style={{
-                background:
-                  'radial-gradient(ellipse at center, rgba(13,23,48,0.32), transparent 72%)',
-              }}
-            />
-            <div
-              aria-hidden="true"
-              className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-[64%] h-1.5 rounded-full bg-ink/30"
-            />
-          </div>
-        ) : (
-          <div className="w-40 h-56 rounded-lg bg-bone-2 border-2 border-ink" />
-        )}
-      </div>
-
-      {/* 바닥 타일 그릴 (회복기 받침대 라인) */}
-      <div
-        aria-hidden="true"
-        className="absolute bottom-0 left-0 right-0 h-8"
-        style={{
-          background:
-            'linear-gradient(180deg, transparent 0%, rgba(13,23,48,0.06) 40%, rgba(13,23,48,0.16) 100%)',
-          backgroundImage:
-            'repeating-linear-gradient(90deg, transparent 0 14px, rgba(13,23,48,0.08) 14px 15px)',
-        }}
-      />
-    </div>
   )
 }
 
@@ -1387,33 +1026,23 @@ function FeaturedLot({ lot, onBid }) {
     return () => clearInterval(t)
   }, [lot.id, seedViewers])
 
-  const img = lot.images?.[0] || lot.image
   const current = lot.currentBid || lot.startingBid || 0
   const nextMin = Math.round(current * 1.05 / 1000) * 1000 || current + 1000
 
+  // BroadcastStream이 이미 카드 비주얼을 차지하므로,
+  // FeaturedLot은 상세 정보 + CTA + 신뢰 배지 패널로만 활용
   return (
     <section
-      className="relative overflow-hidden rounded-2xl border-2 border-ink bg-paper shadow-[0_6px_0_#1a1a1a]"
+      className="surface-pop p-5 sm:p-6"
       aria-label={`라이브 LOT: ${lot.nameKo || lot.name}`}
     >
-      <div className="grid sm:grid-cols-[1.2fr_1fr] gap-0">
-        {/* ── 카드 이미지 = 라이브 단상 (핀스팟 + 헤일로 + 발판) ── */}
-        <HealingStage
-          img={img}
-          alt={lot.nameKo || lot.name}
-          viewers={viewers}
-          lotId={lot.id}
-        />
-
-        {/* ── 가격 → CTA → 신뢰 ── */}
-        <CounterReceipt
-          lot={lot}
-          current={current}
-          nextMin={nextMin}
-          viewers={viewers}
-          onBid={onBid}
-        />
-      </div>
+      <CounterReceipt
+        lot={lot}
+        current={current}
+        nextMin={nextMin}
+        viewers={viewers}
+        onBid={onBid}
+      />
     </section>
   )
 }
@@ -1425,40 +1054,22 @@ function FeaturedLot({ lot, onBid }) {
 //   - 신뢰 배지 (정품/안전/입찰보호)
 function CounterReceipt({ lot, current, nextMin, viewers, onBid }) {
   return (
-    <div
-      className="relative p-5 sm:p-6 flex flex-col gap-4 bg-paper"
-      style={{
-        backgroundImage:
-          'linear-gradient(180deg, #ffffff 0%, #fbf7ec 100%)',
-      }}
-    >
-      {/* 영수증 톱니 (모바일에선 상단, 데스크탑에선 좌측) */}
-      <span
-        aria-hidden="true"
-        className="hidden sm:block absolute left-0 top-3 bottom-3 w-2"
-        style={{
-          backgroundImage:
-            'radial-gradient(circle at left center, #fbf7ec 5px, transparent 5px)',
-          backgroundSize: '8px 12px',
-          backgroundRepeat: 'repeat-y',
-        }}
-      />
-
+    <div className="flex flex-col gap-4">
       {/* 카드명 + 감정 등급 */}
       <div>
         <div className="flex items-center gap-2 flex-wrap">
-          <SerialTag>
-            {lot.set || lot.setShort || 'POKÉMON TCG'}
-          </SerialTag>
+          <Eyebrow tone="fire" dot dotColor="red">
+            지금 진행 중
+          </Eyebrow>
           <span className="font-mono text-[10.5px] font-extrabold uppercase tracking-[0.22em] text-mute">
-            · NO.{String(lot.number || '').padStart(3, '0') || '???'}
+            {lot.set || lot.setShort || 'POKÉMON TCG'} · NO.{String(lot.number || '').padStart(3, '0') || '???'}
           </span>
         </div>
-        <h2 className="mt-2 font-display text-2xl sm:text-3xl font-extrabold text-ink leading-tight">
+        <h2 className="mt-3 font-display text-2xl sm:text-3xl font-bold text-ink leading-[1.05] tracking-tight">
           {lot.nameKo || lot.name}
         </h2>
         {lot.grade?.grade != null && (
-          <div className="mt-2 inline-flex items-center gap-1.5">
+          <div className="mt-2.5 inline-flex items-center gap-1.5">
             <span className="px-2 py-0.5 rounded bg-electric text-ink font-mono text-[11px] font-extrabold border-2 border-ink shadow-[0_2px_0_#1a1a1a]">
               {lot.grade.cert || 'PSA'} · {lot.grade.grade}
             </span>
@@ -1467,29 +1078,24 @@ function CounterReceipt({ lot, current, nextMin, viewers, onBid }) {
         )}
       </div>
 
-      {/* 위계 3: 현재가 — 페이지에서 가장 큰 숫자 (영수증 강조 라인) */}
-      <div
-        className="rounded-xl border-2 border-ink bg-paper shadow-[0_3px_0_#1a1a1a] p-3 sm:p-4"
-        style={{
-          backgroundImage:
-            'repeating-linear-gradient(180deg, transparent 0 22px, rgba(13,23,48,0.04) 22px 23px)',
-        }}
-      >
+      {/* 현재가 — 페이지에서 가장 큰 숫자 (LCD 영수증 톤) */}
+      <div className="rounded-2xl border-2 border-ink bg-bone-2 shadow-[0_3px_0_#1a1a1a] p-4">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[10.5px] font-mono font-extrabold uppercase tracking-[0.18em] text-mute">
+          <span className="pixel-label text-ink/55">
             현재 입찰가
           </span>
-          <MetaChip icon="user">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-paper border-2 border-ink font-mono text-[10px] font-extrabold tabular-nums">
+            <Icon name="user" size={10} strokeWidth={2.6} />
             {lot.bidCount || 0}회
-          </MetaChip>
+          </span>
         </div>
         <div
-          className="mt-0.5 font-display font-extrabold text-ink leading-[1] tabular-nums"
+          className="mt-1 font-display font-bold text-ink leading-[1] tabular-nums"
           style={{ fontSize: 'clamp(30px, 5.4vw, 44px)' }}
         >
           {formatKRWFull(current)}
         </div>
-        <div className="mt-1.5 flex items-baseline gap-2 flex-wrap text-[11.5px]">
+        <div className="mt-2 flex items-baseline gap-2 flex-wrap text-[11.5px]">
           <Icon name="arrow" size={11} strokeWidth={2.6} className="text-grass" />
           <span className="text-mute font-bold">다음 최소 입찰</span>
           <span className="font-mono font-extrabold text-grass tabular-nums">
@@ -1498,22 +1104,21 @@ function CounterReceipt({ lot, current, nextMin, viewers, onBid }) {
         </div>
       </div>
 
-      {/* 위계 4: 회복(=입찰) 버튼 — 광택 스윕 */}
+      {/* 입찰 CTA — btn-pop 톤 (사이트 전체 메인 CTA 패턴) */}
       <button
         type="button"
         onClick={onBid}
-        className="focus-ring group relative w-full inline-flex items-center justify-center gap-2 px-5 py-4 rounded-2xl font-extrabold text-base sm:text-lg border-2 border-ink shadow-[0_5px_0_#1a1a1a] hover:-translate-y-1 hover:shadow-[0_6px_0_#1a1a1a] active:translate-y-0 active:shadow-[0_2px_0_#1a1a1a] transition-all bg-fire text-paper overflow-hidden"
+        className="btn btn-pop btn-lg group relative overflow-hidden w-full"
         aria-label="입찰 참여하기"
       >
         <Icon name="gavel" size={18} strokeWidth={2.6} />
-        지금 입찰 참여하기
+        지금 두근두근 입찰!
         <Icon
           name="arrow"
           size={16}
           strokeWidth={2.6}
           className="ml-0.5 transition-transform group-hover:translate-x-0.5"
         />
-        {/* 대각 광택 스윕 — 회복기 LED 라인 느낌 */}
         <span
           aria-hidden="true"
           className="absolute top-0 left-0 h-full w-1/3 pointer-events-none"
@@ -1525,48 +1130,14 @@ function CounterReceipt({ lot, current, nextMin, viewers, onBid }) {
         />
       </button>
       <div className="text-center text-[11px] font-bold text-mute leading-relaxed">
-        지금 <span className="text-fire font-extrabold">{viewers.toLocaleString()}명</span>이 함께 지켜보는 중
-        <br className="sm:hidden" />
+        지금 <span className="text-dex font-extrabold">{viewers.toLocaleString()}명</span>이 함께 지켜보는 중
         <span className="hidden sm:inline"> · </span>
-        클릭하면 안전한 입찰 화면으로 이동해요
+        <br className="sm:hidden" />
+        클릭하면 페이지 위에서 바로 입찰할 수 있어요
       </div>
 
-      {/* 위계 5: 신뢰 배지 */}
+      {/* 신뢰 배지 */}
       <TrustBadges />
-    </div>
-  )
-}
-
-// ── 카운트다운 배너 — 위계 #1, LED 디지트 디스플레이 ───────────
-function CountdownBanner({ t, isCritical, isUrgent }) {
-  if (!t) {
-    return (
-      <div className="bg-ink px-4 py-2.5 flex items-center justify-center border-b-2 border-ink">
-        <span className="inline-flex items-center gap-2 font-mono text-[11px] font-extrabold uppercase tracking-[0.18em] text-electric">
-          <LiveDot size={5} color="#facc15" />
-          상시 입찰 · 마감 기한 없음
-        </span>
-      </div>
-    )
-  }
-  if (t.ended) {
-    return (
-      <div className="bg-ink/90 px-4 py-2.5 flex items-center justify-center border-b-2 border-ink">
-        <span className="font-mono text-[11px] font-extrabold uppercase tracking-[0.18em] text-mute-2">
-          ⛔ 카운터 마감 · 경매가 종료되었어요
-        </span>
-      </div>
-    )
-  }
-  const bg = isCritical ? 'bg-rose' : isUrgent ? 'bg-fire' : 'bg-ink'
-  const tone = isCritical ? 'critical' : isUrgent ? 'urgent' : 'calm'
-  return (
-    <div
-      className={`${bg} px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-center gap-3 flex-wrap border-b-2 border-ink`}
-      style={isCritical ? { animation: 'shake-soft 0.6s ease-in-out infinite' } : undefined}
-      aria-live={isCritical ? 'assertive' : 'polite'}
-    >
-      <DigitClock t={t} tone={tone} />
     </div>
   )
 }
@@ -1760,20 +1331,20 @@ function BidFeed({ lot, userBidEvent }) {
   }, [items])
 
   return (
-    <div className="relative overflow-hidden rounded-xl border-2 border-ink bg-paper shadow-[0_4px_0_#1a1a1a] flex flex-col lg:min-h-0 lg:flex-1">
-      {/* 실시간 입찰 모니터 — CRT 헤더 베젤 */}
-      <div className="bg-ink px-4 py-2.5 flex items-center justify-between border-b-2 border-ink">
-        <div className="inline-flex items-center gap-2 text-electric">
-          <LiveDot size={6} color="#facc15" />
-          <span className="font-display text-sm font-extrabold tracking-tight">
-            실시간 입찰 모니터
+    <div className="relative overflow-hidden rounded-2xl border-2 border-ink bg-paper shadow-[0_4px_0_#1a1a1a] flex flex-col lg:min-h-0 lg:flex-1">
+      {/* 헤더 — 종이 톤 + LED 펄스 */}
+      <div className="bg-bone-2 px-4 py-2.5 flex items-center justify-between border-b-2 border-ink/15">
+        <div className="inline-flex items-center gap-2 text-ink">
+          <span className="led led-red led-pulse" style={{ width: 7, height: 7 }} aria-hidden="true" />
+          <span className="font-display text-sm font-bold tracking-tight">
+            실시간 입찰 로그
           </span>
         </div>
-        <span className="font-mono text-[10px] font-bold text-electric/70 tabular-nums uppercase tracking-[0.18em]">
+        <span className="pixel-label text-mute">
           LIVE
         </span>
       </div>
-      {/* CRT 화면 — 스캔라인 오버레이 + 다크 톤 */}
+      {/* 입찰 로그 — 종이 베이스 + 살짝 도트 패턴 (in-game battle log 느낌) */}
       <div className="relative flex-1 lg:min-h-0">
         <div
           ref={scrollRef}
@@ -1782,28 +1353,15 @@ function BidFeed({ lot, userBidEvent }) {
           aria-live="polite"
           aria-label="실시간 입찰 메시지"
           style={{
-            background:
-              'radial-gradient(120% 90% at 50% 0%, #1a2747 0%, #0d1730 60%, #08101f 100%)',
+            background: 'var(--color-bone)',
+            backgroundImage:
+              'radial-gradient(circle at 1px 1px, rgba(13,23,48,0.05) 1px, transparent 0)',
+            backgroundSize: '20px 20px',
           }}
         >
           {items.map((it) => (
             <FeedRow key={it.id} item={it} />
           ))}
-          {/* CRT 스캔라인 */}
-          <span
-            aria-hidden="true"
-            className="absolute inset-0 pointer-events-none mix-blend-overlay"
-            style={{
-              backgroundImage:
-                'repeating-linear-gradient(180deg, rgba(255,255,255,0.05) 0 1px, transparent 1px 3px)',
-            }}
-          />
-          {/* CRT flicker */}
-          <span
-            aria-hidden="true"
-            className="absolute inset-0 pointer-events-none bg-electric/5"
-            style={{ animation: 'crt-flicker 4s steps(1) infinite' }}
-          />
         </div>
       </div>
     </div>
@@ -1812,80 +1370,74 @@ function BidFeed({ lot, userBidEvent }) {
 
 function FeedRow({ item }) {
   if (item.kind === 'me') {
+    // 내 입찰 — 노란 양각 칩, 별 마크
     return (
       <div
-        className="relative z-10 flex items-center justify-between gap-2 px-2.5 py-2 rounded-md border-2 border-electric"
+        className="relative z-10 flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg border-2 border-ink bg-electric"
         style={{
           animation: 'bid-pop 0.3s ease-out',
-          background:
-            'linear-gradient(90deg, rgba(250,204,21,0.18), rgba(250,204,21,0.05))',
-          boxShadow: '0 0 0 1px rgba(250,204,21,0.35), 0 0 12px rgba(250,204,21,0.35)',
+          boxShadow: '0 3px 0 #1a1a1a',
         }}
       >
         <span className="inline-flex items-center gap-1.5 min-w-0">
           <span
-            className="w-5 h-5 rounded-full grid place-items-center font-mono text-[9px] font-extrabold bg-electric text-ink border-2 border-ink shrink-0"
+            className="w-5 h-5 rounded-full grid place-items-center font-mono text-[10px] font-extrabold bg-ink text-electric border-2 border-ink shrink-0"
             aria-hidden="true"
           >
             ★
           </span>
-          <span className="text-[12px] font-extrabold text-electric truncate"
-            style={{ textShadow: '0 0 6px rgba(250,204,21,0.55)' }}>
+          <span className="text-[12px] font-extrabold text-ink truncate">
             {item.who}
           </span>
         </span>
-        <span className="font-mono text-[12.5px] font-extrabold text-electric tabular-nums"
-          style={{ textShadow: '0 0 6px rgba(250,204,21,0.55)' }}>
+        <span className="font-mono text-[12.5px] font-extrabold text-ink tabular-nums">
           {formatKRWFull(item.amt)}
         </span>
       </div>
     )
   }
   if (item.sys) {
+    // 시스템 메시지 — 점선 안내 줄
     return (
       <div
-        className="relative z-10 px-2.5 py-1.5 rounded-md text-center font-mono text-[10.5px] font-extrabold text-electric bg-electric/10 border border-electric/30"
-        style={{
-          animation: 'bid-pop 0.3s ease-out',
-          textShadow: '0 0 8px rgba(250,204,21,0.45)',
-        }}
+        className="relative z-10 px-2.5 py-1.5 rounded-md text-center font-mono text-[10.5px] font-extrabold text-ink bg-paper border-2 border-dashed border-ink/30"
+        style={{ animation: 'bid-pop 0.3s ease-out' }}
       >
-        ▸ {item.msg}
+        <span className="text-grass">▸</span> {item.msg}
       </div>
     )
   }
   if (item.kind === 'react') {
+    // 리액션 — 가볍게 흘러가는 텍스트
     return (
       <div
-        className="relative z-10 inline-flex items-center gap-1.5 text-[11px] font-mono font-bold text-paper/70"
+        className="relative z-10 inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-mono font-bold text-mute"
         style={{ animation: 'bid-pop 0.3s ease-out' }}
       >
-        <span className="text-paper">{item.who}</span>
+        <span className="text-ink/80">{item.who}</span>
         <span aria-hidden="true">{item.r}</span>
       </div>
     )
   }
-  // bid
+  // 일반 입찰 — 종이 양각 칩, 빨간 dex 동전
   return (
     <div
-      className="relative z-10 flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-md bg-ink/40 border border-electric/20"
+      className="relative z-10 flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-paper border-2 border-ink/15"
       style={{
         animation: 'bid-pop 0.3s ease-out',
-        boxShadow: 'inset 0 0 0 1px rgba(250,204,21,0.08)',
+        boxShadow: '0 2px 0 rgba(13,23,48,0.08)',
       }}
     >
       <span className="inline-flex items-center gap-1.5 min-w-0">
         <span
-          className="w-5 h-5 rounded-full grid place-items-center font-mono text-[9px] font-extrabold bg-fire text-paper border-2 border-ink shrink-0"
+          className="w-5 h-5 rounded-full grid place-items-center font-mono text-[10px] font-extrabold bg-dex text-paper border-2 border-ink shrink-0"
           aria-hidden="true"
-          style={{ boxShadow: '0 0 8px rgba(255,122,69,0.55)' }}
         >
           ₩
         </span>
-        <span className="text-[11.5px] font-extrabold text-paper truncate">{item.who}</span>
+        <span className="text-[11.5px] font-extrabold text-ink truncate">{item.who}</span>
       </span>
-      <span className="font-mono text-[12px] font-extrabold text-electric tabular-nums"
-        style={{ textShadow: '0 0 6px rgba(250,204,21,0.45)' }}>
+      <span className="font-mono text-[12px] font-extrabold text-dex tabular-nums">
         {formatKRWFull(item.amt)}
       </span>
     </div>
@@ -1893,7 +1445,7 @@ function FeedRow({ item }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 모바일 sticky CTA — 회복기 톤 (포켓볼 마크 + 광택 스윕)
+// 모바일 sticky CTA — 종이 양각 바 + Pokédex 빨간 입찰 버튼
 // ═══════════════════════════════════════════════════════════════
 function MobileStickyCta({ lot, onBid }) {
   const current = lot.currentBid || lot.startingBid || 0
@@ -1902,18 +1454,18 @@ function MobileStickyCta({ lot, onBid }) {
       <div className="flex items-center gap-3">
         <PokeballMark size={32} />
         <div className="min-w-0 flex-1">
-          <div className="text-[10px] font-mono font-extrabold uppercase tracking-[0.18em] text-mute inline-flex items-center gap-1">
-            <LiveDot size={4} />
+          <div className="pixel-label text-mute inline-flex items-center gap-1.5">
+            <span className="led led-red led-pulse" style={{ width: 5, height: 5 }} aria-hidden="true" />
             현재 입찰가
           </div>
-          <div className="font-display text-base font-extrabold text-ink leading-none tabular-nums truncate">
+          <div className="mt-0.5 font-display text-base font-extrabold text-ink leading-none tabular-nums truncate">
             {formatKRWFull(current)}
           </div>
         </div>
         <button
           type="button"
           onClick={onBid}
-          className="focus-ring relative overflow-hidden inline-flex items-center gap-2 px-4 py-3 rounded-full font-extrabold text-sm border-2 border-ink shadow-[0_3px_0_#1a1a1a] active:translate-y-0.5 active:shadow-[0_1px_0_#1a1a1a] transition-all bg-fire text-paper shrink-0"
+          className="btn btn-pop btn-md relative overflow-hidden shrink-0 rounded-full"
           aria-label="입찰 참여하기"
         >
           <Icon name="gavel" size={14} strokeWidth={2.6} />
