@@ -320,7 +320,7 @@ export default function HomePage() {
                   className="card-pop-wrap sparkle-host is-on"
                   style={{ animationDelay: `${i * 0.4}s` }}
                 >
-                  <CardTile card={c} />
+                  <CardTile card={c} stage />
                 </div>
               </div>
             ))}

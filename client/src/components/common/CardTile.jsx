@@ -9,7 +9,7 @@ import useWishlistStore from '@/store/wishlistStore'
 import useAuthStore from '@/store/authStore'
 import useToastStore from '@/store/toastStore'
 
-function CardTile({ card }) {
+function CardTile({ card, stage = false }) {
   const cardId = card.id || card._id
   const wished = useWishlistStore((s) => s.has(cardId))
   const toggle = useWishlistStore((s) => s.toggle)
@@ -96,8 +96,9 @@ function CardTile({ card }) {
         </button>
       </div>
 
-      {/* Big card image — holo sheen sweeps across on hover */}
-      <div className="px-6 py-5 flex justify-center holo-sheen"
+      {/* Big card image — holo sheen sweeps across on hover.
+          stage=true 일 때 .card-stage 적용 → spotlight + turntable + sparkles 무대 효과 (리자몽 톤) */}
+      <div className={`px-6 py-5 flex justify-center holo-sheen ${stage ? 'card-stage' : ''}`}
         style={{ background: `radial-gradient(ellipse at center, ${card.accent || '#fbf7ec'}12 0%, transparent 70%)` }}>
         <PokeCard card={card} size="md" />
       </div>
