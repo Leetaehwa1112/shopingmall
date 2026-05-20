@@ -174,7 +174,7 @@ const placeBid = async (req, res) => {
 
     // 1) 사전 조회로 친절한 에러 메시지 (경매 종료/유형/연속입찰 등)
     const product = await Product.findById(req.params.id).select(
-      "sale_type status endsAt currentBid startPrice price bidHistory"
+      "sale_type status endsAt currentBid startPrice buyNowPrice price bidHistory"
     );
     if (!product) {
       return res.status(404).json({ success: false, message: "상품을 찾을 수 없습니다." });
@@ -197,14 +197,19 @@ const placeBid = async (req, res) => {
         message: `최소 입찰가는 ${minBid.toLocaleString("ko-KR")}원 이상이어야 합니다.`,
       });
     }
-    // 상한 sanity check — 직전 가격의 10배 OR 100억(10,000,000,000), 둘 중 작은 값
-    // 사용자의 오타·실수로 천문학적 금액 입력 방지
-    const ABSOLUTE_MAX = 10_000_000_000; // 100억
-    const maxBid = Math.min(baseline * 10, ABSOLUTE_MAX);
+    // 입찰 상한 결정
+    //  1) 셀러가 즉시낙찰가(buyNowPrice)를 설정했으면 → 그 가격까지만 입찰 허용
+    //     (그 가격으로 입찰하면 즉시 낙찰 처리됨)
+    //  2) 없으면 → 시작가의 5배 (시세 보호용 안전망)
+    const maxBid = product.buyNowPrice
+      ? product.buyNowPrice
+      : (product.startPrice || product.price || 0) * 5;
     if (numAmount > maxBid) {
       return res.status(400).json({
         success: false,
-        message: `입찰 한도를 초과했어요. 최대 ${maxBid.toLocaleString("ko-KR")}원까지 입찰 가능합니다.`,
+        message: product.buyNowPrice
+          ? `즉시낙찰가(${maxBid.toLocaleString("ko-KR")}원)를 초과할 수 없어요.`
+          : `시작가의 5배(${maxBid.toLocaleString("ko-KR")}원)를 초과할 수 없어요.`,
       });
     }
     // 만원 단위로 떨어지지 않으면 거부 (깔끔한 금액만 허용)
@@ -254,13 +259,23 @@ const placeBid = async (req, res) => {
       });
     }
 
+    // 즉시낙찰가 도달 → 경매 즉시 종료 (endsAt = now, status = sold_out)
+    let instantWin = false;
+    if (product.buyNowPrice && numAmount >= product.buyNowPrice) {
+      await Product.findByIdAndUpdate(req.params.id, {
+        $set: { endsAt: new Date(), status: "sold_out" },
+      });
+      instantWin = true;
+    }
+
     res.status(201).json({
       success: true,
-      message: "입찰이 등록되었습니다.",
+      message: instantWin ? "즉시낙찰가로 낙찰되었어요! 🎉" : "입찰이 등록되었습니다.",
       data: {
         currentBid: updated.currentBid,
         bidCount: updated.bidCount,
         bidHistory: updated.bidHistory,
+        instantWin,
       },
     });
   } catch (error) {

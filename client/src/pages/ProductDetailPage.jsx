@@ -64,10 +64,13 @@ export default function ProductDetailPage() {
   const cardId   = card.id || card._id
   // 만원 단위로 올림 — 깔끔한 금액만 노출
   const roundUpToMan = (n) => Math.ceil(n / 10000) * 10000
-  const minBid = roundUpToMan((card.currentBid || 0) + 1000000)
+  const baseline = card.currentBid || card.startPrice || 0
+  const minBid = roundUpToMan(baseline + 1000000)
+  // 상한 — 셀러의 buyNowPrice가 있으면 그 값, 없으면 startPrice의 5배
+  const maxBid = card.buyNowPrice || (card.startPrice || card.price || 0) * 5
 
   const quickBid = (mult) =>
-    setBidAmount(roundUpToMan(((card.currentBid || 0) + 1000000) * mult).toString())
+    setBidAmount(roundUpToMan((baseline + 1000000) * mult).toString())
 
   const handleBid = async () => {
     if (!isAuthenticated) {
@@ -80,18 +83,38 @@ export default function ProductDetailPage() {
       toast({ type: 'error', title: '입찰 실패', message: `최소 ${formatKRWFull(minBid)} 이상 입찰해주세요` })
       return
     }
+    // 상한 초과 — 서버에서도 막지만 UX상 사전 차단
+    if (amt > maxBid) {
+      toast({ type: 'error', title: '입찰 한도 초과', message: `최대 ${formatKRWFull(maxBid)} 까지 입찰 가능해요` })
+      return
+    }
+    // 직전가의 2배 이상 입찰 시 확인 다이얼로그 (오타 방지)
+    if (amt >= baseline * 2 && baseline > 0) {
+      const ok = window.confirm(
+        `정말 ${formatKRWFull(amt)} 으로 입찰하시겠어요?\n\n` +
+        `현재가(${formatKRWFull(baseline)})의 ${(amt / baseline).toFixed(1)}배입니다.\n` +
+        `입찰은 취소할 수 없으니 한 번 더 확인해주세요.`
+      )
+      if (!ok) return
+    }
     if (bidding) return
     setBidding(true)
     try {
       const { data } = await api.post(`/products/${cardId}/bid`, { amount: amt })
+      const { instantWin } = data.data
       // 서버가 돌려준 최신 currentBid/bidCount/bidHistory 로 카드 갱신
       setCard((prev) => prev ? {
         ...prev,
         currentBid: data.data.currentBid,
         bidCount: data.data.bidCount,
         bidHistory: data.data.bidHistory,
+        ...(instantWin ? { status: 'sold_out', endsAt: new Date().toISOString() } : {}),
       } : prev)
-      toast({ type: 'success', title: '두근두근! 입찰 완료', message: `${formatKRWFull(amt)} 입찰됨` })
+      toast({
+        type: 'success',
+        title: instantWin ? '🎉 즉시낙찰 성공!' : '두근두근! 입찰 완료',
+        message: `${formatKRWFull(amt)} ${instantWin ? '으로 낙찰됨' : '입찰됨'}`,
+      })
       setBidAmount('')
     } catch (err) {
       const msg = err?.response?.data?.message || '입찰에 실패했어요. 잠시 후 다시 시도해주세요.'
@@ -278,14 +301,24 @@ export default function ProductDetailPage() {
 
               {/* Direct input */}
               <div className="space-y-2">
-                <div className="text-[10px] font-bold text-mute tracking-[0.18em] uppercase">또는 직접 입력</div>
+                <div className="flex items-baseline justify-between">
+                  <div className="text-[10px] font-bold text-mute tracking-[0.18em] uppercase">또는 직접 입력</div>
+                  <div className="text-[10px] font-bold text-mute tabular-nums">
+                    최소 {formatKRW(minBid)} · 최대 {formatKRW(maxBid)}
+                  </div>
+                </div>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={bidAmount}
-                    onChange={(e) => setBidAmount(e.target.value)}
+                    onChange={(e) => {
+                      // 숫자만 + 11자리 제한 (=999억대까지, 그 이상은 입력 자체 차단)
+                      const cleaned = e.target.value.replace(/[^0-9]/g, '').slice(0, 11)
+                      setBidAmount(cleaned)
+                    }}
                     placeholder={`최소 ${formatKRWFull(minBid)}`}
                     inputMode="numeric"
+                    maxLength={11}
                     className="flex-1 bg-bone-2 border-2 border-ink rounded-lg px-4 py-3 font-mono text-sm font-bold text-ink focus:bg-paper focus:border-dex focus:outline-none transition-colors placeholder:text-mute placeholder:font-medium"
                   />
                 </div>
@@ -293,6 +326,26 @@ export default function ProductDetailPage() {
                   <Icon name="bolt" size={14} strokeWidth={2.5} />
                   {bidding ? '입찰 중…' : '지금 두근두근 입찰!'}
                 </Button>
+                {/* 즉시구매 — buyNowPrice 설정된 경매만 노출 */}
+                {card.buyNowPrice && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const ok = window.confirm(
+                        `즉시낙찰가 ${formatKRWFull(card.buyNowPrice)} 으로 경매를 종료하시겠어요?\n\n` +
+                        `이 금액으로 입찰되면 경매가 즉시 마감되고 낙찰이 확정됩니다.`
+                      )
+                      if (!ok) return
+                      setBidAmount(String(card.buyNowPrice))
+                      // 약간 지연 후 입찰 — state 반영 보장
+                      setTimeout(handleBid, 50)
+                    }}
+                    disabled={bidding}
+                    className="w-full mt-2 py-3 rounded-lg bg-paper border-2 border-ink text-ink font-bold text-sm shadow-[0_3px_0_#1a1a1a] hover:bg-electric/30 hover:-translate-y-0.5 transition-all disabled:opacity-60"
+                  >
+                    💎 즉시구매 · {formatKRW(card.buyNowPrice)}
+                  </button>
+                )}
               </div>
 
               {/* Auto-bid toggle */}

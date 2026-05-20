@@ -29,6 +29,7 @@ function buildProductFromApplication(app) {
     sale_type: isBuyNow ? "buynow" : "auction",
     price,
     startPrice: app.startPrice,
+    buyNowPrice: app.buyNowPrice || null,
     endsAt: app.endsAt,
     images: app.photos || [],
     description: app.description || "",

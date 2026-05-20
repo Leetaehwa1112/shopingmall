@@ -28,9 +28,10 @@ const productSchema = new mongoose.Schema(
       cert:    { type: String, default: "" },
     },
 
-    price:      { type: Number, required: [true, "가격은 필수입니다."], min: 0 },
-    startPrice: { type: Number },
-    currentBid: { type: Number },
+    price:       { type: Number, required: [true, "가격은 필수입니다."], min: 0 },
+    startPrice:  { type: Number },
+    buyNowPrice: { type: Number, default: null }, // 경매 즉시낙찰가 — 입찰 상한 + 즉시구매 트리거
+    currentBid:  { type: Number },
     bidCount:   { type: Number, default: 0 },
     watchers:   { type: Number, default: 0 },
     endsAt:     { type: Date },
