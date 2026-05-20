@@ -656,16 +656,8 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
       {/* 카드 + 정보 */}
       <Link to={`/products/${card.id}`} className="block group bg-paper" aria-label={`${card.nameKo} 경매 상세`}>
         <div className="flex gap-4 p-5">
-          <div className="shrink-0 holo-sheen rounded-lg relative">
+          <div className="shrink-0 holo-sheen rounded-lg">
             <PokeCard card={card} size={compact ? 'xs' : 'sm'} />
-            {!lotEnded && (
-              <span
-                aria-hidden="true"
-                className="absolute -top-1.5 -right-1.5 inline-flex items-center px-1.5 py-0.5 rounded-md bg-dex text-paper text-[9px] font-extrabold tracking-wider border-2 border-ink shadow-[0_2px_0_#1a1a1a]"
-              >
-                NOW
-              </span>
-            )}
           </div>
           <div className="min-w-0 flex flex-col justify-between flex-1">
             <div>
