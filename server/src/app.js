@@ -49,13 +49,27 @@ app.use((req, _res, next) => { sanitizeKeys(req.body); next(); });
 
 // ─── CORS — origin은 환경변수로 (배포 시 도메인 교체) ─────────
 // CLIENT_ORIGIN 콤마 구분 multi 허용. 개발은 localhost:3000 기본.
-const allowedOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:3000')
+// "*.vercel.app" 같은 와일드카드 패턴 지원 — Vercel preview 배포 매번 URL 바뀜.
+const rawOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:3000')
   .split(',').map((s) => s.trim()).filter(Boolean);
+
+// 정확 매칭과 와일드카드 패턴을 분리.
+const exactOrigins = rawOrigins.filter((o) => !o.includes('*'));
+// "*.vercel.app" → ".vercel.app" suffix 매칭
+const wildcardSuffixes = rawOrigins
+  .filter((o) => o.startsWith('*.'))
+  .map((o) => o.slice(1)); // ".vercel.app"
+
+const isAllowedOrigin = (origin) => {
+  if (exactOrigins.includes(origin)) return true;
+  return wildcardSuffixes.some((suffix) => origin.endsWith(suffix));
+};
+
 app.use(cors({
   origin: (origin, cb) => {
     // 같은 출처 / curl 등 origin 없는 요청 허용
     if (!origin) return cb(null, true);
-    if (allowedOrigins.includes(origin)) return cb(null, true);
+    if (isAllowedOrigin(origin)) return cb(null, true);
     return cb(new Error(`CORS blocked: ${origin}`));
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
