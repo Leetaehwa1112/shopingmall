@@ -4,7 +4,7 @@ const Product = require("../models/Product");
 // 제외: bidHistory(최대 50개 sub-doc), description(긴 본문), created_by populate.
 const LIST_FIELDS =
   "sku name nameKo set setShort year number accent rarity isHolo grade " +
-  "price currentBid bidCount watchers endsAt population category " +
+  "price startPrice buyNowPrice currentBid bidCount watchers endsAt population category " +
   "sale_type status images stock createdAt";
 
 // [GET] /api/products - 상품 목록 조회
@@ -79,11 +79,24 @@ const getProductBySku = async (req, res) => {
 // [POST] /api/products - 상품 등록 (어드민)
 const createProduct = async (req, res) => {
   try {
-    const { sku, name, price, category, images, description, stock, sale_type } = req.body;
+    const {
+      sku, name, price, category, images, description, stock, sale_type,
+      startPrice, buyNowPrice, endsAt,
+    } = req.body;
 
     const existing = await Product.findOne({ sku: sku?.toUpperCase() });
     if (existing) {
       return res.status(409).json({ success: false, message: "이미 사용 중인 SKU입니다." });
+    }
+
+    // 경매 필드 정합성 — buyNowPrice 있으면 startPrice보다 커야 함
+    if (sale_type === "auction" && buyNowPrice != null && startPrice != null) {
+      if (Number(buyNowPrice) <= Number(startPrice)) {
+        return res.status(400).json({
+          success: false,
+          message: "즉시낙찰가는 시작가보다 커야 합니다.",
+        });
+      }
     }
 
     const product = await Product.create({
@@ -95,6 +108,12 @@ const createProduct = async (req, res) => {
       description,
       stock,
       sale_type,
+      // 경매 전용 — buynow면 undefined로 떨어져 schema default 사용
+      ...(sale_type === "auction" ? {
+        startPrice: startPrice != null ? Number(startPrice) : undefined,
+        buyNowPrice: buyNowPrice != null && buyNowPrice !== "" ? Number(buyNowPrice) : null,
+        endsAt: endsAt || undefined,
+      } : {}),
       created_by: req.user._id,
     });
 
@@ -114,7 +133,10 @@ const createProduct = async (req, res) => {
 // [PUT] /api/products/:id - 상품 수정 (어드민)
 const updateProduct = async (req, res) => {
   try {
-    const { sku, name, price, category, images, description, stock, sale_type, status } = req.body;
+    const {
+      sku, name, price, category, images, description, stock, sale_type, status,
+      startPrice, buyNowPrice, endsAt,
+    } = req.body;
 
     // SKU 변경 시 중복 확인
     if (sku) {
@@ -124,9 +146,30 @@ const updateProduct = async (req, res) => {
       }
     }
 
+    // 경매 필드 정합성 검증
+    if (sale_type === "auction" && buyNowPrice != null && buyNowPrice !== "" && startPrice != null) {
+      if (Number(buyNowPrice) <= Number(startPrice)) {
+        return res.status(400).json({
+          success: false,
+          message: "즉시낙찰가는 시작가보다 커야 합니다.",
+        });
+      }
+    }
+
+    // undefined 필드는 $set 대상에서 제외 (기존 값 유지)
+    const update = { sku, name, price, category, images, description, stock, sale_type, status };
+    if (sale_type === "auction") {
+      if (startPrice !== undefined) update.startPrice = Number(startPrice);
+      // buyNowPrice가 빈 문자열이면 null 처리 (즉시낙찰 해제)
+      if (buyNowPrice !== undefined) {
+        update.buyNowPrice = buyNowPrice === "" || buyNowPrice == null ? null : Number(buyNowPrice);
+      }
+      if (endsAt !== undefined) update.endsAt = endsAt;
+    }
+
     const product = await Product.findByIdAndUpdate(
       req.params.id,
-      { sku, name, price, category, images, description, stock, sale_type, status },
+      update,
       { new: true, runValidators: true }
     );
 

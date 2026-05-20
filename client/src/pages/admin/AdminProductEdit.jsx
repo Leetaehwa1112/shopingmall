@@ -15,7 +15,8 @@ export default function AdminProductEdit() {
   const [fetching, setFetching] = useState(true)
   const [form, setForm] = useState({
     sku: '', name: '', category: 'base', description: '',
-    sale_type: 'buynow', price: '', stock: '', status: 'active',
+    sale_type: 'buynow', price: '', startPrice: '', buyNowPrice: '',
+    stock: '', status: 'active',
     imageFront: '', imageBack: '',
   })
 
@@ -30,6 +31,8 @@ export default function AdminProductEdit() {
           description: p.description ?? '',
           sale_type: p.sale_type ?? 'buynow',
           price: p.price ?? '',
+          startPrice: p.startPrice ?? '',
+          buyNowPrice: p.buyNowPrice ?? '',
           stock: p.stock ?? '',
           status: p.status ?? 'active',
           imageFront: p.images?.[0] ?? '',
@@ -46,6 +49,7 @@ export default function AdminProductEdit() {
     e.preventDefault()
     setLoading(true)
     try {
+      const isAuction = form.sale_type === 'auction'
       await api.put(`/products/${id}`, {
         name: form.name,
         category: form.category,
@@ -55,6 +59,11 @@ export default function AdminProductEdit() {
         stock: Number(form.stock),
         status: form.status,
         images: [form.imageFront, form.imageBack].filter(Boolean),
+        // 경매면 시작가/즉시낙찰가 같이 전송 (null이면 해제)
+        ...(isAuction ? {
+          startPrice: form.startPrice ? Number(form.startPrice) : undefined,
+          buyNowPrice: form.buyNowPrice ? Number(form.buyNowPrice) : null,
+        } : {}),
       })
       toast({ type: 'success', title: '수정 완료', message: `${form.name} 수정됨` })
       navigate('/admin/products')
@@ -118,6 +127,22 @@ export default function AdminProductEdit() {
               </button>
             ))}
           </div>
+          {form.sale_type === 'auction' && (
+            <div className="space-y-3 mt-4 p-4 bg-ink/[0.02] rounded-xl border border-ink/10">
+              <Input label="시작가 (원)" type="number" value={form.startPrice} onChange={f('startPrice')} />
+              <Input
+                label="즉시낙찰가 (원, 선택)"
+                type="number"
+                value={form.buyNowPrice}
+                onChange={f('buyNowPrice')}
+                placeholder="비워두면 즉시낙찰 불가"
+              />
+              <div className="text-[11px] text-mute font-medium leading-relaxed">
+                💎 설정 시: 이 금액 도달 → 경매 즉시 종료 + 낙찰<br />
+                ⚪ 미설정: 종료시각까지 진행, 입찰 상한 = 시작가 × 5
+              </div>
+            </div>
+          )}
         </Section>
 
         <Section title="상태">

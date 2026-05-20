@@ -14,7 +14,7 @@ export default function AdminProductNew() {
   const [form, setForm] = useState({
     sku: '', name: '', nameKo: '', set: '', year: '', number: '',
     company: 'PSA', score: '10', cert: '', country: 'USA',
-    type: 'buynow', price: '', startPrice: '', endsAt: '',
+    type: 'buynow', price: '', startPrice: '', buyNowPrice: '', endsAt: '',
     category: 'base', description: '',
     imageFront: '', imageBack: '',
   })
@@ -25,15 +25,22 @@ export default function AdminProductNew() {
     e.preventDefault()
     setLoading(true)
     try {
+      const isAuction = form.type === 'auction'
       await api.post('/products', {
         sku: form.sku,
         name: form.nameKo || form.name,
-        price: Number(form.type === 'buynow' ? form.price : form.startPrice),
+        price: Number(isAuction ? form.startPrice : form.price),
         category: form.category,
         description: form.description,
-        sale_type: form.type === 'auction' ? 'auction' : 'buynow',
+        sale_type: isAuction ? 'auction' : 'buynow',
         stock: 1,
         images: [form.imageFront, form.imageBack].filter(Boolean),
+        // 경매: 시작가 / 종료 / 선택적 즉시낙찰가
+        ...(isAuction ? {
+          startPrice: Number(form.startPrice),
+          endsAt: form.endsAt,
+          buyNowPrice: form.buyNowPrice ? Number(form.buyNowPrice) : null,
+        } : {}),
       })
       toast({ type: 'success', title: '카드 등록 완료', message: `${form.nameKo || form.name} 등록됨` })
       navigate('/admin/products')
@@ -127,9 +134,22 @@ export default function AdminProductNew() {
           {form.type === 'buynow' ? (
             <Input label="판매가 (원) *" type="number" value={form.price} onChange={f('price')} required />
           ) : (
-            <div className="grid grid-cols-2 gap-4">
-              <Input label="시작가 (원) *" type="number" value={form.startPrice} onChange={f('startPrice')} required />
-              <Input label="옥션 종료 *" type="datetime-local" value={form.endsAt} onChange={f('endsAt')} required />
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <Input label="시작가 (원) *" type="number" value={form.startPrice} onChange={f('startPrice')} required />
+                <Input label="옥션 종료 *" type="datetime-local" value={form.endsAt} onChange={f('endsAt')} required />
+              </div>
+              <Input
+                label="즉시낙찰가 (원, 선택)"
+                type="number"
+                value={form.buyNowPrice}
+                onChange={f('buyNowPrice')}
+                placeholder="비워두면 즉시낙찰 불가 — 시간만료까지 경매"
+              />
+              <div className="text-[11px] text-mute font-medium leading-relaxed -mt-2">
+                💎 설정 시: 이 금액에 도달하면 경매 즉시 종료 + 낙찰<br />
+                ⚪ 미설정 시: 종료시각까지 일반 경매로만 진행 (입찰 상한 = 시작가의 5배)
+              </div>
             </div>
           )}
         </Section>

@@ -222,9 +222,14 @@ export default function AdminProducts() {
             <Cell primary={r.name} secondary={r.category} />
           },
           { key: 'type', label: '유형', align: 'center', render: (r) =>
-            r.sale_type === 'auction'
-              ? <StatusPill tone="red" led="red">AUCTION</StatusPill>
-              : <StatusPill tone="blue">BUY NOW</StatusPill>
+            r.sale_type === 'auction' ? (
+              <div className="inline-flex flex-col items-center gap-1">
+                <StatusPill tone="red" led="red">AUCTION</StatusPill>
+                {r.buyNowPrice ? (
+                  <span className="text-[9px] font-bold text-emerald-600 tracking-wide">💎 즉시낙찰 ON</span>
+                ) : null}
+              </div>
+            ) : <StatusPill tone="blue">BUY NOW</StatusPill>
           },
           { key: 'stock', label: '재고', align: 'center', sortable: true, render: (r) =>
             <InlineNumberCell
