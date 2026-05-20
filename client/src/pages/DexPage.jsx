@@ -470,44 +470,121 @@ function TypeDetailCard({ type, matchCount }) {
   return (
     <section
       aria-label={`${type} 타입 상세`}
-      className="max-w-7xl mx-auto px-4 sm:px-6 -mt-2 mb-6"
+      className="mt-3"
     >
+      {/* === LCD 도시에 표시되는 도감 데이터 시트 === */}
       <div
-        className="relative overflow-hidden rounded-2xl border-2 border-ink shadow-[0_4px_0_#1a1a1a] p-6 sm:p-7"
-        style={{ background: `linear-gradient(135deg, ${info.hex}22 0%, transparent 60%), #fffaf2` }}
+        className="relative overflow-hidden rounded-xl"
+        style={{
+          background: 'rgba(7,23,10,0.55)',
+          boxShadow: [
+            'inset 0 0 0 1px rgba(142,194,90,0.25)',
+            'inset 0 1px 0 rgba(255,255,255,0.04)',
+            'inset 0 0 40px rgba(0,0,0,0.5)',
+          ].join(', '),
+        }}
       >
-        <div className="flex items-start gap-5 flex-wrap sm:flex-nowrap">
-          {/* 큰 심볼 — 실제 타입 심볼 (SVG) */}
-          <div
-            className="shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-2 border-ink flex items-center justify-center shadow-[0_3px_0_#1a1a1a]"
-            style={{
-              backgroundColor: info.hex,
-              boxShadow: '0 4px 0 #1a1a1a, inset 0 2px 0 rgba(255,255,255,0.25)',
-            }}
-            aria-hidden="true"
-          >
-            <TypeSymbol type={type} size={56} variant="plain" className="text-white" />
+        {/* 상단 데이터 시트 헤더 — 그린 LCD 톤 */}
+        <div
+          className="flex items-center justify-between px-4 sm:px-5 py-2"
+          style={{
+            background: 'linear-gradient(180deg, rgba(142,194,90,0.18), rgba(142,194,90,0.06))',
+            borderBottom: '1px dashed rgba(142,194,90,0.35)',
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <span
+              className="w-1.5 h-1.5 rounded-full animate-pulse"
+              style={{ backgroundColor: '#8ec25a', boxShadow: '0 0 6px #8ec25a' }}
+              aria-hidden="true"
+            />
+            <span className="font-mono text-[10px] font-bold tracking-[0.22em] uppercase" style={{ color: '#8ec25a' }}>
+              DOSSIER · TYPE.{ (info.slug || type).toString().toUpperCase()}
+            </span>
+          </div>
+          <span className="font-mono text-[10px] font-bold tracking-wider tabular-nums" style={{ color: '#8ec25a' }}>
+            REC {String(matchCount).padStart(3, '0')}
+          </span>
+        </div>
+
+        <div className="p-4 sm:p-5 flex items-start gap-4 sm:gap-5 flex-wrap sm:flex-nowrap">
+          {/* === 좌측: 보석 인서트 슬롯 (디바이스의 표본 윈도우) === */}
+          <div className="shrink-0">
+            <div
+              className="relative w-24 h-28 sm:w-28 sm:h-32 rounded-lg flex items-center justify-center overflow-hidden"
+              style={{
+                background: `
+                  radial-gradient(circle at 50% 35%, ${info.hex}26 0%, transparent 60%),
+                  linear-gradient(180deg, #0d1f0d 0%, #07170a 100%)
+                `,
+                boxShadow: [
+                  `inset 0 0 0 2px ${info.hex}55`,
+                  'inset 0 0 24px rgba(0,0,0,0.7)',
+                  `inset 0 0 8px ${info.hex}33`,
+                ].join(', '),
+              }}
+            >
+              {/* 표본 윈도우 코너 마커 */}
+              {['top-1 left-1', 'top-1 right-1', 'bottom-1 left-1', 'bottom-1 right-1'].map((pos, i) => (
+                <span
+                  key={i}
+                  aria-hidden="true"
+                  className={`absolute ${pos} w-2 h-2`}
+                  style={{
+                    borderTop: i < 2 ? `2px solid ${info.hex}` : 'none',
+                    borderBottom: i >= 2 ? `2px solid ${info.hex}` : 'none',
+                    borderLeft: i % 2 === 0 ? `2px solid ${info.hex}` : 'none',
+                    borderRight: i % 2 === 1 ? `2px solid ${info.hex}` : 'none',
+                    opacity: 0.7,
+                  }}
+                />
+              ))}
+              <TypeSymbol type={type} size={56} variant="jewel" />
+              {/* 스캔라인 — 작은 영역 */}
+              <span
+                aria-hidden="true"
+                className="absolute inset-0 pointer-events-none opacity-25 mix-blend-overlay"
+                style={{
+                  backgroundImage:
+                    'repeating-linear-gradient(0deg, rgba(255,255,255,0.08) 0px, rgba(255,255,255,0.08) 1px, transparent 1px, transparent 3px)',
+                }}
+              />
+            </div>
+            <div className="mt-1.5 font-mono text-[9px] font-bold tracking-[0.2em] uppercase text-center" style={{ color: '#8ec25a' }}>
+              SPEC #{String(Math.abs(type.charCodeAt(0)) % 999).padStart(3, '0')}
+            </div>
           </div>
 
+          {/* === 우측: 타입명 + 설명 + 상성 === */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-mute">TYPE · 속성</span>
-              <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-ink/60 tabular-nums">
-                {String(matchCount).padStart(2, '0')}마리
-              </span>
-            </div>
-            <h2 className="font-display text-2xl sm:text-3xl font-bold text-ink leading-none mb-2 inline-flex items-center gap-2.5">
+            <h2 className="font-display text-2xl sm:text-3xl leading-none mb-2 inline-flex items-center gap-2.5"
+                style={{ color: '#cfe9b0', textShadow: '0 0 8px rgba(142,194,90,0.4)' }}>
               {type}
               <TypeSymbol type={type} size={20} variant="solid" />
             </h2>
-            <p className="text-sm text-ink/80 font-medium leading-relaxed">{info.desc}</p>
+            <p className="text-sm font-medium leading-relaxed" style={{ color: 'rgba(207,233,176,0.85)' }}>
+              {info.desc}
+            </p>
 
-            {/* 상성 */}
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* 상성 — LCD 데이터 패널 두 줄 */}
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <EffectivenessRow label="효과적이에요" tone="strong" types={info.strong} />
               <EffectivenessRow label="약점이에요"   tone="weak"   types={info.weak} />
             </div>
           </div>
+        </div>
+
+        {/* 하단 시그니처 라인 */}
+        <div
+          className="flex items-center justify-between px-4 sm:px-5 py-1.5"
+          style={{ borderTop: '1px dashed rgba(142,194,90,0.25)', background: 'rgba(0,0,0,0.25)' }}
+        >
+          <span className="font-mono text-[9px] font-bold tracking-[0.22em] uppercase" style={{ color: 'rgba(142,194,90,0.6)' }}>
+            POKÉDEX SYS · v1.151
+          </span>
+          <span className="font-mono text-[9px] font-bold tracking-wider" style={{ color: 'rgba(142,194,90,0.5)' }}>
+            ◉ LIVE FEED
+          </span>
         </div>
       </div>
     </section>
@@ -515,13 +592,23 @@ function TypeDetailCard({ type, matchCount }) {
 }
 
 function EffectivenessRow({ label, tone, types }) {
-  const accent = tone === 'strong' ? '#16a34a' : '#dc2626'
-  const bgTone = tone === 'strong' ? 'rgba(22,163,74,0.10)' : 'rgba(220,38,38,0.08)'
+  const accent = tone === 'strong' ? '#8ec25a' : '#ff6b6b'   // LCD 그린 / 경고 레드
+  const glowColor = tone === 'strong' ? 'rgba(142,194,90,0.4)' : 'rgba(255,107,107,0.4)'
   return (
-    <div className="rounded-xl p-3 border-2 border-ink/15" style={{ backgroundColor: bgTone }}>
+    <div
+      className="rounded-lg p-2.5"
+      style={{
+        background: 'rgba(0,0,0,0.3)',
+        boxShadow: `inset 0 0 0 1px ${accent}33, inset 0 0 12px rgba(0,0,0,0.5)`,
+      }}
+    >
       <div className="flex items-center gap-1.5 mb-1.5">
-        <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: accent }} aria-hidden="true" />
-        <span className="font-mono text-[10px] font-bold uppercase tracking-wider" style={{ color: accent }}>
+        <span
+          className="inline-block w-1.5 h-1.5 rounded-full animate-pulse"
+          style={{ backgroundColor: accent, boxShadow: `0 0 6px ${glowColor}` }}
+          aria-hidden="true"
+        />
+        <span className="font-mono text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: accent, textShadow: `0 0 4px ${glowColor}` }}>
           {tone === 'strong' ? 'STRONG VS' : 'WEAK TO'} · {label}
         </span>
       </div>

@@ -46,6 +46,28 @@ export default function PokedexShell({ title = 'POKÉDEX', subtitle, children, c
           style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.55) 50%, transparent)' }}
         />
 
+        {/* 본체 우측 측면 음각 굴곡 — 입체감 */}
+        <span
+          aria-hidden="true"
+          className="absolute right-0 top-1/4 bottom-1/4 w-[2px] pointer-events-none"
+          style={{ background: 'linear-gradient(90deg, rgba(0,0,0,0.15), transparent)' }}
+        />
+
+        {/* 코너 4개 리벳/스크류 (디바이스 디테일) */}
+        {[
+          'top-3 left-3', 'top-3 right-3', 'bottom-3 left-3', 'bottom-3 right-3',
+        ].map((pos, i) => (
+          <span
+            key={i}
+            aria-hidden="true"
+            className={`absolute ${pos} w-2.5 h-2.5 rounded-full pointer-events-none`}
+            style={{
+              background: 'radial-gradient(circle at 35% 30%, #4a4a4a, #1a1a1a 65%, #000)',
+              boxShadow: 'inset 0 0.5px 0 rgba(255,255,255,0.25), 0 1px 2px rgba(0,0,0,0.5)',
+            }}
+          />
+        ))}
+
         {/* === 상단 컨트롤 패널 === */}
         <div className="px-5 sm:px-8 pt-5 sm:pt-7 pb-4 flex items-center gap-4">
           {/* 큰 파란 LED */}
@@ -112,13 +134,27 @@ export default function PokedexShell({ title = 'POKÉDEX', subtitle, children, c
             </div>
             {subtitle && (
               <div
-                className="font-mono text-[10px] sm:text-[11px] mt-1 font-bold tracking-[0.18em] uppercase"
+                className="font-mono text-[9px] sm:text-[10px] mt-1 font-bold tracking-[0.18em] uppercase"
                 style={{ color: 'rgba(255,255,255,0.85)' }}
               >
                 {subtitle}
               </div>
             )}
+            <div
+              className="font-mono text-[8px] sm:text-[9px] mt-0.5 tracking-[0.22em] font-bold uppercase"
+              style={{ color: 'rgba(0,0,0,0.45)' }}
+            >
+              MFG · SILPH CO · KANTO
+            </div>
           </div>
+        </div>
+
+        {/* 본체 중앙 음각 라인 — '경첩' 같은 디바이스 디테일 (시각만) */}
+        <div className="px-5 sm:px-8 -mt-1 mb-1" aria-hidden="true">
+          <div className="h-[2px] rounded-full"
+               style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.35) 15%, rgba(0,0,0,0.35) 85%, transparent 100%)' }} />
+          <div className="h-px rounded-full mt-px"
+               style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.2) 15%, rgba(255,255,255,0.2) 85%, transparent 100%)' }} />
         </div>
 
         {/* === LCD 스크린 (검정 베젤 + 어두운 그린 안쪽) === */}
@@ -182,49 +218,84 @@ export default function PokedexShell({ title = 'POKÉDEX', subtitle, children, c
           </div>
         )}
 
-        {/* === 하단 D-pad / 스피커 그릴 장식 (디바이스 디테일) === */}
-        <div className="px-5 sm:px-8 pb-5 sm:pb-6 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            {/* 미니 D-pad */}
-            <div className="relative w-10 h-10 sm:w-12 sm:h-12 shrink-0" aria-hidden="true">
-              <div
-                className="absolute inset-0 rounded-md"
-                style={{
-                  background: 'linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%)',
-                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15), 0 2px 0 #000',
-                  clipPath: 'polygon(33% 0, 67% 0, 67% 33%, 100% 33%, 100% 67%, 67% 67%, 67% 100%, 33% 100%, 33% 67%, 0 67%, 0 33%, 33% 33%)',
-                }}
+        {/* === 하단 컨트롤 패드 영역 === */}
+        <div className="px-5 sm:px-8 pb-5 sm:pb-6 flex items-end justify-between gap-4">
+          {/* 좌측: 진짜 D-pad 모양 (4방향) */}
+          <div className="relative w-14 h-14 sm:w-16 sm:h-16 shrink-0" aria-hidden="true">
+            {/* + 모양 검정 베이스 */}
+            <div
+              className="absolute inset-0 rounded-md"
+              style={{
+                background: 'radial-gradient(circle at 30% 25%, #3a3a3a 0%, #1a1a1a 60%, #050505 100%)',
+                clipPath: 'polygon(33% 0, 67% 0, 67% 33%, 100% 33%, 100% 67%, 67% 67%, 67% 100%, 33% 100%, 33% 67%, 0 67%, 0 33%, 33% 33%)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15), 0 2px 0 #000',
+              }}
+            />
+            {/* 방향 화살표 (작은 삼각형) */}
+            <span className="absolute top-[6%] left-1/2 -translate-x-1/2" style={{ width: 0, height: 0, borderLeft: '4px solid transparent', borderRight: '4px solid transparent', borderBottom: '5px solid rgba(255,255,255,0.55)' }} />
+            <span className="absolute bottom-[6%] left-1/2 -translate-x-1/2" style={{ width: 0, height: 0, borderLeft: '4px solid transparent', borderRight: '4px solid transparent', borderTop: '5px solid rgba(255,255,255,0.55)' }} />
+            <span className="absolute left-[6%] top-1/2 -translate-y-1/2" style={{ width: 0, height: 0, borderTop: '4px solid transparent', borderBottom: '4px solid transparent', borderRight: '5px solid rgba(255,255,255,0.55)' }} />
+            <span className="absolute right-[6%] top-1/2 -translate-y-1/2" style={{ width: 0, height: 0, borderTop: '4px solid transparent', borderBottom: '4px solid transparent', borderLeft: '5px solid rgba(255,255,255,0.55)' }} />
+            {/* 중앙 분할 점 */}
+            <span className="absolute inset-0 m-auto w-1.5 h-1.5 rounded-full" style={{ background: 'rgba(0,0,0,0.7)' }} />
+          </div>
+
+          {/* 가운데: 시리얼 + 인디케이터 (디바이스 디테일) */}
+          <div className="flex flex-col items-center gap-1.5 select-none">
+            <div className="flex gap-1.5">
+              <span className="font-mono text-[8px] sm:text-[9px] font-bold tracking-[0.18em] uppercase"
+                    style={{ color: 'rgba(255,255,255,0.65)' }}>
+                PWR
+              </span>
+              <span
+                className="w-1.5 h-1.5 rounded-full"
+                style={{ backgroundColor: '#16a34a', boxShadow: '0 0 4px #16a34a' }}
+                aria-hidden="true"
+              />
+              <span className="font-mono text-[8px] sm:text-[9px] font-bold tracking-[0.18em] uppercase"
+                    style={{ color: 'rgba(255,255,255,0.65)' }}>
+                BAT
+              </span>
+              <span
+                className="w-1.5 h-1.5 rounded-full"
+                style={{ backgroundColor: '#facc15', boxShadow: '0 0 4px #facc15' }}
+                aria-hidden="true"
               />
             </div>
-            {/* 미니 둥근 버튼 두개 */}
-            <div className="flex gap-1.5">
-              <span
-                className="w-6 h-6 sm:w-7 sm:h-7 rounded-full"
-                style={{
-                  background: 'radial-gradient(circle at 32% 28%, #4a4a4a, #1a1a1a)',
-                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15), 0 2px 0 #000',
-                }}
-                aria-hidden="true"
-              />
-              <span
-                className="w-6 h-6 sm:w-7 sm:h-7 rounded-full"
-                style={{
-                  background: 'radial-gradient(circle at 32% 28%, #4a4a4a, #1a1a1a)',
-                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15), 0 2px 0 #000',
-                }}
-                aria-hidden="true"
-              />
+            <div className="font-mono text-[8px] sm:text-[9px] tracking-[0.22em] font-bold uppercase"
+                 style={{ color: 'rgba(0,0,0,0.55)', textShadow: '0 1px 0 rgba(255,255,255,0.15)' }}>
+              SN · {Math.floor(Math.random() * 9000 + 1000)} · KANTO
             </div>
           </div>
-          {/* 스피커 그릴 (가로 슬릿 6개) */}
-          <div className="flex flex-col gap-[3px]" aria-hidden="true">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <span
-                key={i}
-                className="block w-16 sm:w-24 h-[3px] rounded-full"
-                style={{ background: 'rgba(0,0,0,0.35)', boxShadow: 'inset 0 0.5px 0 rgba(0,0,0,0.5)' }}
-              />
-            ))}
+
+          {/* 우측: A/B 둥근 액션 버튼 + 스피커 그릴 */}
+          <div className="flex items-center gap-3">
+            <div className="flex gap-2">
+              {['A', 'B'].map((label, i) => (
+                <div key={label} className="flex flex-col items-center gap-1">
+                  <span
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-display text-[11px] font-bold"
+                    style={{
+                      background: 'radial-gradient(circle at 32% 28%, #5a5a5a, #1a1a1a 65%, #000)',
+                      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25), inset 0 -2px 3px rgba(0,0,0,0.6), 0 2px 0 #000',
+                      color: 'rgba(255,255,255,0.7)',
+                    }}
+                    aria-hidden="true"
+                  >
+                    {label}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-col gap-[3px]" aria-hidden="true">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <span
+                  key={i}
+                  className="block w-12 sm:w-16 h-[3px] rounded-full"
+                  style={{ background: 'rgba(0,0,0,0.4)', boxShadow: 'inset 0 0.5px 0 rgba(0,0,0,0.6)' }}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </div>
