@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { formatKRW, timeUntil } from '@/api/cards'
 import { normalizeProduct, normalizePack } from '@/api/normalize'
@@ -62,6 +62,9 @@ export default function HomePage() {
   return (
     <main className="bg-bone">
       <GreetingDropdown />
+
+      {/* === 가상계좌 입금 대기 배너 === */}
+      <PendingDepositBanner />
 
       {/* === 글로벌 에러 배너 === */}
       {error && !loading && (
@@ -537,6 +540,66 @@ export default function HomePage() {
         </div>
       </section>
     </main>
+  )
+}
+
+/* ─── 가상계좌 입금 대기 배너 ─────────────────────────────── */
+// sessionStorage의 last-order에 method='bank'인 미입금 주문이 있으면 상단 배너로 알림.
+// 사용자가 닫으면 localStorage에 dismiss 플래그 저장 (해당 orderId 한정).
+const PENDING_DISMISS_KEY = 'pokevault:pendingDepositDismissed'
+
+function PendingDepositBanner() {
+  const [order, setOrder] = useState(null)
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('last-order')
+      if (!raw) return
+      const o = JSON.parse(raw)
+      if (o?.method !== 'bank') return
+      const orderId = o.serverOrder?.orderNumber || o.orderId
+      const dismissed = localStorage.getItem(PENDING_DISMISS_KEY) === orderId
+      if (!dismissed) setOrder(o)
+    } catch { /* 무시 */ }
+  }, [])
+
+  if (!order) return null
+  const orderId = order.serverOrder?.orderNumber || order.orderId
+
+  const onDismiss = () => {
+    try { localStorage.setItem(PENDING_DISMISS_KEY, orderId) } catch {}
+    setOrder(null)
+  }
+
+  return (
+    <div className="bg-electric/20 border-b-2 border-ink/20 px-6 py-3">
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="led led-yellow led-pulse" aria-hidden="true" />
+          <div className="text-sm text-ink leading-snug">
+            <strong className="font-bold">가상계좌 입금 대기 중</strong>
+            <span className="text-ink/70 font-medium"> · 발급된 계좌로 24시간 내 입금해 주세요. </span>
+            <span className="font-mono text-xs text-ink/60">#{orderId}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link
+            to="/order-complete"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink text-paper text-xs font-bold border-2 border-ink shadow-[0_2px_0_#1a1a1a] hover:-translate-y-0.5 transition-all"
+          >
+            입금 정보 보기 <Icon name="arrow" size={12} strokeWidth={2.5} />
+          </Link>
+          <button
+            type="button"
+            onClick={onDismiss}
+            aria-label="배너 닫기"
+            className="inline-flex items-center justify-center w-7 h-7 rounded-md text-ink/60 hover:text-ink hover:bg-ink/10 transition-colors"
+          >
+            <Icon name="close" size={14} strokeWidth={2.5} />
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 
