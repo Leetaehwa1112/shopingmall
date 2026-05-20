@@ -722,7 +722,7 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
               className="btn btn-pop btn-lg relative overflow-hidden w-full"
             >
               <Icon name="gavel" size={16} strokeWidth={2.6} />
-              두근두근 경매장 보러가기
+              두근두근 경매 보러가기
               <Icon name="arrow" size={14} strokeWidth={2.6} />
               <span
                 aria-hidden="true"
