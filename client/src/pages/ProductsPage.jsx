@@ -46,7 +46,7 @@ export default function ProductsPage() {
 
   // ─── 경매 페이지: 라이브 시청만 노출. 전체 LOT은 모달로 ──────
   if (isAuctionOnly) {
-    return <AuctionLivePage lots={auctionList} loading={loading} />
+    return <AuctionLivePage lots={auctionList} loading={loading} error={error} />
   }
 
   // ─── 일반 마켓 페이지 (즉시구매 + 경매 카드 카탈로그) ───────
@@ -216,17 +216,21 @@ function MarketPage({
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 경매 라이브 페이지 — 포켓몬센터 무드 (크림 + 페이퍼 + 레드 트림)
+// 경매 라이브 페이지 — 5초 테스트 + 휴리스틱 평가 기반 재설계
 // ═══════════════════════════════════════════════════════════════
 //
-// 디자인 톤:
-//   - 사이트 전반의 '두꺼운 잉크 보더 + 크림 페이지 + 노란 셰도우 카드'
-//     형식을 그대로 가져와 옥션장의 'gold/velvet' 무드를 버림.
-//   - 포켓몬센터 카운터처럼 위쪽에 빨간 (fire #ff7a45) 띠가 있는 흰
-//     페이퍼 카드로 무대를 구성.
-//   - 포켓볼 모티브 (상단 빨강 + 하단 흰색 + 가운데 잉크 라인) 를
-//     섹션 헤더에 차용.
-function AuctionLivePage({ lots, loading }) {
+// 정보 위계 (5초 안에 전달):
+//   1. 카운트다운 (시간 압박)              ← 빨간 배너, 큰 모노 숫자
+//   2. 카드 이미지 (대상)                  ← 페이지 최대 비주얼
+//   3. 현재가 (가격)                       ← 페이지 최대 숫자
+//   4. CTA "입찰 참여하기"                 ← 페이지 최대 빨간 버튼
+//   5. 신뢰 배지 (정품/안전)
+//   6. 보조: 다음 LOT · 입찰 피드          ← 위계 ↓ 회색톤
+//
+// 모바일: 단일 컬럼 스택 + 하단 sticky CTA 바.
+// 접근성: aria-live(피드), aria-label, focus-visible ring, 색+텍스트 이중표기.
+// ═══════════════════════════════════════════════════════════════
+function AuctionLivePage({ lots, loading, error }) {
   const [showAll, setShowAll] = useState(false)
   const [featuredId, setFeaturedId] = useState(null)
 
@@ -241,40 +245,36 @@ function AuctionLivePage({ lots, loading }) {
   }, [sorted, featuredId])
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-10">
-      <PokeCenterHero
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 pb-28 lg:pb-10">
+      {/* === 1. 컴팩트 컨텍스트 스트립 (시각 점유 최소) === */}
+      <CompactHeroStrip
         liveCount={sorted.length}
         onOpenAll={() => setShowAll(true)}
-        lots={sorted}
+        disabled={loading || sorted.length === 0}
       />
 
-      {loading ? (
-        <div className="mt-10 text-center py-24 text-mute font-bold">
-          <span className="inline-flex items-center gap-2">
-            <span className="led led-red led-pulse" style={{ width: 8, height: 8 }} />
-            방송 준비 중…
-          </span>
-        </div>
+      {/* === 2. 상태별 본문 === */}
+      {error ? (
+        <ErrorState />
+      ) : loading ? (
+        <LoadingState />
       ) : !featured ? (
-        <div className="mt-10 text-center py-24">
-          <div className="inline-flex flex-col items-center gap-3">
-            <div className="w-16 h-16 rounded-full bg-fire/20 border-2 border-ink flex items-center justify-center shadow-[0_4px_0_#1a1a1a]">
-              <Icon name="broadcast" size={28} strokeWidth={2.2} className="text-fire" />
-            </div>
-            <div className="font-display text-xl font-bold text-ink">아직 방송 중인 LOT이 없어요</div>
-            <div className="text-sm text-mute font-medium">곧 새로운 카드가 단상 위에 올라와요.</div>
-          </div>
-        </div>
+        <EmptyState />
       ) : (
-        <div className="mt-6 grid lg:grid-cols-[1fr_320px] gap-5">
+        <div className="mt-5 grid lg:grid-cols-[1fr_320px] gap-5">
           <FeaturedLot lot={featured} />
           <LiveSidebar
             featured={featured}
-            upcoming={sorted.filter((c) => c.id !== featured.id).slice(0, 5)}
+            upcoming={sorted.filter((c) => c.id !== featured.id).slice(0, 4)}
             onPickLot={setFeaturedId}
             onOpenAll={() => setShowAll(true)}
           />
         </div>
+      )}
+
+      {/* === 3. 모바일 sticky CTA — 항상 시야 === */}
+      {featured && !loading && !error && (
+        <MobileStickyCta lot={featured} />
       )}
 
       {showAll && (
@@ -303,132 +303,82 @@ function AuctionLivePage({ lots, loading }) {
           from { transform: translateY(12px) scale(0.98); opacity: 0; }
           to   { transform: translateY(0) scale(1);     opacity: 1; }
         }
+        @keyframes shake-soft {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-2px); }
+          75% { transform: translateX(2px); }
+        }
+        .focus-ring:focus-visible {
+          outline: none;
+          box-shadow: 0 0 0 3px #facc15, 0 0 0 5px #0d1730;
+        }
       `}</style>
     </div>
   )
 }
 
-// ── 포켓몬센터 카운터 Hero ───────────────────────────────────
-function PokeCenterHero({ liveCount, onOpenAll, lots }) {
-  const stats = useMemo(() => {
-    const totalBids = lots.reduce((s, c) => s + (c.bidCount || 0), 0)
-    const topBid = lots.reduce((m, c) => Math.max(m, c.currentBid || 0), 0)
-    const now = Date.now()
-    const endingSoon = lots.filter((c) => c.endsAt && c.endsAt - now < 1000 * 60 * 60).length
-    return { totalBids, topBid, endingSoon }
-  }, [lots])
-
+// ═══════════════════════════════════════════════════════════════
+// 1) 컴팩트 컨텍스트 스트립 — 단일 행, 정보 압축
+// ═══════════════════════════════════════════════════════════════
+function CompactHeroStrip({ liveCount, onOpenAll, disabled }) {
   return (
-    <section
+    <header
       className="relative overflow-hidden rounded-2xl border-2 border-ink bg-paper shadow-[0_4px_0_#1a1a1a]"
-      aria-label="라이브 경매장"
+      aria-label="라이브 경매장 헤더"
     >
-      {/* === 빨간 카운터 띠 — 포켓센터 입구 사인 === */}
-      <div className="relative px-5 sm:px-7 py-4 bg-fire">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-3">
-            {/* 포켓볼 메달 — 상단 빨강 + 하단 흰 + 중앙 잉크 라인 */}
-            <span
-              className="relative inline-flex w-12 h-12 rounded-full border-2 border-ink shadow-[0_3px_0_rgba(0,0,0,0.35)] shrink-0"
-              style={{
-                background:
-                  'linear-gradient(180deg, #ff7a45 0%, #ff7a45 47%, #0d1730 47%, #0d1730 53%, #fff 53%, #fff 100%)',
-              }}
-              aria-hidden="true"
-            >
-              <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-paper border-2 border-ink" />
-              <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-fire"
-                style={{ animation: 'pulse-live 1.4s ease-in-out infinite' }} />
-            </span>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-[0.2em] bg-paper text-fire border-2 border-ink">
-                  <span className="w-1.5 h-1.5 rounded-full bg-fire"
-                    style={{ animation: 'pulse-live 1.2s ease-in-out infinite' }} />
-                  ON AIR
-                </span>
-                <span className="font-mono text-[10px] font-extrabold tracking-[0.2em] uppercase text-paper/90">
-                  POKÉVAULT · AUCTION CENTER
-                </span>
-              </div>
-              <h1 className="mt-1 font-display text-2xl sm:text-3xl font-extrabold text-paper tracking-tight leading-tight">
-                두근두근 라이브 경매장
-              </h1>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={onOpenAll}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-paper border-2 border-ink shadow-[0_3px_0_#1a1a1a] hover:-translate-y-0.5 hover:bg-electric/20 transition-all font-extrabold text-ink text-sm"
+      {/* 빨간 단일 띠 — 위계 ↓ 위해 통계 타일 제거, 인라인 메타로 통합 */}
+      <div className="bg-fire px-4 sm:px-5 py-3 flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3 min-w-0">
+          {/* 포켓볼 미니 메달 */}
+          <span
+            className="relative inline-flex w-10 h-10 rounded-full border-2 border-ink shrink-0"
+            style={{
+              background:
+                'linear-gradient(180deg, #ff7a45 0%, #ff7a45 47%, #0d1730 47%, #0d1730 53%, #fff 53%, #fff 100%)',
+            }}
+            aria-hidden="true"
           >
-            <Icon name="layers" size={14} strokeWidth={2.4} />
-            전체 LOT 보기
-            <span className="ml-1 inline-flex items-center justify-center min-w-[1.4rem] h-5 px-1.5 rounded-full bg-fire text-paper font-mono text-[10.5px] font-bold tabular-nums">
-              {liveCount}
-            </span>
-          </button>
+            <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-paper border-2 border-ink" />
+            <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-fire"
+              style={{ animation: 'pulse-live 1.4s ease-in-out infinite' }} />
+          </span>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-[0.18em] bg-paper text-fire border-2 border-ink">
+                <span className="w-1.5 h-1.5 rounded-full bg-fire"
+                  style={{ animation: 'pulse-live 1.2s ease-in-out infinite' }} />
+                ON AIR
+              </span>
+              <span className="font-mono text-[10px] font-extrabold tracking-[0.18em] uppercase text-paper/90">
+                지금 <span className="text-paper tabular-nums">{liveCount}</span>건 경매 중
+              </span>
+            </div>
+            <h1 className="font-display text-xl sm:text-2xl font-extrabold text-paper tracking-tight leading-tight">
+              두근두근 라이브 경매장
+            </h1>
+          </div>
         </div>
-      </div>
 
-      {/* 상단/하단 분리 라인 (포켓볼 적도) — 흰 카드 위쪽 */}
-      <div className="h-1 bg-ink" aria-hidden="true" />
-
-      {/* === 페이퍼 카운터 본체 — 친근한 멘트 + 4칸 통계 === */}
-      <div className="px-5 sm:px-7 py-5 sm:py-6 bg-paper">
-        <p className="text-sm text-mute leading-relaxed font-medium max-w-2xl">
-          어서오세요! 지금 단상 위엔 <b className="text-ink">{liveCount}장</b>의 카드가 새 주인을 기다리고 있어요.
-          마감이 임박한 LOT부터 차례대로 무대에 올라옵니다.
-        </p>
-
-        <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2.5">
-          <StatTile label="라이브 LOTS" value={String(liveCount).padStart(3, '0')} suffix="건" tone="fire" />
-          <StatTile label="누적 입찰" value={String(stats.totalBids).padStart(4, '0')} suffix="회" tone="grass" />
-          <StatTile label="마감 임박" value={String(stats.endingSoon).padStart(2, '0')} suffix="< 1H" tone="rose" alert={stats.endingSoon > 0} />
-          <StatTile label="최고 입찰가" value={formatKRW(stats.topBid)} suffix="KRW" tone="water" mono />
-        </div>
-      </div>
-    </section>
-  )
-}
-
-function StatTile({ label, value, suffix, tone = 'fire', alert, mono }) {
-  // tone → 컬러 매핑: 사이트 토큰을 그대로 활용
-  const toneMap = {
-    fire:  { bg: 'bg-fire/10',  bd: 'border-fire/40',  text: 'text-fire',  led: '#ff7a45' },
-    grass: { bg: 'bg-grass/10', bd: 'border-grass/40', text: 'text-grass', led: '#7bc043' },
-    rose:  { bg: 'bg-rose/10',  bd: 'border-rose/40',  text: 'text-rose',  led: '#fb7185' },
-    water: { bg: 'bg-water/10', bd: 'border-water/40', text: 'text-water', led: '#3ba7e8' },
-  }
-  const c = toneMap[tone] || toneMap.fire
-  return (
-    <div className={`relative overflow-hidden rounded-xl border-2 ${c.bg} ${c.bd} px-3 py-2.5`}>
-      <div className="flex items-center justify-between gap-1.5">
-        <span className="font-mono text-[9px] font-extrabold tracking-[0.2em] uppercase text-mute">
-          {label}
-        </span>
-        {alert && (
-          <span className="w-1.5 h-1.5 rounded-full"
-            style={{ background: c.led, boxShadow: `0 0 6px ${c.led}`, animation: 'pulse-live 1s ease-in-out infinite' }} />
-        )}
-      </div>
-      <div className="mt-1 flex items-baseline gap-1.5">
-        <span
-          className={`${mono ? 'font-mono tabular-nums' : 'font-display'} font-extrabold leading-none ${c.text}`}
-          style={{ fontSize: 22 }}
+        <button
+          type="button"
+          onClick={onOpenAll}
+          disabled={disabled}
+          className="focus-ring inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-paper border-2 border-ink shadow-[0_3px_0_#1a1a1a] hover:-translate-y-0.5 hover:bg-electric/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-extrabold text-ink text-sm"
+          aria-label={`전체 LOT 보기, ${liveCount}건`}
         >
-          {value}
-        </span>
-        <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-mute">
-          {suffix}
-        </span>
+          <Icon name="layers" size={14} strokeWidth={2.4} />
+          전체 LOT
+          <span className="ml-0.5 inline-flex items-center justify-center min-w-[1.4rem] h-5 px-1.5 rounded-full bg-fire text-paper font-mono text-[10.5px] font-bold tabular-nums">
+            {liveCount}
+          </span>
+        </button>
       </div>
-    </div>
+    </header>
   )
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 메인 무대 (Featured LOT) — 페이퍼 + 빨간 헤더
+// 2) Featured LOT — 정보 위계 재배치 (시간 → 가격 → CTA)
 // ═══════════════════════════════════════════════════════════════
 function FeaturedLot({ lot }) {
   const navigate = useNavigate()
@@ -439,7 +389,7 @@ function FeaturedLot({ lot }) {
   }, [])
   const t = lot.endsAt ? timeUntil(lot.endsAt) : null
 
-  // 가짜 시청자 카운트 — 라이브 분위기 (실제 소켓 없이도)
+  // 시청자 카운트 — 라이브 분위기 (실제 소켓 없이도)
   const seedViewers = useMemo(
     () => 80 + ((lot.id?.charCodeAt?.(0) || 7) * 13) % 240,
     [lot.id]
@@ -458,165 +408,221 @@ function FeaturedLot({ lot }) {
   const current = lot.currentBid || lot.startingBid || 0
   const nextMin = Math.round(current * 1.05 / 1000) * 1000 || current + 1000
 
+  // 마감 임박도 — 1시간 이내면 강조
+  const isCritical = t && !t.ended && t.totalMs < 1000 * 60 * 10  // 10분 이하
+  const isUrgent   = t && !t.ended && t.totalMs < 1000 * 60 * 60  // 1시간 이하
+
   return (
     <section
       className="relative overflow-hidden rounded-2xl border-2 border-ink bg-paper shadow-[0_6px_0_#1a1a1a]"
-      aria-label={`LIVE LOT ${lot.name}`}
+      aria-label={`라이브 LOT: ${lot.nameKo || lot.name}`}
     >
-      {/* ── 빨간 방송 헤더 (포켓센터 입구 사인 톤) ── */}
-      <div className="relative px-4 sm:px-5 py-2.5 bg-fire flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-[0.2em] bg-paper text-fire border-2 border-ink">
-            <span className="w-1.5 h-1.5 rounded-full bg-fire"
-              style={{ animation: 'pulse-live 1.2s ease-in-out infinite' }} />
-            ON AIR
-          </span>
-          <span className="font-mono text-[10px] font-extrabold tracking-[0.2em] uppercase text-paper">
-            LIVE STAGE
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full font-mono text-[10px] font-bold text-ink bg-paper border-2 border-ink">
-            <Icon name="eye" size={11} strokeWidth={2.4} />
-            <span className="tabular-nums">{viewers.toLocaleString()}</span> 시청
-          </span>
-          <span className="inline-flex items-center px-2 py-1 rounded-full font-mono text-[10px] font-bold text-paper bg-ink border-2 border-ink">
-            LOT · {String(lot.id || '').slice(-4).toUpperCase()}
-          </span>
-        </div>
-      </div>
+      {/* ── 위계 1: 카운트다운 배너 (가장 먼저 인지) ── */}
+      <CountdownBanner t={t} isCritical={isCritical} isUrgent={isUrgent} />
 
-      {/* 잉크 적도 라인 */}
-      <div className="h-1 bg-ink" aria-hidden="true" />
-
-      {/* ── 스튜디오 무대 ── */}
-      <div
-        className="relative aspect-[16/10] overflow-hidden"
-        style={{
-          // 따뜻한 크림 ~ 살구 빛 그라데이션 + 위쪽 부드러운 스포트라이트
-          background: `
-            radial-gradient(120% 90% at 50% -10%, rgba(255,122,69,0.18) 0%, transparent 55%),
-            linear-gradient(180deg, #fff6e8 0%, #fbf7ec 55%, #f5efe0 100%)
-          `,
-        }}
-      >
-        {/* 살짝 깔리는 카드 배경 (블러 대신 옅게) */}
-        {img && (
-          <img
-            src={img}
-            alt=""
-            aria-hidden="true"
-            className="absolute inset-0 w-full h-full object-cover opacity-[0.08]"
-          />
-        )}
-
-        {/* 부드러운 카메라 스캔 — 살구색 광선이 위→아래로 */}
-        <span className="absolute left-0 right-0 h-24 pointer-events-none"
+      <div className="grid sm:grid-cols-[1.2fr_1fr] gap-0">
+        {/* ── 위계 2: 카드 이미지 (가장 큰 비주얼) ── */}
+        <div
+          className="relative aspect-[4/5] sm:aspect-auto sm:min-h-[420px] overflow-hidden border-b-2 sm:border-b-0 sm:border-r-2 border-ink"
           style={{
-            background: 'linear-gradient(180deg, transparent, rgba(255,122,69,0.18), transparent)',
-            animation: 'scan-soft 6s linear infinite',
+            background: `
+              radial-gradient(120% 90% at 50% -10%, rgba(255,122,69,0.18) 0%, transparent 55%),
+              linear-gradient(180deg, #fff6e8 0%, #fbf7ec 55%, #f5efe0 100%)
+            `,
           }}
-        />
-
-        {/* 중앙 — 카드 이미지 */}
-        <div className="absolute inset-0 flex items-center justify-center p-6">
-          {img ? (
-            <div className="relative">
-              <img
-                src={img}
-                alt={lot.nameKo || lot.name}
-                className="max-h-[270px] sm:max-h-[330px] rounded-lg border-2 border-ink"
-                style={{
-                  boxShadow: '0 14px 28px rgba(13,23,48,0.25), 0 0 0 4px #ffffff',
-                }}
-              />
-              {/* 카드 발판 그림자 */}
-              <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-3/4 h-3 rounded-full"
-                style={{ background: 'radial-gradient(ellipse at center, rgba(13,23,48,0.28), transparent 70%)' }}
-              />
-            </div>
-          ) : (
-            <div className="w-40 h-56 rounded-lg bg-bone-2 border-2 border-ink" />
+        >
+          {img && (
+            <img
+              src={img}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 w-full h-full object-cover opacity-[0.08]"
+            />
           )}
-        </div>
+          {/* 살구색 부드러운 카메라 스캔 */}
+          <span className="absolute left-0 right-0 h-24 pointer-events-none"
+            style={{
+              background: 'linear-gradient(180deg, transparent, rgba(255,122,69,0.18), transparent)',
+              animation: 'scan-soft 6s linear infinite',
+            }}
+          />
 
-        {/* 하단 — 카드명 + 카운트다운 */}
-        <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-3 flex-wrap">
-          <div className="inline-flex flex-col bg-paper/85 border-2 border-ink rounded-lg px-2.5 py-1.5 shadow-[0_3px_0_#1a1a1a]">
-            <span className="font-mono text-[9.5px] font-extrabold uppercase tracking-[0.22em] text-mute">
-              {lot.set || lot.setShort || 'POKÉMON TCG'}
-            </span>
-            <span className="font-display text-base sm:text-lg font-extrabold text-ink leading-tight">
-              {lot.nameKo || lot.name}
+          {/* 상단 좌측 — 시청자 수만 (LOT 번호는 사이드 카드로 이동, ON AIR는 헤더에만) */}
+          <div className="absolute top-3 left-3">
+            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full font-mono text-[10px] font-bold text-ink bg-paper/90 border-2 border-ink shadow-[0_2px_0_#1a1a1a]">
+              <Icon name="eye" size={11} strokeWidth={2.4} />
+              <span className="tabular-nums">{viewers.toLocaleString()}</span> 명 시청 중
             </span>
           </div>
-          {t && (
-            <div className="inline-flex items-center gap-1 rounded-lg bg-ink px-2.5 py-1.5 border-2 border-ink shadow-[0_3px_0_rgba(0,0,0,0.35)]">
-              <Icon name="clock" size={11} strokeWidth={2.4} className="text-electric" />
-              <span className={`font-mono text-xs font-extrabold tabular-nums ${t.ended ? 'text-mute-2' : 'text-electric'}`}>
-                {t.ended
-                  ? '경매 종료'
-                  : `${t.d > 0 ? `${t.d}D ` : ''}${String(t.h).padStart(2, '0')}:${String(t.m).padStart(2, '0')}:${String(t.s).padStart(2, '0')}`}
+
+          {/* 카드 이미지 — 중앙 큰 비주얼 */}
+          <div className="absolute inset-0 flex items-center justify-center p-5 sm:p-6">
+            {img ? (
+              <div className="relative">
+                <img
+                  src={img}
+                  alt={lot.nameKo || lot.name}
+                  className="max-h-[320px] sm:max-h-[360px] rounded-lg border-2 border-ink"
+                  style={{
+                    boxShadow: '0 14px 28px rgba(13,23,48,0.25), 0 0 0 4px #ffffff',
+                  }}
+                />
+                {/* 발판 그림자 */}
+                <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-3/4 h-3 rounded-full"
+                  style={{ background: 'radial-gradient(ellipse at center, rgba(13,23,48,0.28), transparent 70%)' }}
+                />
+              </div>
+            ) : (
+              <div className="w-40 h-56 rounded-lg bg-bone-2 border-2 border-ink" />
+            )}
+          </div>
+        </div>
+
+        {/* ── 위계 3-4: 카드명 → 현재가 → CTA ── */}
+        <div className="p-5 sm:p-6 flex flex-col gap-4 bg-paper">
+          {/* 카드명 */}
+          <div>
+            <div className="font-mono text-[10.5px] font-extrabold uppercase tracking-[0.22em] text-mute">
+              {lot.set || lot.setShort || 'POKÉMON TCG'} · LOT {String(lot.id || '').slice(-4).toUpperCase()}
+            </div>
+            <h2 className="mt-1 font-display text-2xl sm:text-3xl font-extrabold text-ink leading-tight">
+              {lot.nameKo || lot.name}
+            </h2>
+            {lot.grade?.grade != null && (
+              <div className="mt-1 inline-flex items-center gap-1.5">
+                <span className="px-1.5 py-0.5 rounded bg-electric text-ink font-mono text-[10px] font-extrabold border-2 border-ink">
+                  {lot.grade.cert || 'PSA'} · {lot.grade.grade}
+                </span>
+                <span className="text-[10.5px] text-mute font-bold">감정 등급</span>
+              </div>
+            )}
+          </div>
+
+          {/* 위계 3: 현재가 — 페이지에서 가장 큰 숫자 */}
+          <div>
+            <div className="text-[10.5px] font-mono font-extrabold uppercase tracking-wider text-mute">
+              현재 입찰가
+            </div>
+            <div className="font-display font-extrabold text-ink leading-[1] tabular-nums" style={{ fontSize: 'clamp(28px, 5vw, 40px)' }}>
+              {formatKRWFull(current)}
+            </div>
+            <div className="mt-1.5 flex items-baseline gap-3 flex-wrap text-[12px]">
+              <span className="text-mute font-bold">
+                다음 최소 입찰
+                <span className="ml-1.5 font-mono font-extrabold text-grass">{formatKRWFull(nextMin)}</span>
+              </span>
+              <span className="text-mute font-bold">
+                누적
+                <span className="ml-1.5 font-mono font-extrabold text-ink tabular-nums">{lot.bidCount || 0}회</span>
               </span>
             </div>
-          )}
-        </div>
-      </div>
+          </div>
 
-      {/* 잉크 적도 라인 */}
-      <div className="h-1 bg-ink" aria-hidden="true" />
+          {/* 위계 4: CTA — 페이지에서 가장 큰 빨간 버튼 */}
+          <button
+            type="button"
+            onClick={() => navigate(`/product/${lot.id}`)}
+            className="focus-ring group w-full inline-flex items-center justify-center gap-2 px-5 py-4 rounded-2xl font-extrabold text-base sm:text-lg border-2 border-ink shadow-[0_5px_0_#1a1a1a] hover:-translate-y-1 hover:shadow-[0_6px_0_#1a1a1a] active:translate-y-0 active:shadow-[0_2px_0_#1a1a1a] transition-all bg-fire text-paper"
+            aria-label="입찰 참여하기"
+          >
+            <Icon name="gavel" size={18} strokeWidth={2.6} />
+            입찰 참여하기
+            <Icon name="arrow" size={16} strokeWidth={2.6} className="ml-0.5 transition-transform group-hover:translate-x-0.5" />
+          </button>
+          <div className="text-center text-[11px] font-bold text-mute">
+            지금 <span className="text-fire">{viewers.toLocaleString()}명</span>이 함께 지켜보는 중 · 클릭하면 안전한 입찰장으로 이동해요
+          </div>
 
-      {/* ── 페이퍼 입찰 액션 바 ── */}
-      <div className="px-5 py-4 sm:px-6 sm:py-5 bg-paper flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-baseline gap-5 flex-wrap">
-          <div>
-            <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-mute">현재가</div>
-            <div className="font-display text-2xl font-extrabold text-ink leading-none">{formatKRWFull(current)}</div>
-          </div>
-          <div>
-            <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-mute">최소 다음 입찰</div>
-            <div className="font-mono text-base font-bold text-grass leading-none">{formatKRWFull(nextMin)}</div>
-          </div>
-          <div>
-            <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-mute">누적 입찰</div>
-            <div className="font-mono text-base font-bold text-ink leading-none">{lot.bidCount || 0} 회</div>
-          </div>
+          {/* 위계 5: 신뢰 배지 */}
+          <TrustBadges />
         </div>
-        <button
-          type="button"
-          onClick={() => navigate(`/product/${lot.id}`)}
-          className="inline-flex items-center gap-2 px-5 py-3 rounded-full font-extrabold text-sm border-2 border-ink shadow-[0_4px_0_#1a1a1a] hover:-translate-y-0.5 transition-all bg-fire text-paper"
-        >
-          <Icon name="gavel" size={14} strokeWidth={2.4} />
-          입찰장 입장하기
-        </button>
       </div>
     </section>
   )
 }
 
+// ── 카운트다운 배너 — 위계 1순위, 시간 압박 시각화 ──────────────
+function CountdownBanner({ t, isCritical, isUrgent }) {
+  if (!t) {
+    return (
+      <div className="bg-ink px-4 py-2 flex items-center justify-center">
+        <span className="font-mono text-[11px] font-extrabold uppercase tracking-wider text-electric">
+          상시 입찰 · 마감 기한 없음
+        </span>
+      </div>
+    )
+  }
+  if (t.ended) {
+    return (
+      <div className="bg-ink/90 px-4 py-2 flex items-center justify-center">
+        <span className="font-mono text-[11px] font-extrabold uppercase tracking-wider text-mute-2">
+          ⛔ 경매가 종료되었어요
+        </span>
+      </div>
+    )
+  }
+  const bg = isCritical ? 'bg-rose' : isUrgent ? 'bg-fire' : 'bg-ink'
+  const fg = isCritical ? 'text-paper' : isUrgent ? 'text-paper' : 'text-electric'
+  const headline = isCritical ? '⚠️ 곧 마감!' : isUrgent ? '🔥 마감 임박' : '⏱ 마감까지'
+  return (
+    <div
+      className={`${bg} px-4 py-2 sm:py-2.5 flex items-center justify-center gap-3 flex-wrap`}
+      style={isCritical ? { animation: 'shake-soft 0.6s ease-in-out infinite' } : undefined}
+      aria-live={isCritical ? 'assertive' : 'polite'}
+    >
+      <span className={`font-display text-xs sm:text-sm font-extrabold tracking-tight ${fg}`}>
+        {headline}
+      </span>
+      <span className={`font-mono text-lg sm:text-xl font-extrabold tabular-nums tracking-wider ${fg}`}>
+        {t.d > 0 ? `${t.d}일 ` : ''}
+        {String(t.h).padStart(2, '0')}:{String(t.m).padStart(2, '0')}:{String(t.s).padStart(2, '0')}
+      </span>
+    </div>
+  )
+}
+
+// ── 신뢰 배지 — 전환 이탈 방지용 ────────────────────────────────
+function TrustBadges() {
+  return (
+    <ul className="grid grid-cols-3 gap-1.5 mt-1" aria-label="신뢰 보증">
+      <TrustItem icon="shield" title="정품 인증" sub="감정 완료" />
+      <TrustItem icon="lock"   title="안전 결제" sub="에스크로" />
+      <TrustItem icon="check"  title="입찰 보호" sub="자동 환불" />
+    </ul>
+  )
+}
+function TrustItem({ icon, title, sub }) {
+  return (
+    <li className="inline-flex flex-col items-center gap-0.5 px-2 py-2 rounded-lg bg-bone-2 border border-ink/15">
+      <Icon name={icon} size={14} strokeWidth={2.2} className="text-grass" />
+      <span className="text-[10.5px] font-extrabold text-ink leading-tight">{title}</span>
+      <span className="text-[9.5px] font-mono text-mute">{sub}</span>
+    </li>
+  )
+}
+
 // ═══════════════════════════════════════════════════════════════
-// 사이드바 — 입찰 피드 + 다음 LOT 미리보기 (페이퍼 톤)
+// 3) Sidebar — 위계 ↓ (회색톤·작은 카드), 다음 LOT + 입찰 피드
 // ═══════════════════════════════════════════════════════════════
 function LiveSidebar({ featured, upcoming, onPickLot, onOpenAll }) {
   return (
-    <aside className="flex flex-col gap-4">
-      <BidFeed lot={featured} />
-
+    <aside className="flex flex-col gap-4 lg:max-h-[calc(100vh-9rem)] lg:overflow-hidden lg:sticky lg:top-24">
+      {/* 다음 LOT — 위쪽 (시각 비중 ↑) */}
       <div className="rounded-xl border-2 border-ink bg-paper shadow-[0_4px_0_#1a1a1a] overflow-hidden">
-        {/* 빨간 헤더 — 통일된 카운터 톤 */}
-        <div className="bg-fire px-4 py-2 flex items-center justify-between">
-          <div className="inline-flex items-center gap-2 text-paper">
+        <div className="bg-bone-2 px-4 py-2 flex items-center justify-between border-b-2 border-ink/10">
+          <div className="inline-flex items-center gap-2 text-ink">
             <Icon name="layers" size={13} strokeWidth={2.4} />
             <span className="font-display text-sm font-extrabold">다음 LOT</span>
           </div>
-          <span className="font-mono text-[10px] font-bold text-paper/90 tabular-nums">
-            UP NEXT · {upcoming.length}
+          <span className="font-mono text-[10px] font-bold text-mute tabular-nums">
+            {upcoming.length}건 대기
           </span>
         </div>
         <ul className="divide-y divide-ink/10">
           {upcoming.length === 0 && (
-            <li className="px-4 py-6 text-center text-xs text-mute font-bold">대기 중인 LOT이 없어요.</li>
+            <li className="px-4 py-6 text-center text-xs text-mute font-bold">
+              곧 새로운 LOT이 무대에 올라옵니다.
+            </li>
           )}
           {upcoming.map((c, i) => {
             const t = c.endsAt ? timeUntil(c.endsAt) : null
@@ -626,7 +632,8 @@ function LiveSidebar({ featured, upcoming, onPickLot, onOpenAll }) {
                 <button
                   type="button"
                   onClick={() => onPickLot(c.id)}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-electric/20 transition-colors"
+                  className="focus-ring w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-electric/20 transition-colors"
+                  aria-label={`${c.nameKo || c.name} 단상에 올리기`}
                 >
                   <span className="font-mono text-[10px] font-extrabold w-5 text-mute tabular-nums">
                     {String(i + 2).padStart(2, '0')}
@@ -655,17 +662,20 @@ function LiveSidebar({ featured, upcoming, onPickLot, onOpenAll }) {
         <button
           type="button"
           onClick={onOpenAll}
-          className="w-full text-center py-2.5 text-[11px] font-extrabold uppercase tracking-wider text-ink border-t-2 border-ink/10 hover:bg-electric/20 transition-colors"
+          className="focus-ring w-full text-center py-2.5 text-[11px] font-extrabold uppercase tracking-wider text-ink border-t-2 border-ink/10 hover:bg-electric/20 transition-colors"
         >
           전체 LOT 자세히 보기 →
         </button>
       </div>
+
+      {/* 입찰 피드 — 보조 (위계 ↓, 회색톤 헤더) */}
+      <BidFeed lot={featured} />
     </aside>
   )
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 입찰 피드 — 페이퍼 + 빨간 헤더, 흰색 버블 채팅
+// 입찰 피드 — 위계 ↓ (회색 헤더, 작은 폰트, aria-live)
 // ═══════════════════════════════════════════════════════════════
 const FEED_NAMES = [
   '트레이너_레드', '체육관관장이슬', '로켓단J', '오바람', '꼬마이브이',
@@ -676,12 +686,12 @@ const FEED_REACT = ['🔥', '⚡', '✨', '👀', '💥', '⭐', '🎯', '🛎�
 function BidFeed({ lot }) {
   const seedRef = useRef(Math.max(1000, lot.currentBid || 0))
   const [items, setItems] = useState(() => [
-    { id: 'sys', sys: true, msg: `LOT 입장 — 시작가 ${formatKRWFull(seedRef.current)}`, t: Date.now() },
+    { id: 'sys', sys: true, msg: `시작가 ${formatKRWFull(seedRef.current)}부터 입찰을 받아요`, t: Date.now() },
   ])
 
   useEffect(() => {
     seedRef.current = Math.max(1000, lot.currentBid || 0)
-    setItems([{ id: `sys-${lot.id}`, sys: true, msg: `LOT 전환 — ${lot.nameKo || lot.name}`, t: Date.now() }])
+    setItems([{ id: `sys-${lot.id}`, sys: true, msg: `${lot.nameKo || lot.name} 단상 입장!`, t: Date.now() }])
   }, [lot.id, lot.currentBid, lot.nameKo, lot.name])
 
   useEffect(() => {
@@ -720,20 +730,24 @@ function BidFeed({ lot }) {
   }, [items])
 
   return (
-    <div className="relative overflow-hidden rounded-xl border-2 border-ink bg-paper shadow-[0_4px_0_#1a1a1a]">
-      <div className="bg-fire px-4 py-2 flex items-center justify-between">
-        <div className="inline-flex items-center gap-2 text-paper">
-          <span className="w-1.5 h-1.5 rounded-full bg-paper"
+    <div className="relative overflow-hidden rounded-xl border-2 border-ink bg-paper shadow-[0_4px_0_#1a1a1a] flex flex-col lg:min-h-0 lg:flex-1">
+      {/* 회색톤 헤더 — 위계 ↓ (메인 무대보다 덜 강조) */}
+      <div className="bg-bone-2 px-4 py-2 flex items-center justify-between border-b-2 border-ink/10">
+        <div className="inline-flex items-center gap-2 text-ink">
+          <span className="w-1.5 h-1.5 rounded-full bg-fire"
             style={{ animation: 'pulse-live 1.2s ease-in-out infinite' }} />
           <span className="font-display text-sm font-extrabold">실시간 입찰 피드</span>
         </div>
-        <span className="font-mono text-[10px] font-bold text-paper/90 tabular-nums uppercase tracking-wider">
+        <span className="font-mono text-[10px] font-bold text-mute tabular-nums uppercase tracking-wider">
           LIVE
         </span>
       </div>
       <div
         ref={scrollRef}
-        className="h-72 overflow-y-auto px-3 py-3 scrollbar-none flex flex-col gap-1.5 bg-bone"
+        className="h-60 lg:flex-1 overflow-y-auto px-3 py-3 scrollbar-none flex flex-col gap-1.5 bg-bone"
+        role="log"
+        aria-live="polite"
+        aria-label="실시간 입찰 메시지"
       >
         {items.map((it) => (
           <FeedRow key={it.id} item={it} />
@@ -760,7 +774,7 @@ function FeedRow({ item }) {
         style={{ animation: 'bid-pop 0.3s ease-out' }}
       >
         <span className="text-ink">{item.who}</span>
-        <span>{item.r}</span>
+        <span aria-hidden="true">{item.r}</span>
       </div>
     )
   }
@@ -771,7 +785,7 @@ function FeedRow({ item }) {
       style={{ animation: 'bid-pop 0.3s ease-out' }}
     >
       <span className="inline-flex items-center gap-1.5 min-w-0">
-        <span className="w-5 h-5 rounded-full grid place-items-center font-mono text-[9px] font-extrabold bg-fire text-paper border-2 border-ink">
+        <span className="w-5 h-5 rounded-full grid place-items-center font-mono text-[9px] font-extrabold bg-fire text-paper border-2 border-ink" aria-hidden="true">
           ₩
         </span>
         <span className="text-[11.5px] font-extrabold text-ink truncate">{item.who}</span>
@@ -784,10 +798,124 @@ function FeedRow({ item }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// 모바일 sticky CTA — 항상 시야 (스크롤 시 위치 고정)
+// ═══════════════════════════════════════════════════════════════
+function MobileStickyCta({ lot }) {
+  const navigate = useNavigate()
+  const current = lot.currentBid || lot.startingBid || 0
+  return (
+    <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 px-3 pb-3 pt-2 bg-paper/95 backdrop-blur-sm border-t-2 border-ink">
+      <div className="flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-mute">
+            현재가
+          </div>
+          <div className="font-display text-base font-extrabold text-ink leading-none tabular-nums truncate">
+            {formatKRWFull(current)}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate(`/product/${lot.id}`)}
+          className="focus-ring inline-flex items-center gap-2 px-4 py-3 rounded-full font-extrabold text-sm border-2 border-ink shadow-[0_3px_0_#1a1a1a] active:translate-y-0.5 active:shadow-[0_1px_0_#1a1a1a] transition-all bg-fire text-paper shrink-0"
+          aria-label="입찰 참여하기"
+        >
+          <Icon name="gavel" size={14} strokeWidth={2.6} />
+          입찰하기
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 상태 컴포넌트 — Loading / Empty / Error
+// ═══════════════════════════════════════════════════════════════
+function LoadingState() {
+  return (
+    <div className="mt-10 text-center py-20" role="status" aria-live="polite">
+      <div className="inline-flex flex-col items-center gap-4">
+        {/* 회전하는 포켓볼 — 사이트 톤과 일관 */}
+        <div className="relative w-14 h-14">
+          <span
+            className="absolute inset-0 rounded-full border-2 border-ink"
+            style={{
+              background:
+                'linear-gradient(180deg, #ff7a45 0%, #ff7a45 47%, #0d1730 47%, #0d1730 53%, #fff 53%, #fff 100%)',
+              animation: 'spin 1.4s linear infinite',
+            }}
+          />
+          <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-paper border-2 border-ink" />
+        </div>
+        <div>
+          <div className="font-display text-lg font-extrabold text-ink">단상을 준비하고 있어요</div>
+          <div className="mt-1 text-sm text-mute font-medium">잠시만 기다려주세요…</div>
+        </div>
+      </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  )
+}
+
+function EmptyState() {
+  const navigate = useNavigate()
+  return (
+    <div className="mt-10 text-center py-16 relative sparkle-host" role="status">
+      <Sparkles always />
+      <div className="inline-flex flex-col items-center gap-4 max-w-md">
+        <div className="w-20 h-20 rounded-full bg-fire/15 border-2 border-ink flex items-center justify-center shadow-[0_4px_0_#1a1a1a]">
+          <Icon name="broadcast" size={32} strokeWidth={2.2} className="text-fire" />
+        </div>
+        <div>
+          <div className="font-display text-2xl font-extrabold text-ink">오늘 경매장은 휴무예요</div>
+          <p className="mt-2 text-sm text-mute font-medium leading-relaxed">
+            지금 단상에 오른 카드가 없어요. 즉시 구매 카탈로그에서 마음에 드는 카드를 먼저 골라볼 수 있어요.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate('/products')}
+          className="focus-ring inline-flex items-center gap-2 px-5 py-3 rounded-full font-extrabold text-sm border-2 border-ink shadow-[0_4px_0_#1a1a1a] hover:-translate-y-0.5 transition-all bg-electric text-ink"
+        >
+          <Icon name="package" size={14} strokeWidth={2.4} />
+          마켓플레이스 둘러보기
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function ErrorState() {
+  return (
+    <div className="mt-10 text-center py-16" role="alert">
+      <div className="inline-flex flex-col items-center gap-4 max-w-md">
+        <div className="w-20 h-20 rounded-full bg-rose/15 border-2 border-ink flex items-center justify-center shadow-[0_4px_0_#1a1a1a]">
+          <Icon name="bell" size={32} strokeWidth={2.2} className="text-rose" />
+        </div>
+        <div>
+          <div className="font-display text-2xl font-extrabold text-ink">방송 신호가 잠시 끊겼어요</div>
+          <p className="mt-2 text-sm text-mute font-medium leading-relaxed">
+            경매 데이터를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="focus-ring inline-flex items-center gap-2 px-5 py-3 rounded-full font-extrabold text-sm border-2 border-ink shadow-[0_4px_0_#1a1a1a] hover:-translate-y-0.5 transition-all bg-paper text-ink"
+        >
+          <Icon name="arrow" size={14} strokeWidth={2.4} />
+          새로고침
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
 // 전체 LOT 모달 — 페이퍼 카드 그리드 (포켓몬센터 카탈로그 톤)
 // ═══════════════════════════════════════════════════════════════
 function AllLotsModal({ lots, featuredId, onClose, onPickLot }) {
-  // ESC + body scroll lock
+  // ESC + body scroll lock + focus trap (간소화)
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
@@ -804,25 +932,22 @@ function AllLotsModal({ lots, featuredId, onClose, onPickLot }) {
       role="dialog"
       aria-modal="true"
       aria-label="전체 LOT 보기"
-      className="fixed inset-0 z-[80] flex items-center justify-center p-4 sm:p-8"
+      className="fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-6"
     >
-      {/* 백드롭 */}
       <button
         type="button"
         aria-label="닫기"
         onClick={onClose}
         className="absolute inset-0 bg-ink/55 backdrop-blur-sm"
       />
-      {/* 본체 */}
       <div
         className="relative w-full max-w-5xl max-h-[88vh] rounded-2xl border-2 border-ink bg-paper shadow-[0_8px_0_#1a1a1a] overflow-hidden flex flex-col"
         style={{ animation: 'modal-in 0.22s ease-out' }}
       >
-        {/* 빨간 카운터 헤더 */}
-        <div className="bg-fire px-5 py-3 flex items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-3">
+        <div className="bg-fire px-4 sm:px-5 py-3 flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
             <span
-              className="relative inline-flex w-9 h-9 rounded-full border-2 border-ink"
+              className="relative inline-flex w-9 h-9 rounded-full border-2 border-ink shrink-0"
               style={{
                 background:
                   'linear-gradient(180deg, #ff7a45 0%, #ff7a45 47%, #0d1730 47%, #0d1730 53%, #fff 53%, #fff 100%)',
@@ -831,11 +956,11 @@ function AllLotsModal({ lots, featuredId, onClose, onPickLot }) {
             >
               <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-paper border-2 border-ink" />
             </span>
-            <div>
+            <div className="min-w-0">
               <div className="font-mono text-[10px] font-extrabold uppercase tracking-[0.22em] text-paper/80">
                 LIVE AUCTION · 전체 LOT
               </div>
-              <div className="font-display text-lg font-extrabold text-paper leading-tight">
+              <div className="font-display text-base sm:text-lg font-extrabold text-paper leading-tight truncate">
                 오늘 단상에 오른 카드 모음
               </div>
             </div>
@@ -844,17 +969,15 @@ function AllLotsModal({ lots, featuredId, onClose, onPickLot }) {
             type="button"
             onClick={onClose}
             aria-label="닫기"
-            className="w-9 h-9 rounded-full bg-paper border-2 border-ink shadow-[0_3px_0_rgba(0,0,0,0.35)] hover:-translate-y-0.5 transition-all inline-flex items-center justify-center"
+            className="focus-ring w-9 h-9 rounded-full bg-paper border-2 border-ink shadow-[0_3px_0_rgba(0,0,0,0.35)] hover:-translate-y-0.5 transition-all inline-flex items-center justify-center shrink-0"
           >
             <Icon name="close" size={14} strokeWidth={2.8} className="text-ink" />
           </button>
         </div>
 
-        {/* 잉크 적도 */}
         <div className="h-1 bg-ink shrink-0" aria-hidden="true" />
 
-        {/* 그리드 */}
-        <div className="flex-1 overflow-y-auto bg-bone p-4 sm:p-5">
+        <div className="flex-1 overflow-y-auto bg-bone p-3 sm:p-5">
           {lots.length === 0 ? (
             <div className="py-16 text-center">
               <div className="inline-flex flex-col items-center gap-3">
@@ -880,9 +1003,8 @@ function AllLotsModal({ lots, featuredId, onClose, onPickLot }) {
           )}
         </div>
 
-        {/* 하단 안내 바 */}
-        <div className="px-5 py-3 bg-bone-2 border-t-2 border-ink/10 flex items-center justify-between gap-3 shrink-0">
-          <span className="text-xs text-mute font-bold">
+        <div className="px-4 sm:px-5 py-3 bg-bone-2 border-t-2 border-ink/10 flex items-center justify-between gap-3 shrink-0">
+          <span className="text-[11px] sm:text-xs text-mute font-bold">
             LOT을 누르면 메인 무대에 즉시 올라와요.
           </span>
           <span className="font-mono text-[11px] font-extrabold text-ink tabular-nums">
@@ -902,7 +1024,8 @@ function ModalLotRow({ lot, index, active, onPick }) {
       type="button"
       onClick={onPick}
       aria-current={active ? 'true' : undefined}
-      className={`group w-full flex items-stretch gap-3 p-2.5 rounded-xl border-2 bg-paper text-left transition-all ${
+      aria-label={`${lot.nameKo || lot.name}, ${formatKRWFull(lot.currentBid || lot.startingBid || 0)}, 단상에 올리기`}
+      className={`focus-ring group w-full flex items-stretch gap-3 p-2.5 rounded-xl border-2 bg-paper text-left transition-all ${
         active
           ? 'border-fire shadow-[0_3px_0_#ff7a45] -translate-y-0.5'
           : 'border-ink/15 hover:border-ink hover:shadow-[0_3px_0_#1a1a1a] hover:-translate-y-0.5'
