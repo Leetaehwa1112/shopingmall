@@ -1,0 +1,30 @@
+# Fly.io app 설정 — 서울(icn) region.
+# 배포: `fly deploy` (server/ 디렉토리에서 실행)
+app = "pokevault-api"           # ← 첫 fly launch 때 이름 결정 (전역 unique). 임시값.
+primary_region = "icn"          # 서울 (Incheon)
+
+[build]
+  # Dockerfile을 사용. (root에 Dockerfile 있으면 자동 감지)
+
+[env]
+  NODE_ENV = "production"
+  PORT = "8080"                 # Fly 기본 internal port
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"   # 트래픽 없으면 머신 정지 (무료 한도 절약)
+  auto_start_machines = true    # 요청 오면 자동 기동
+  min_machines_running = 0      # 0 → 콜드스타트 가능 (Heroku Eco와 비슷). 1로 올리면 항상 가동.
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/health"
+
+[[vm]]
+  size = "shared-cpu-1x"        # 무료 한도
+  memory = "256mb"
+  cpus = 1
