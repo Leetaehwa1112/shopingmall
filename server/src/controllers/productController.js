@@ -197,6 +197,23 @@ const placeBid = async (req, res) => {
         message: `최소 입찰가는 ${minBid.toLocaleString("ko-KR")}원 이상이어야 합니다.`,
       });
     }
+    // 상한 sanity check — 직전 가격의 10배 OR 100억(10,000,000,000), 둘 중 작은 값
+    // 사용자의 오타·실수로 천문학적 금액 입력 방지
+    const ABSOLUTE_MAX = 10_000_000_000; // 100억
+    const maxBid = Math.min(baseline * 10, ABSOLUTE_MAX);
+    if (numAmount > maxBid) {
+      return res.status(400).json({
+        success: false,
+        message: `입찰 한도를 초과했어요. 최대 ${maxBid.toLocaleString("ko-KR")}원까지 입찰 가능합니다.`,
+      });
+    }
+    // 만원 단위로 떨어지지 않으면 거부 (깔끔한 금액만 허용)
+    if (numAmount % 10000 !== 0) {
+      return res.status(400).json({
+        success: false,
+        message: "입찰 금액은 만원 단위로 입력해주세요.",
+      });
+    }
 
     const lastBid = product.bidHistory?.[0];
     if (lastBid && String(lastBid.bidder_id) === String(req.user._id)) {

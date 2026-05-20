@@ -62,9 +62,12 @@ export default function ProductDetailPage() {
 
   const cardType = card.type || card.sale_type
   const cardId   = card.id || card._id
-  const minBid   = (card.currentBid || 0) + 1000000
+  // 만원 단위로 올림 — 깔끔한 금액만 노출
+  const roundUpToMan = (n) => Math.ceil(n / 10000) * 10000
+  const minBid = roundUpToMan((card.currentBid || 0) + 1000000)
 
-  const quickBid = (mult) => setBidAmount(((card.currentBid + 1000000) * mult).toString())
+  const quickBid = (mult) =>
+    setBidAmount(roundUpToMan(((card.currentBid || 0) + 1000000) * mult).toString())
 
   const handleBid = async () => {
     if (!isAuthenticated) {
@@ -257,7 +260,7 @@ export default function ProductDetailPage() {
                 <div className="text-[10px] font-bold text-mute tracking-[0.18em] uppercase mb-2">⚡ 빠른 입찰 금액 선택</div>
                 <div className="grid grid-cols-3 gap-2">
                   {[{ mult: 1, label: '최소가' }, { mult: 1.1, label: '+10%' }, { mult: 1.25, label: '+25%' }].map(({ mult, label }) => {
-                    const amount = (card.currentBid + 1000000) * mult
+                    const amount = roundUpToMan(((card.currentBid || 0) + 1000000) * mult)
                     return (
                       <button
                         key={mult}
