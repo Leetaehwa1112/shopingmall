@@ -12,9 +12,9 @@
   --color-blue:   #2a4480;
 
   /* === Pokédex device chrome (지우의 빨간 도감) === */
-  --pdx-shell:    #c91019;   /* 광택 빨간 본체 */
-  --pdx-shell-d:  #8c0a10;   /* 본체 하단 그늘 */
-  --pdx-shell-hl: #ff5b62;   /* 본체 상단 하이라이트 */
+  --pdx-shell:    #dc2626;   /* 광택 빨간 본체 — color-dex(진한 빨강) 톤 통일 */
+  --pdx-shell-d:  #991b1b;   /* 본체 하단 그늘 */
+  --pdx-shell-hl: #ef4444;   /* 본체 상단 하이라이트 */
   --pdx-bezel:    #1a1a1a;   /* 검정 베젤 */
   --pdx-bezel-2:  #2a2a2a;
   --pdx-screen:   #0c1f0c;   /* LCD 어두운 그린 */
@@ -237,6 +237,100 @@ body {
 .sparkle.s3 { bottom: 18%; left: 18%; animation-delay: 0.6s; width: 10px; height: 10px; }
 .sparkle.s4 { bottom: 8%;  right: 16%; animation-delay: 0.9s; }
 .sparkle.s5 { top: 50%; left: 4%;   animation-delay: 1.2s; width: 5px; height: 5px; }
+
+/* === PACK CARD PEEK — hover 시 팩 상단이 살짝 뜯어지며 카드 솟아남 ===
+   카드깡 심리 자극용. PackTile 안의 PackVisual 위로 카드 3장이
+   살짝 펼쳐지듯 위로 슬라이드. */
+.pack-peek-cards .pack-peek-card {
+  position: relative;
+  width: 44px;
+  height: 64px;
+  border-radius: 5px;
+  border: 1.5px solid #1a1a1a;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.5);
+  transform: translateY(20px) rotate(var(--peek-rot, 0deg)) translateX(var(--peek-tx, 0));
+  opacity: 0;
+  transition: transform 380ms cubic-bezier(.34,1.56,.64,1), opacity 280ms ease-out;
+  transition-delay: var(--peek-delay, 0s);
+  overflow: hidden;
+}
+.pack-peek-card::after {
+  /* 카드 안에 살짝 비치는 캐릭터 실루엣 */
+  content: '';
+  position: absolute;
+  inset: 12% 18% 30% 18%;
+  border-radius: 3px;
+  background: radial-gradient(circle at 50% 40%, rgba(0,0,0,0.18), transparent 70%);
+}
+.pack-peek-holo {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg,
+    transparent 30%,
+    rgba(255,255,255,0.55) 48%,
+    rgba(255,200,100,0.4) 52%,
+    transparent 70%);
+  mix-blend-mode: screen;
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+.group:hover .pack-peek-card {
+  opacity: 1;
+  transform: translateY(-44px) rotate(var(--peek-rot, 0deg)) translateX(var(--peek-tx, 0));
+}
+.group:hover .pack-peek-holo { opacity: 1; }
+
+/* 팩 자체 — hover 시 살짝 들리고 약간 회전 */
+.pack-visual-wrap {
+  transition: transform 380ms cubic-bezier(.34,1.56,.64,1);
+}
+.group:hover .pack-visual-wrap {
+  transform: translateY(8px) rotate(-1.5deg);
+}
+
+/* 팩 상단 찢어진 가장자리 띠 — hover 시 노출, 톱니 모양 */
+.pack-tear-strip {
+  position: absolute;
+  top: 12%;
+  left: 8%;
+  right: 8%;
+  height: 6px;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0));
+  -webkit-mask-image: linear-gradient(180deg, #000 60%, transparent);
+          mask-image: linear-gradient(180deg, #000 60%, transparent);
+  filter: drop-shadow(0 -1px 0 #1a1a1a);
+  transition: opacity 220ms ease, transform 280ms ease;
+  transform: scaleY(0.4);
+}
+.group:hover .pack-tear-strip {
+  opacity: 0.85;
+  transform: scaleY(1.2);
+}
+
+/* hover 시 떠다니는 작은 골드 sparkle (peek 강조) */
+.pack-peek-sparkle {
+  position: absolute;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fef08a 0%, #facc15 40%, transparent 70%);
+  opacity: 0;
+  pointer-events: none;
+  filter: blur(0.5px);
+}
+.group:hover .pack-peek-sparkle {
+  animation: pack-peek-twinkle 1.4s ease-in-out infinite;
+}
+.pack-peek-sparkle.s-a { top: 24%; left: 22%; animation-delay: 0s; }
+.pack-peek-sparkle.s-b { top: 14%; right: 28%; animation-delay: 0.35s; width: 6px; height: 6px; }
+.pack-peek-sparkle.s-c { top: 40%; right: 18%; animation-delay: 0.7s; width: 10px; height: 10px; }
+@keyframes pack-peek-twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.6) translateY(0); }
+  40%      { opacity: 1; transform: scale(1.1) translateY(-6px); }
+  60%      { opacity: 1; transform: scale(1.0) translateY(-4px); }
+}
 
 /* === Float / bob animations for playful elements === */
 @keyframes float-bob {
@@ -677,6 +771,27 @@ body {
 .card-sway {
   animation: card-sway 7s ease-in-out infinite;
   transform-origin: center center;
+}
+
+/* === BUY NOW 카드 wrapper — 살아있는 idle 상태 + hover 강화 ===
+   각 카드가 6초 주기로 부드럽게 위아래 + 미세 회전, hover 시 살짝 떠오름 */
+@keyframes card-breathe {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-5px) rotate(0.3deg); }
+}
+.card-pop-wrap {
+  animation: card-breathe 6s ease-in-out infinite;
+  transition: transform 280ms cubic-bezier(.34,1.56,.64,1),
+              filter 280ms ease;
+}
+.card-pop-wrap:hover {
+  animation-play-state: paused;
+  transform: translateY(-8px) scale(1.015);
+  filter: drop-shadow(0 12px 16px rgba(220,38,38,0.18));
+}
+/* idle sparkle 강제 활성화 — 카드 안에 sparkle-host가 있어야 작동 */
+.card-pop-wrap .sparkle-host .sparkle {
+  animation: sparkle-twinkle 2.2s ease-in-out infinite;
 }
 
 /* === Auction spotlight glow === */

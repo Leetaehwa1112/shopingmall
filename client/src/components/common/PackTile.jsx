@@ -41,9 +41,51 @@ function PackTile({ pack }) {
         </button>
       </div>
 
-      <div className="px-6 py-6 flex justify-center holo-sheen"
-        style={{ background: `radial-gradient(ellipse at center, ${pack.accent}12 0%, transparent 70%)` }}>
-        <PackVisual pack={pack} size="md" />
+      {/* 카드깡 심리 유도 영역 — 마우스 올리면 팩 상단이 뜯어지면서
+          안에서 카드 3장이 살짝 솟아나옴 (peek). 클릭 욕구 자극. */}
+      <div
+        className="relative px-6 py-6 flex justify-center holo-sheen overflow-hidden"
+        style={{
+          background: `radial-gradient(ellipse at center, ${pack.accent}12 0%, transparent 70%)`,
+          minHeight: 220,
+        }}
+      >
+        {/* 안에서 솟아나오는 카드들 — 절대 배치, hover 시 위로 슬라이드 */}
+        <div
+          aria-hidden="true"
+          className="pack-peek-cards absolute inset-x-0 top-[28%] flex justify-center items-end gap-1 pointer-events-none"
+        >
+          {[-1, 0, 1].map((i) => (
+            <span
+              key={i}
+              className="pack-peek-card"
+              style={{
+                ['--peek-rot']: `${i * 8}deg`,
+                ['--peek-delay']: `${0.04 * Math.abs(i)}s`,
+                ['--peek-tx']: `${i * 14}px`,
+                background:
+                  i === 0
+                    ? `linear-gradient(135deg, ${pack.accent || '#facc15'} 0%, #fff 50%, ${pack.accent || '#facc15'} 100%)`
+                    : 'linear-gradient(135deg, #f5f5f5 0%, #ffffff 50%, #e5e5e5 100%)',
+              }}
+            >
+              {/* 카드 상단 홀로 띠 */}
+              <span className="pack-peek-holo" aria-hidden="true" />
+            </span>
+          ))}
+        </div>
+
+        {/* 팩 자체 — hover 시 상단 살짝 들리는 효과 */}
+        <div className="pack-visual-wrap relative z-10">
+          <PackVisual pack={pack} size="md" />
+          {/* 찢어진 가장자리 — hover 시 상단 1/4 살짝 위로 분리되는 듯 */}
+          <span aria-hidden="true" className="pack-tear-strip" />
+        </div>
+
+        {/* hover 시 떠다니는 작은 sparkle */}
+        <span aria-hidden="true" className="pack-peek-sparkle s-a" />
+        <span aria-hidden="true" className="pack-peek-sparkle s-b" />
+        <span aria-hidden="true" className="pack-peek-sparkle s-c" />
       </div>
       <span aria-hidden="true">
         <span className="sparkle s1" />
