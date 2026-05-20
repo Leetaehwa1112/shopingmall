@@ -162,7 +162,11 @@ export default function AdminOrders() {
         breadcrumb={['Admin', '거래', '주문 관리']}
         actions={
           <>
-            <button onClick={() => setBulkTrackOpen(true)} className="inline-flex items-center gap-1.5 text-xs font-bold bg-emerald-600 text-white px-3 py-1.5 rounded-md hover:bg-emerald-700">
+            <button
+              onClick={() => setBulkTrackOpen(true)}
+              style={{ backgroundColor: '#16a34a', color: '#fff' }}
+              className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-md border-2 border-ink shadow-[0_2px_0_#1a1a1a] hover:-translate-y-0.5 hover:shadow-[0_3px_0_#1a1a1a] transition-all"
+            >
               <Icon name="package" size={12} strokeWidth={2.5} /> 송장 일괄 등록
             </button>
             <button onClick={fetchOrders} className="inline-flex items-center gap-1.5 text-xs font-bold text-mute hover:text-ink px-3 py-1.5 rounded-md border border-gray-900/15 bg-paper hover:bg-bone-2">
