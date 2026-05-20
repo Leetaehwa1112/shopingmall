@@ -361,6 +361,7 @@ function DexControlPanel({
         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05), inset 0 0 0 1px rgba(142,194,90,0.15)',
       }}
     >
+      {/* ── 1행: 검색 + 카운터/리셋 ──────────────────────────── */}
       <div className="flex items-center gap-2.5">
         {/* LCD 미니 검색 */}
         <label className="relative shrink-0">
@@ -382,69 +383,7 @@ function DexControlPanel({
           />
         </label>
 
-        {/* 타입 칩 — 가로 스크롤 */}
-        {/*
-          포켓몬 디바이스 — 심볼 전용 버튼 행.
-          전체(✦)는 텍스트 라벨, 나머지는 SVG 심볼만 (이모지 X).
-          gap을 늘려 손가락 타깃 사이 호흡 확보.
-        */}
-        <div
-          className="flex gap-3 overflow-x-auto scrollbar-none flex-1 min-w-0 -my-1 py-1 items-center"
-          role="radiogroup"
-          aria-label="타입 필터"
-        >
-          {allTypes.map((t) => {
-            const info = TYPE_INFO[t] || TYPE_INFO['전체']
-            const isActive = typeFilter === t
-            const isAll = t === '전체'
-            // ALL은 라벨 버튼, 나머지는 유리알 jewel 자체가 버튼.
-            if (isAll) {
-              return (
-                <button
-                  key={t}
-                  role="radio"
-                  aria-checked={isActive}
-                  onClick={() => onType(t)}
-                  style={{
-                    backgroundColor: isActive ? '#facc15' : 'rgba(0,0,0,0.45)',
-                    color: isActive ? '#1a1a1a' : '#8ec25a',
-                    borderColor: isActive ? '#1a1a1a' : 'rgba(142,194,90,0.4)',
-                  }}
-                  className={`shrink-0 inline-flex items-center justify-center rounded-full border-2 h-10 px-4 text-[11px] font-bold tracking-wider uppercase transition-all ${
-                    isActive ? 'shadow-[0_3px_0_#1a1a1a] -translate-y-0.5' : 'hover:-translate-y-0.5'
-                  }`}
-                >
-                  ALL · 전체
-                </button>
-              )
-            }
-            return (
-              <button
-                key={t}
-                role="radio"
-                aria-checked={isActive}
-                aria-label={t}
-                title={t}
-                onClick={() => onType(t)}
-                className={`shrink-0 inline-flex items-center justify-center rounded-full transition-all ${
-                  isActive
-                    ? '-translate-y-0.5'
-                    : 'opacity-70 hover:opacity-100 hover:-translate-y-0.5'
-                }`}
-                style={{
-                  // 활성: 황금 글로우 / 비활성: 살짝 그림자만
-                  filter: isActive
-                    ? `drop-shadow(0 0 8px ${info.hex}cc) drop-shadow(0 2px 4px rgba(0,0,0,0.5))`
-                    : 'drop-shadow(0 2px 3px rgba(0,0,0,0.4))',
-                }}
-              >
-                <TypeSymbol type={t} size={26} variant="jewel" />
-              </button>
-            )
-          })}
-        </div>
-
-        <span className="hidden sm:inline-flex shrink-0 font-mono text-[10px] font-bold tracking-wider uppercase text-mute tabular-nums">
+        <span className="ml-auto inline-flex shrink-0 font-mono text-[10px] font-bold tracking-wider uppercase text-mute tabular-nums">
           {String(filteredCount).padStart(2, '0')} / {String(totalCount).padStart(2, '0')}
         </span>
 
@@ -456,6 +395,64 @@ function DexControlPanel({
             Reset
           </button>
         )}
+      </div>
+
+      {/* ── 2행: 타입 칩 그리드 (줄바꿈, 라벨 포함) ───────────── */}
+      {/*
+        18타입 + ALL 로 가로 스크롤이 길어지는 문제 해결:
+        flex-wrap 으로 자동 2~3줄 배치. 라벨을 심볼 옆에 붙여 시인성 강화.
+        활성 칩은 황금 글로우 + 살짝 들림, 비활성은 어두운 LCD 배경.
+      */}
+      <div
+        className="mt-2.5 flex flex-wrap gap-1.5"
+        role="radiogroup"
+        aria-label="타입 필터"
+      >
+        {allTypes.map((t) => {
+          const info = TYPE_INFO[t] || TYPE_INFO['전체']
+          const isActive = typeFilter === t
+          const isAll = t === '전체'
+          return (
+            <button
+              key={t}
+              role="radio"
+              aria-checked={isActive}
+              aria-label={t}
+              onClick={() => onType(t)}
+              className={`inline-flex items-center gap-1.5 rounded-full pl-1 pr-3 py-1 border-2 transition-all ${
+                isActive ? '-translate-y-0.5' : 'opacity-80 hover:opacity-100 hover:-translate-y-0.5'
+              }`}
+              style={{
+                backgroundColor: isActive
+                  ? `${info.hex}30`
+                  : 'rgba(0,0,0,0.35)',
+                borderColor: isActive ? info.hex : 'rgba(142,194,90,0.18)',
+                boxShadow: isActive
+                  ? `0 0 0 1px ${info.hex}80, 0 0 12px ${info.hex}66, inset 0 1px 0 rgba(255,255,255,0.08)`
+                  : 'inset 0 1px 0 rgba(255,255,255,0.04)',
+              }}
+            >
+              {isAll ? (
+                <span
+                  className="inline-flex items-center justify-center rounded-full font-bold text-[12px]"
+                  style={{
+                    width: 22, height: 22,
+                    backgroundColor: isActive ? '#facc15' : 'rgba(142,194,90,0.2)',
+                    color: isActive ? '#1a1a1a' : '#8ec25a',
+                  }}
+                >✦</span>
+              ) : (
+                <TypeSymbol type={t} size={18} variant="jewel" />
+              )}
+              <span
+                className="text-[11px] font-bold tracking-wider uppercase"
+                style={{ color: isActive ? '#fff' : '#cfead0' }}
+              >
+                {isAll ? 'ALL' : t}
+              </span>
+            </button>
+          )
+        })}
       </div>
     </div>
   )
