@@ -5,6 +5,7 @@ const variants = {
   spark:     'btn-spark',     // rainbow holo CTA — hero, signup
   pop:       'btn-pop',       // chunky bordered red — main bid CTA
   electric:  'btn-electric',  // yellow pop — secondary playful
+  psychic:   'btn-psychic',   // purple pop — trainer signup CTA
   secondary: 'btn-secondary',
   ghost:     'btn-ghost',
   dark:      'btn-primary',

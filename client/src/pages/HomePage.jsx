@@ -70,8 +70,9 @@ export default function HomePage() {
       ? `다음 경매 일정 보기 · ${upcomingAuctions.length}건 예정`
       : '즉시구매 카드 보기'
   const heroPrimaryTo = FEATURED_LIVE ? `/products/${FEATURED_LIVE.id}` : '/auctions'
-  const heroSecondaryCta = FEATURED_LIVE ? '경매장 둘러보기' : '카드팩 · 박스 보기'
-  const heroSecondaryTo = FEATURED_LIVE ? '/auctions' : '/packs'
+  // 보조 CTA — LIVE 유무와 상관없이 카드팩 바로 구매 진입점으로 통일.
+  const heroSecondaryCta = '카드팩 바로구매'
+  const heroSecondaryTo = '/packs'
 
   return (
     <main className="bg-bone">
@@ -332,40 +333,38 @@ export default function HomePage() {
           ════════════════════════════════════════════════ */}
       <section aria-label="판매 · 회원가입" className="max-w-7xl mx-auto px-6 py-16">
         <div className="grid lg:grid-cols-2 gap-5">
-          {/* Sell — Pokédex playful */}
+          {/* Sell — 위탁(노란 electric 톤) */}
           <div className="dex-casing p-8 relative overflow-hidden text-white holo-shine sparkle-host">
             <Sparkles always />
             <div className="flex items-center gap-2 mb-3">
-              <span className="led led-red led-pulse" aria-hidden="true" />
-              <span className="pixel-label text-electric">SELL ON AUCTION</span>
+              <span className="led led-yellow led-pulse" aria-hidden="true" />
+              <span className="pixel-label text-electric">CONSIGN</span>
             </div>
             <h3 className="font-display text-[28px] lg:text-[36px] font-bold mb-3 leading-[1.05]">
-              내 카드도 누군가의<br/>
-              <span className="text-electric">갖고 싶은</span> 카드예요
+              <span className="text-electric">내 카드 위탁하기</span>
             </h3>
             <p className="text-[15px] text-white/85 leading-relaxed mb-6 max-w-sm font-medium">
-              PSA·BGS 등급 카드를 출품하면 트레이너들 사이에서 두근거림이 시작돼요. 수수료 10%.
+              PSA·BGS 등급 카드를 위탁하면 트레이너들 사이에서 두근거림이 시작돼요. 수수료 10%.
             </p>
-            <Link to="/sell" aria-label="경매 등록하기">
-              <Button variant="electric" size="lg">내 카드 출품하기 <Icon name="arrow" size={14} strokeWidth={2.5} /></Button>
+            <Link to="/sell" aria-label="카드 위탁하기">
+              <Button variant="electric" size="lg">내 카드 위탁하기 <Icon name="arrow" size={14} strokeWidth={2.5} /></Button>
             </Link>
           </div>
 
-          {/* Join — friendly cream */}
+          {/* Join — 트레이너 등록 (보라 psychic 톤) */}
           <div className="surface-pop p-8 relative overflow-hidden">
             <Pokeball size={160} className="absolute -bottom-6 -right-6 opacity-15 float-bob" aria-hidden="true" />
             <div className="relative sparkle-host">
               <Sparkles />
               <Eyebrow tone="psychic" className="mb-4">Become a Trainer</Eyebrow>
               <h3 className="font-display text-[28px] lg:text-[36px] font-bold text-ink mb-3 leading-[1.05]">
-                트레이너로 등록하고<br/>
-                <span className="text-psychic">모든 카드</span>에 닿기
+                <span className="text-psychic">트레이너 등록하기</span>
               </h3>
               <p className="text-[15px] text-mute leading-relaxed mb-6 max-w-sm font-medium">
                 경매 참여, 자동 입찰, 시세 알림까지. 무료로 시작할 수 있어요.
               </p>
-              <Link to="/register" aria-label="회원가입 페이지로 이동">
-                <Button variant="spark" size="lg">트레이너 되기 <Icon name="arrow" size={14} strokeWidth={2.5} /></Button>
+              <Link to="/register" aria-label="트레이너 등록 페이지로 이동">
+                <Button variant="psychic" size="lg">트레이너 등록하기 <Icon name="arrow" size={14} strokeWidth={2.5} /></Button>
               </Link>
             </div>
           </div>
