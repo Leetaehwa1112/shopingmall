@@ -9,6 +9,7 @@ const {
   getAllOrders,
   updateOrderStatus,
   updateTracking,
+  adminUpdateFields,
 } = require('../controllers/orderController')
 
 // ─── 유저 ────────────────────────────────────────────────────
@@ -21,5 +22,6 @@ router.patch('/:id/cancel',       protect,    cancelOrder)       // 주문 취�
 router.get('/',                   ...admin,   getAllOrders)       // 전체 주문 조회
 router.patch('/:id/status',       ...admin,   updateOrderStatus)  // 상태 변경
 router.patch('/:id/tracking',     ...admin,   updateTracking)     // 송장 등록
+router.patch('/:id',              ...admin,   adminUpdateFields)  // 화이트리스트 필드 부분 수정
 
 module.exports = router

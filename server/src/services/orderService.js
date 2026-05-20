@@ -260,6 +260,22 @@ const updateOrderStatus = async (orderId, status) => {
   return order
 }
 
+/**
+ * 주문 필드 부분 수정 (어드민) — 한정된 화이트리스트 필드만 변경 허용.
+ * 결제 정보 정정(예: 가상계좌 발급 후 카드 재결제) 같은 운영 케이스 대응.
+ */
+const ADMIN_PATCHABLE = ['paymentMethod', 'memo']
+const adminUpdateFields = async (orderId, patch = {}) => {
+  const order = await Order.findById(orderId)
+  if (!order) throw new AppError('주문을 찾을 수 없습니다.', 404)
+  for (const key of Object.keys(patch)) {
+    if (!ADMIN_PATCHABLE.includes(key)) continue
+    order[key] = patch[key]
+  }
+  await order.save()
+  return order
+}
+
 /** 송장 등록 (어드민) */
 const updateTracking = async (orderId, { trackingNumber, carrier }) => {
   const order = await Order.findById(orderId)
@@ -275,6 +291,7 @@ const updateTracking = async (orderId, { trackingNumber, carrier }) => {
 }
 
 module.exports = {
+  adminUpdateFields,
   createOrder,
   getMyOrders,
   getOrderById,
