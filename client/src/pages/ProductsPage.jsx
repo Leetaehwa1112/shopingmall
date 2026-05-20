@@ -472,6 +472,23 @@ function AuctionLivePage({ lots, loading, error }) {
           0%   { transform: translateX(0); }
           100% { transform: translateX(-50%); }
         }
+        /* REC 인디케이터 — 송출 중 빨간 점 두근거림 (LIVE보다 강한 호흡) */
+        @keyframes rec-blink {
+          0%, 100% { opacity: 1;   transform: scale(1); }
+          45%      { opacity: 0.4; transform: scale(0.85); }
+          55%      { opacity: 1;   transform: scale(1); }
+        }
+        /* 진행자 PIP 음성 EQ 막대 — 0.55~0.9s 주기로 위아래 */
+        @keyframes eq-bar {
+          0%   { transform: scaleY(0.25); }
+          50%  { transform: scaleY(1);    }
+          100% { transform: scaleY(0.45); }
+        }
+        /* 진행자 캠 — 살짝 위아래로 흔들리는 진행자 모션 */
+        @keyframes caster-bob {
+          0%, 100% { transform: translateY(0)   rotate(-2deg); }
+          50%      { transform: translateY(-3px) rotate(2deg);  }
+        }
         .focus-ring:focus-visible {
           outline: none;
           box-shadow: 0 0 0 3px #facc15, 0 0 0 5px #0d1730;
@@ -524,6 +541,25 @@ function CounterPokeballs({ liveCount }) {
 //  - 하단 티커 : 다음 최소가 · 입찰 수 · 시청자 마키
 // ═══════════════════════════════════════════════════════════════
 
+// ─── 카메라 룰 오브 서드 코너 마크 — 화면 네 모서리에 작은 ㄱ 자 ────
+//   진짜 캠 뷰파인더처럼 프레이밍 가이드를 노출 → "지금 카메라가 송출 중"
+function CornerCrosshair({ pos = 'tl' }) {
+  const base = 'absolute z-30 pointer-events-none w-4 h-4 sm:w-5 sm:h-5'
+  const placement = {
+    tl: 'top-1.5 left-1.5 border-t-2 border-l-2',
+    tr: 'top-1.5 right-1.5 border-t-2 border-r-2',
+    bl: 'bottom-1.5 left-1.5 border-b-2 border-l-2',
+    br: 'bottom-1.5 right-1.5 border-b-2 border-r-2',
+  }[pos]
+  return (
+    <span
+      aria-hidden="true"
+      className={`${base} ${placement}`}
+      style={{ borderColor: 'rgba(250,204,21,0.65)' }}
+    />
+  )
+}
+
 function BroadcastStream({ lot, onBid }) {
   const [, setNow] = useState(Date.now())
   useEffect(() => {
@@ -545,6 +581,35 @@ function BroadcastStream({ lot, onBid }) {
     )
     return () => clearInterval(id)
   }, [lot.id, seedViewers])
+
+  // ── 방송 타임코드 — 페이지 진입 시점부터 흐르는 송출 시간 (TC) ──
+  //   진짜 OBS/카메라처럼 HH:MM:SS 형식. lot.startsAt이 있으면 그 시각 기준.
+  const broadcastStartRef = useRef(lot.startsAt || Date.now())
+  useEffect(() => { broadcastStartRef.current = lot.startsAt || Date.now() }, [lot.id, lot.startsAt])
+  const tcMs = Math.max(0, Date.now() - broadcastStartRef.current)
+  const tcH = Math.floor(tcMs / 3600000)
+  const tcM = Math.floor((tcMs % 3600000) / 60000)
+  const tcS = Math.floor((tcMs % 60000) / 1000)
+  const timecode = `${String(tcH).padStart(2, '0')}:${String(tcM).padStart(2, '0')}:${String(tcS).padStart(2, '0')}`
+
+  // ── 비트레이트 살짝 흔들기 (4.0~4.5 Mbps) — 진짜 인코더 같은 느낌 ──
+  const bitrate = useMemo(() => (4.0 + (Math.sin(Date.now() / 3000) + 1) * 0.25).toFixed(1), [tcS])
+
+  // ── 글리치 효과 — 8~15초 사이 무작위 한 번씩 0.3초 ──
+  const [glitch, setGlitch] = useState(false)
+  useEffect(() => {
+    let alive = true
+    const schedule = () => {
+      const delay = 8000 + Math.random() * 7000
+      setTimeout(() => {
+        if (!alive) return
+        setGlitch(true)
+        setTimeout(() => { if (alive) setGlitch(false); schedule() }, 280)
+      }, delay)
+    }
+    schedule()
+    return () => { alive = false }
+  }, [])
 
   // ── 미니 플레이어 : 본 방송의 "가시 비율" 기반으로 토글 ──────
   //   - visibleRatio < 1/3  → 미니 ON  (1/3 미만 보이면 작게 띄움)
@@ -627,34 +692,48 @@ function BroadcastStream({ lot, onBid }) {
       className="dex-casing p-4 sm:p-5 relative reveal-up"
       aria-label="라이브 방송 화면"
     >
-      {/* ── Pokédex 상단 LED + 라이브 정보 라인 ────────────────── */}
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <div className="inline-flex items-center gap-2.5 min-w-0">
-          <span className="led led-red led-pulse" aria-hidden="true" />
+      {/* ── 상단 송출 컨트롤바 — REC + LIVE + 채널 + 시청자 + 신호 ───
+          OBS/방송국 송출 패널 시그니처: 빨간 REC 원형 + 타임코드 + 비트레이트 */}
+      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+        <div className="inline-flex items-center gap-2.5 min-w-0 flex-wrap">
+          {/* REC 인디케이터 — 빨간 원이 펄스 + 'REC' 텍스트 */}
+          <span className="inline-flex items-center gap-1.5">
+            <span
+              className="inline-block rounded-full bg-red-500"
+              style={{ width: 10, height: 10, boxShadow: '0 0 8px #ef4444', animation: 'rec-blink 1.1s ease-in-out infinite' }}
+              aria-hidden="true"
+            />
+            <span className="font-mono text-[11px] font-extrabold text-white tracking-[0.18em]">REC</span>
+          </span>
+          <span className="text-paper/30">·</span>
           <span className="pixel-label text-white">LIVE · CH.01</span>
           <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded font-mono text-[10px] font-extrabold uppercase tracking-[0.18em] bg-paper/15 text-paper border border-paper/25">
             LOT-{String(lot.id || '').slice(-4).toUpperCase() || '0000'}
           </span>
+          {/* 타임코드 — TC HH:MM:SS / 24fps */}
+          <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded font-mono text-[10px] font-extrabold tabular-nums bg-black/35 text-electric border border-paper/15">
+            TC {timecode}
+          </span>
         </div>
 
         <div className="inline-flex items-center gap-2 sm:gap-2.5">
-          <span className="hidden sm:inline-flex items-center gap-1.5 font-mono text-[11px] font-extrabold text-paper tabular-nums">
+          {/* 신호 강도 메타 — 진짜 인코더 출력처럼 */}
+          <span className="hidden md:inline-flex items-center gap-1 font-mono text-[10px] font-bold text-paper/70 tabular-nums">
+            1080p · {bitrate}Mbps · 24fps
+          </span>
+          <span className="hidden md:inline text-paper/30">·</span>
+          <span className="inline-flex items-center gap-1.5 font-mono text-[11px] font-extrabold text-paper tabular-nums">
             <Icon name="eye" size={12} strokeWidth={2.6} className="text-electric" />
-            {viewers.toLocaleString()}명
+            {viewers.toLocaleString()}
           </span>
           <span className="pixel-label text-white/70 hidden sm:inline">시청중</span>
-          <div className="hidden sm:flex items-center gap-1.5" aria-hidden="true">
-            <span className="led led-blue" />
-            <span className="led led-yellow" />
-            <span className="led led-green" />
-          </div>
         </div>
       </div>
 
-      {/* ── Pokédex 화면 인셋 — 카드가 진열된 라이브 무대 ───────── */}
+      {/* ── 송출 화면 인셋 — 진짜 OBS 라이브 출력 시그니처 ───────── */}
       <div
         className="dex-casing-inset relative overflow-hidden sparkle-host"
-        style={{ aspectRatio: '16 / 9' }}
+        style={{ aspectRatio: '16 / 9', filter: glitch ? 'hue-rotate(-12deg) contrast(1.15)' : undefined, transition: 'filter 80ms' }}
       >
         <Sparkles always />
         <div className="spotlight" aria-hidden="true" />
@@ -663,6 +742,35 @@ function BroadcastStream({ lot, onBid }) {
           className="turntable-disc"
           style={{ width: '52%', aspectRatio: '1', bottom: '8%', left: '50%', transform: 'translateX(-50%)' }}
         />
+
+        {/* CRT 스캔라인 — 모든 컨텐츠 위에 옅게 깔리는 송출 시그니처 */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none mix-blend-overlay opacity-25 z-30"
+          style={{
+            backgroundImage:
+              'repeating-linear-gradient(180deg, transparent 0px, transparent 2px, rgba(255,255,255,0.06) 2px, rgba(255,255,255,0.06) 3px)',
+          }}
+        />
+
+        {/* 글리치 시 RGB 분리 레이어 */}
+        {glitch && (
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 pointer-events-none mix-blend-screen z-40"
+            style={{
+              background:
+                'linear-gradient(90deg, rgba(255,0,90,0.18) 0%, transparent 35%, transparent 65%, rgba(0,200,255,0.18) 100%)',
+              transform: 'translateX(-2px)',
+            }}
+          />
+        )}
+
+        {/* 카메라 룰 오브 서드 — 네 모서리 ㄱ 자 마크 (캠 그리드 시그니처) */}
+        <CornerCrosshair pos="tl" />
+        <CornerCrosshair pos="tr" />
+        <CornerCrosshair pos="bl" />
+        <CornerCrosshair pos="br" />
 
         {/* 카드 — 회전 단상 위 */}
         <div className="absolute inset-0 flex items-center justify-center p-4 sm:p-6 z-10">
@@ -701,23 +809,75 @@ function BroadcastStream({ lot, onBid }) {
           )}
         </div>
 
-        {/* PIP: 우상단 진행자 — Pokéball 도장 (작고 부드럽게) */}
-        <div className="absolute top-2.5 right-2.5 z-20 pointer-events-none">
-          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-paper/15 backdrop-blur-sm border border-paper/30">
-            <PokeballMark size={18} animated />
-            <span className="pixel-label text-white">진행자</span>
-          </span>
+        {/* ── 우상단 PIP 진행자 캠 — 진짜 16:9 미니 화면 + REC + EQ ── */}
+        <div className="absolute top-3 right-3 z-20 pointer-events-none">
+          <div
+            className="relative w-[120px] sm:w-[150px] aspect-video rounded-md overflow-hidden border-2 border-ink"
+            style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.45)' }}
+          >
+            {/* 검은 캠 배경 + 빨간 그라데이션 (조명) */}
+            <div className="absolute inset-0 bg-ink" />
+            <div
+              className="absolute inset-0"
+              style={{ background: 'radial-gradient(ellipse at 60% 40%, rgba(220,38,38,0.3), transparent 65%)' }}
+              aria-hidden="true"
+            />
+            {/* PIP 좌상단 CAM 라벨 */}
+            <span className="absolute top-1 left-1.5 font-mono text-[8px] font-extrabold text-electric tracking-[0.18em]">
+              CAM 1
+            </span>
+            {/* PIP 우상단 REC 펄스 */}
+            <span className="absolute top-1 right-1.5 inline-flex items-center gap-1">
+              <span
+                className="inline-block rounded-full bg-red-500"
+                style={{ width: 5, height: 5, boxShadow: '0 0 4px #ef4444', animation: 'rec-blink 1.1s ease-in-out infinite' }}
+              />
+              <span className="font-mono text-[7px] font-extrabold text-white tracking-wider">REC</span>
+            </span>
+            {/* PIP 중앙 진행자 — 회전 포켓볼 */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span
+                className="inline-flex"
+                style={{ animation: 'caster-bob 3.2s ease-in-out infinite' }}
+              >
+                <PokeballMark size={34} animated />
+              </span>
+            </div>
+            {/* PIP 하단 음성 EQ 막대 — 5개 막대가 무작위 톤으로 움직임 */}
+            <div className="absolute bottom-1 left-1.5 right-1.5 flex items-end justify-between gap-[2px] h-3.5">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <span
+                  key={i}
+                  className="flex-1 bg-electric rounded-sm"
+                  style={{
+                    transformOrigin: 'bottom',
+                    animation: `eq-bar ${0.55 + i * 0.08}s ease-in-out ${i * 0.05}s infinite alternate`,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+          {/* PIP 아래 작은 라벨 */}
+          <div className="mt-1 text-center font-mono text-[8px] font-extrabold text-paper/65 tracking-wider">
+            STUDIO A · ON AIR
+          </div>
         </div>
 
-        {/* 좌상단 NOW BIDDING 칩 — 부드러운 톤 */}
-        <div className="absolute top-2.5 left-2.5 z-20 pointer-events-none">
-          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-paper/15 backdrop-blur-sm border border-paper/30">
-            <span className="led led-yellow led-pulse" style={{ width: 6, height: 6 }} aria-hidden="true" />
+        {/* 좌상단 NOW BIDDING — 펄스 칩 (방송 위젯) */}
+        <div className="absolute top-3 left-3 z-20 pointer-events-none">
+          <span
+            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full border-2 border-ink"
+            style={{
+              background: 'linear-gradient(180deg, var(--color-dex) 0%, var(--color-dex-d) 100%)',
+              boxShadow: '0 3px 0 #1a1a1a, 0 0 12px rgba(220,38,38,0.5)',
+            }}
+          >
+            <span className="led led-yellow led-pulse" style={{ width: 7, height: 7 }} aria-hidden="true" />
             <span className="pixel-label text-electric">NOW BIDDING</span>
           </span>
         </div>
 
-        {/* ── 로어서드 자막 (카드명 + 등급) ─────────────────── */}
+        {/* ── 로어서드 자막 (TV 뉴스 자막바 톤) ─────────────────── */}
         <div className="absolute left-0 right-0 bottom-0 z-10 px-3 sm:px-5 py-3 pointer-events-none">
           <div className="inline-block">
             <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded chip-type chip-type-fire" style={{ boxShadow: '0 2px 0 #1a1a1a' }}>
@@ -735,6 +895,13 @@ function BroadcastStream({ lot, onBid }) {
               )}
             </h2>
           </div>
+        </div>
+
+        {/* ── 우하단 송출 타임코드 (작은 텍스트) ─────────────── */}
+        <div className="absolute bottom-2 right-3 z-20 pointer-events-none">
+          <span className="font-mono text-[9px] font-extrabold tabular-nums text-paper/70 tracking-wider">
+            TC {timecode} · 24FPS
+          </span>
         </div>
       </div>
 
@@ -795,25 +962,50 @@ function BroadcastStream({ lot, onBid }) {
         )}
       </div>
 
-      {/* ── 하단 보조 정보 라인 (티커 대체 — 정적, 친근한 톤) ── */}
-      <div className="mt-3 flex items-center justify-between gap-3 flex-wrap text-[11px] font-bold">
-        <div className="inline-flex items-center gap-3 flex-wrap text-paper/85">
-          <span className="inline-flex items-center gap-1.5">
-            <Icon name="arrow" size={11} strokeWidth={2.6} className="text-electric" />
-            다음 최소 입찰{' '}
-            <span className="font-mono font-extrabold text-electric tabular-nums">
-              {formatKRWFull(nextMin)}
-            </span>
-          </span>
-          <span className="text-paper/40">·</span>
-          <span className="inline-flex items-center gap-1.5">
-            <Icon name="user" size={11} strokeWidth={2.6} className="text-paper/70" />
-            <span className="font-mono tabular-nums">{lot.bidCount || 0}</span>회 입찰
-          </span>
+      {/* ── 하단 마키 티커 — 진짜 방송국 자막바처럼 흐름 ───────── */}
+      <div className="mt-3 relative h-7 rounded-md overflow-hidden border border-paper/15"
+        style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.6) 100%)' }}
+      >
+        <div className="absolute left-0 top-0 bottom-0 z-10 px-2.5 flex items-center bg-dex border-r border-paper/15">
+          <span className="font-mono text-[10px] font-extrabold text-paper tracking-[0.18em]">LIVE FEED</span>
         </div>
-        <span className="pixel-label text-electric">
-          정품인증 · 안전결제 · 입찰보호
-        </span>
+        {/* 마키 트랙 — 같은 콘텐츠 2번 붙여서 무한 스크롤 */}
+        <div className="absolute inset-0 pl-[88px] flex items-center overflow-hidden">
+          <div
+            className="inline-flex items-center gap-6 whitespace-nowrap text-[11px] font-bold text-paper/90 shrink-0"
+            style={{ animation: 'ticker-slide 28s linear infinite' }}
+          >
+            {[0, 1].map((cycle) => (
+              <span key={cycle} className="inline-flex items-center gap-6 pr-8">
+                <span className="inline-flex items-center gap-1.5">
+                  <Icon name="arrow" size={11} strokeWidth={2.6} className="text-electric" />
+                  다음 최소 입찰
+                  <span className="font-mono font-extrabold text-electric tabular-nums">
+                    {formatKRWFull(nextMin)}
+                  </span>
+                </span>
+                <span className="text-paper/30">●</span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Icon name="user" size={11} strokeWidth={2.6} className="text-paper/70" />
+                  <span className="font-mono tabular-nums">{lot.bidCount || 0}</span>회 입찰 진행
+                </span>
+                <span className="text-paper/30">●</span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Icon name="eye" size={11} strokeWidth={2.6} className="text-electric" />
+                  <span className="font-mono tabular-nums">{viewers.toLocaleString()}</span>명 시청 중
+                </span>
+                <span className="text-paper/30">●</span>
+                <span className="text-electric font-mono tracking-wider">
+                  STUDIO A · POKÉVAULT LIVE · {timecode}
+                </span>
+                <span className="text-paper/30">●</span>
+                <span>정품인증 · 안전결제 · 입찰보호</span>
+                <span className="text-paper/30">●</span>
+                <span className="text-electric">두근두근 라이브 진행 중!</span>
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
     </section>
 
