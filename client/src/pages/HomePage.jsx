@@ -150,17 +150,12 @@ export default function HomePage() {
             </ul>
           </div>
 
-          {/* RIGHT — smart panel + 다음 LOT 미리보기 */}
-          <div className="hidden md:block space-y-3">
+          {/* RIGHT — smart panel. 다음 LOT 정보는 패널 내부 한 줄 힌트로 통합(좌우 높이 정렬). */}
+          <div className="hidden md:block">
             {loading ? (
               <HeroPanelSkeleton />
             ) : FEATURED_LIVE ? (
-              <>
-                <FeaturedLivePanel card={FEATURED_LIVE} />
-                {upcomingAuctions.length > 0 && (
-                  <UpNextStrip cards={upcomingAuctions.slice(0, 3)} />
-                )}
-              </>
+              <FeaturedLivePanel card={FEATURED_LIVE} nextLot={upcomingAuctions[0]} />
             ) : upcomingAuctions[0] ? (
               <NextAuctionPanel card={upcomingAuctions[0]} queueCount={upcomingAuctions.length} />
             ) : buyNow[0] ? (
@@ -598,7 +593,7 @@ function PendingDepositBanner() {
 
 // 5초 컷 임팩트 패널 — 빨간 LIVE 헤더 + 카드 + 현재가 + 거대 CTA.
 // 정책: 동시 LIVE 1건 → 이 패널은 "지금 무대 위" 그 자체.
-function FeaturedLivePanel({ card, compact = false }) {
+function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
   const lotEnded = card.endsAt && timeUntil(card.endsAt).ended
   // 가짜 시청자 수 — LOT _id 기반 결정적 의사난수 (리렌더 마다 흔들리지 않게)
   const viewers = useMemo(() => {
@@ -739,6 +734,28 @@ function FeaturedLivePanel({ card, compact = false }) {
         <div className="mt-2 text-center text-[11px] font-bold text-mute">
           지금 <span className="text-dex font-extrabold">{viewers}</span>명이 함께 지켜보는 중
         </div>
+        {/* 다음 LOT 힌트 — 한 줄로 압축해서 별도 UP NEXT 패널 제거 (좌우 높이 정렬). */}
+        {nextLot && (
+          <Link
+            to="/auctions"
+            className="mt-2 flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-bone-2 border border-ink/10 hover:border-ink/40 hover:bg-electric/15 transition-colors group"
+            aria-label={`다음 경매: ${nextLot.nameKo || nextLot.name}`}
+          >
+            <span className="inline-flex items-center gap-1.5 min-w-0">
+              <span className="inline-flex items-center justify-center w-4 h-4 rounded bg-ink text-electric text-[9px] font-mono font-extrabold tabular-nums shrink-0">
+                {nextLot.lotOrder || '·'}
+              </span>
+              <span className="text-[11px] font-bold text-ink/65 shrink-0">NEXT</span>
+              <span className="text-[11.5px] font-extrabold text-ink truncate">
+                {nextLot.nameKo || nextLot.name}
+              </span>
+            </span>
+            <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-mute group-hover:text-ink whitespace-nowrap">
+              {nextLot.startsAt ? formatRelativeStart(nextLot.startsAt) : '곧'}
+              <Icon name="arrow" size={10} strokeWidth={2.5} aria-hidden="true" />
+            </span>
+          </Link>
+        )}
       </div>
 
       <style>{`
@@ -752,44 +769,6 @@ function FeaturedLivePanel({ card, compact = false }) {
           100% { transform: translateX(260%); }
         }
       `}</style>
-    </div>
-  )
-}
-
-// 우측 LIVE 패널 밑에 붙는 작은 큐 — "다음 LOT" 미리보기 (최대 3개)
-function UpNextStrip({ cards }) {
-  return (
-    <div className="rounded-xl border-2 border-ink/15 bg-bone-2 p-2.5">
-      <div className="px-2 pb-1.5 flex items-center justify-between">
-        <span className="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-ink/70">
-          <span className="led led-yellow" aria-hidden="true" />
-          UP NEXT
-        </span>
-        <Link to="/auctions" className="text-[10px] font-bold text-mute hover:text-ink underline underline-offset-2">
-          전체 일정 →
-        </Link>
-      </div>
-      <ul className="flex flex-col gap-1.5">
-        {cards.map((c) => (
-          <li key={c.id || c._id}>
-            <Link
-              to={`/products/${c.id}`}
-              className="flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-paper border border-ink/10 hover:border-ink hover:-translate-y-0.5 transition-all"
-              aria-label={`예정 경매: ${c.nameKo || c.name}`}
-            >
-              <span className="inline-flex items-center gap-2 min-w-0">
-                <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-ink text-electric text-[10px] font-mono font-extrabold tabular-nums border border-ink shrink-0">
-                  {c.lotOrder || '·'}
-                </span>
-                <span className="font-display text-[12.5px] font-bold text-ink truncate">{c.nameKo || c.name}</span>
-              </span>
-              <span className="text-[10px] font-mono font-bold text-mute tabular-nums whitespace-nowrap">
-                {c.startsAt ? formatRelativeStart(c.startsAt) : '곧'}
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
     </div>
   )
 }
