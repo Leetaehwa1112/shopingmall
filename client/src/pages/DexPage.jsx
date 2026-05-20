@@ -1025,26 +1025,35 @@ function CatalogueModal({ poke, owned, onToggleOwned, onClose }) {
 
         {/* ── 카탈로그 본문: 카드 라인업 ────────────────── */}
         <div className="flex-1 overflow-y-auto bg-bone">
-          <div className="px-5 sm:px-8 pt-6 pb-8">
+          <div className="px-5 sm:px-7 pt-5 pb-7">
             <div className="flex items-baseline justify-between mb-4">
-              <h3 className="font-mono text-[11px] font-bold tracking-[0.22em] uppercase text-ink">
-                Card Lineup
-              </h3>
+              <div className="flex items-baseline gap-2">
+                <h3 className="font-mono text-[11px] font-bold tracking-[0.22em] uppercase text-ink">
+                  Card Lineup
+                </h3>
+                <span className="font-mono text-[10px] font-bold text-mute tabular-nums">
+                  {String(sortedCards.length).padStart(2, '0')}
+                </span>
+              </div>
               {poke.onSaleCount > 0 && (
-                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-grass">
-                  ✦ Live first
+                <span className="inline-flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-wider"
+                      style={{ color: '#16a34a' }}>
+                  <span className="w-1.5 h-1.5 rounded-full animate-pulse"
+                        style={{ backgroundColor: '#16a34a', boxShadow: '0 0 6px #16a34a80' }} />
+                  Live First
                 </span>
               )}
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
+            {/* 카드 슬리브 리스트 — 가로 행 레이아웃 */}
+            <div className="flex flex-col gap-2">
               {sortedCards.map((card) => (
                 <SpecimenCard key={card.cardId} card={card} onClose={onClose} />
               ))}
             </div>
 
             {/* 신뢰 라인 */}
-            <div className="mt-8 pt-5 border-t border-dashed border-ink/15">
+            <div className="mt-6 pt-4 border-t border-dashed border-ink/15">
               <p className="text-center font-mono text-[10px] font-bold tracking-wider uppercase text-mute/70">
                 ✦ All listings verified by POKÉVAULT · PSA / BGS / CGC ✦
               </p>
@@ -1056,77 +1065,109 @@ function CatalogueModal({ poke, owned, onToggleOwned, onClose }) {
   )
 }
 
-// ─── 모달 안의 카드 한 장 ───────────────────────────────────
+// ─── 모달 안의 카드 한 장 — 카드 슬리브(가로 슬롯) 레이아웃 ─────
 function SpecimenCard({ card, onClose }) {
   const hasSale = card.matched.length > 0
   const primary = card.primaryProduct
   const isAuction = primary?.sale_type === 'auction'
 
+  // 상태별 강한 시각 차이 — 재고/경매/카탈로그
+  const stateLabel = isAuction ? 'AUCTION · 경매' : hasSale ? 'IN STOCK · 재고있음' : 'CATALOGUED'
+  const stateColor = isAuction ? '#dc2626' : hasSale ? '#16a34a' : '#9ca3af'
+  const stateBg    = isAuction ? '#dc2626' : hasSale ? '#16a34a' : '#e5e7eb'
+  const stateText  = (isAuction || hasSale) ? '#fff' : '#6b7280'
+
   const inner = (
     <>
-      {hasSale && (
-        <span
-          className={
-            `absolute top-2 left-2 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-full ` +
-            `text-[9px] font-bold uppercase tracking-[0.15em] border-2 ` +
-            (isAuction
-              ? 'bg-dex border-ink text-white'
-              : 'bg-grass border-ink text-white')
-          }
-        >
-          <span className={`w-1 h-1 rounded-full bg-paper ${isAuction ? 'animate-pulse' : ''}`} />
-          {isAuction ? 'Live' : 'Stock'}
-        </span>
-      )}
-
-      <div className="aspect-[3/4] bg-bone-2 overflow-hidden relative">
-        <img
-          src={card.image}
-          alt={`${card.setShort} ${card.number}`}
-          loading="lazy"
-          className={
-            `w-full h-full object-contain transition-all duration-300 ` +
-            (hasSale
-              ? 'group-hover:scale-105'
-              : 'grayscale-[55%] opacity-70 group-hover:grayscale-0 group-hover:opacity-100')
-          }
-          onError={(e) => {
-            e.target.style.display = 'none'
-            e.target.parentElement.innerHTML =
-              '<div class="w-full h-full flex items-center justify-center text-3xl text-mute/40" role="img" aria-label="이미지 없음">🃏</div>'
+      {/* 좌측: 카드 썸네일 (가로 슬리브 모양) */}
+      <div className="shrink-0 w-[72px] sm:w-[84px] relative">
+        <div
+          className="rounded-lg overflow-hidden aspect-[63/88] bg-bone-2 relative"
+          style={{
+            boxShadow: 'inset 0 0 0 1.5px rgba(13,23,48,0.12), 0 2px 4px rgba(0,0,0,0.1)',
           }}
-        />
-        {!hasSale && (
-          <div className="absolute inset-0 bg-gradient-to-t from-ink/15 to-transparent pointer-events-none" />
-        )}
-      </div>
-
-      <div className="p-2.5 border-t border-ink/10">
-        <div className="font-display text-[12px] font-bold text-ink leading-tight truncate">
-          {card.setShort}
-        </div>
-        <div className="flex items-center justify-between mt-0.5">
-          <div className="font-mono text-[9px] text-mute tracking-wider">
-            {card.number} · {card.year}
-          </div>
-          {hasSale && primary && (
-            <div className="font-mono text-[11px] font-bold text-ink tabular-nums">
-              ₩{Math.round(primary.price / 10000)}만
-            </div>
+        >
+          <img
+            src={card.image}
+            alt={`${card.setShort} ${card.number}`}
+            loading="lazy"
+            className={
+              `w-full h-full object-contain transition-all duration-200 ` +
+              (hasSale ? 'group-hover:scale-105' : 'grayscale-[60%] opacity-75')
+            }
+            onError={(e) => {
+              e.target.style.display = 'none'
+              e.target.parentElement.innerHTML =
+                '<div class="w-full h-full flex items-center justify-center text-xl text-mute/40" role="img">🃏</div>'
+            }}
+          />
+          {!hasSale && (
+            <div className="absolute inset-0 bg-gradient-to-t from-ink/20 to-transparent pointer-events-none" />
           )}
         </div>
-        {card.rarity && (
-          <div className="font-mono text-[9px] text-mute/70 mt-0.5 truncate uppercase tracking-wider">
-            {card.rarity}
+      </div>
+
+      {/* 우측: 메타 + 상태 + 가격 */}
+      <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
+        {/* 상단: 세트명 + 상태 배지 */}
+        <div className="flex items-start justify-between gap-2 mb-1.5">
+          <div className="min-w-0">
+            <div className="font-display text-[14px] sm:text-[15px] font-bold text-ink leading-tight truncate">
+              {card.setShort}
+            </div>
+            <div className="font-mono text-[10px] text-mute tracking-wider mt-0.5">
+              {card.number} · {card.year}
+              {card.rarity && <span className="ml-1.5 uppercase">· {card.rarity}</span>}
+            </div>
           </div>
-        )}
+          {/* 상태 배지 — 강한 대비 */}
+          <span
+            className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-[0.12em] border-2 border-ink"
+            style={{
+              backgroundColor: stateBg,
+              color: stateText,
+              boxShadow: hasSale ? `0 0 8px ${stateColor}66, 0 1px 0 #1a1a1a` : '0 1px 0 #1a1a1a',
+            }}
+          >
+            {hasSale && (
+              <span className={`w-1 h-1 rounded-full ${isAuction ? 'animate-pulse' : ''}`}
+                    style={{ backgroundColor: stateText }} />
+            )}
+            {stateLabel}
+          </span>
+        </div>
+
+        {/* 하단: 가격 + CTA */}
+        <div className="flex items-end justify-between gap-2">
+          {hasSale && primary ? (
+            <div>
+              <div className="font-mono text-[9px] font-bold uppercase tracking-wider text-mute">
+                {isAuction ? '현재가' : '판매가'}
+              </div>
+              <div className="font-display text-lg sm:text-xl font-bold text-ink tabular-nums leading-none">
+                ₩{primary.price.toLocaleString()}
+              </div>
+            </div>
+          ) : (
+            <div className="font-mono text-[10px] font-bold uppercase tracking-wider text-mute/70">
+              현재 매물 없음
+            </div>
+          )}
+          {hasSale && (
+            <span className="shrink-0 inline-flex items-center gap-1 font-mono text-[10px] font-bold uppercase tracking-wider"
+                  style={{ color: stateColor }}>
+              {isAuction ? '입찰하기' : '구매하기'}
+              <Icon name="arrow" size={10} strokeWidth={2.6} />
+            </span>
+          )}
+        </div>
       </div>
     </>
   )
 
   const baseCls =
-    'group block bg-paper rounded-xl border-2 border-ink/15 overflow-hidden relative ' +
-    'transition-all duration-150'
+    'group flex items-stretch gap-3 sm:gap-4 p-2.5 sm:p-3 bg-paper rounded-xl ' +
+    'transition-all duration-150 relative'
 
   return hasSale ? (
     <Link
@@ -1135,14 +1176,14 @@ function SpecimenCard({ card, onClose }) {
       aria-label={`${card.setShort} ${card.number} ${isAuction ? '경매' : '판매'} 보기`}
       className={
         baseCls +
-        ' border-ink hover:-translate-y-0.5 shadow-[0_3px_0_#1a1a1a] hover:shadow-[0_5px_0_#1a1a1a] ' +
+        ' border-2 border-ink hover:-translate-y-0.5 shadow-[0_3px_0_#1a1a1a] hover:shadow-[0_5px_0_#1a1a1a] ' +
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-electric focus-visible:ring-offset-2'
       }
     >
       {inner}
     </Link>
   ) : (
-    <div className={baseCls + ' shadow-[0_2px_0_rgba(0,0,0,0.1)]'} aria-label={`${card.setShort} 매물 없음`}>
+    <div className={baseCls + ' border border-dashed border-ink/20 opacity-90'} aria-label={`${card.setShort} 매물 없음`}>
       {inner}
     </div>
   )
