@@ -4,6 +4,7 @@ import api from '@/api/axios'
 import useCollectionStore from '@/store/collectionStore'
 import { POKEDEX, ARTWORK_URL, TYPE_TOKEN, TYPE_BG_SOFT, TYPE_INFO } from '@/constants/pokedex'
 import TypeSymbol from '@/components/common/TypeSymbol'
+import PokedexShell from '@/components/dex/PokedexShell'
 import Icon from '@/components/common/Icon'
 import {
   DexLed,
@@ -117,78 +118,56 @@ export default function DexPage() {
 
   return (
     <div className="min-h-screen bg-bone">
-      <DexHero
-        stats={stats}
-        loading={loading}
-        saleOnly={saleOnly}
-        onToggleSale={() => setSaleOnly((v) => !v)}
-      />
-
-      <DexControlPanel
-        query={query}
-        onQuery={setQuery}
-        typeFilter={typeFilter}
-        onType={setTypeFilter}
-        allTypes={allTypes}
-        filteredCount={filtered.length}
-        totalCount={POKEDEX.length}
-        hasActiveFilter={hasActiveFilter}
-        onReset={resetFilters}
-      />
-
-      {/* 선택된 타입의 심볼·설명·상성 카드 — '전체'면 숨김 */}
-      {typeFilter !== '전체' && <TypeDetailCard type={typeFilter} matchCount={filtered.length} />}
-
-      {/* ── Grid ───────────────────────────────────────────── */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
-        {loading ? (
-          <SkeletonGrid />
-        ) : error ? (
-          <StateBlock
-            tone="alert"
-            icon="⚡️"
-            title="도감 신호가 끊어졌어요"
-            desc="네트워크를 확인하고 다시 시도해주세요."
-            action={<DexButton variant="device" onClick={fetchData}>다시 연결</DexButton>}
-          />
-        ) : filtered.length === 0 ? (
-          <StateBlock
-            icon={saleOnly ? '🛒' : '🔍'}
-            title={saleOnly ? '지금 막 매진이에요' : '조건에 맞는 포켓몬이 없어요'}
-            desc={saleOnly ? '아직 등록된 매물이 없어요. 곧 새 매물이 올라옵니다.' : '검색어나 타입을 바꿔보세요.'}
-            action={hasActiveFilter ? <DexButton variant="ghost" onClick={resetFilters}>전체 도감 보기</DexButton> : null}
-          />
-        ) : (
+      {/*
+        도감 디바이스로 전체 재포장 — 빨간 셸 안에 LCD(필터/상태) + 카탈로그 인서트.
+        모든 상태·핸들러는 그대로, 표현 계층만 새 디자인 시스템으로 치환.
+      */}
+      <PokedexShell
+        title="POKÉDEX"
+        subtitle={`NAT'L · ${String(stats.total).padStart(3, '0')} · OWNED ${String(stats.owned).padStart(3, '0')}`}
+        children={
           <>
-            <div className="flex items-baseline justify-between mb-5 px-1">
-              <div className="font-mono text-[11px] font-bold uppercase tracking-[0.22em] text-mute">
-                {saleOnly ? 'IN STOCK' : 'NATIONAL DEX'}
-                <span className="ml-2 text-ink tabular-nums">{String(filtered.length).padStart(3, '0')}</span>
-              </div>
-              <div className="hidden sm:block font-mono text-[10px] text-mute/70 tracking-wider uppercase">
-                Sale · Owned · #ID
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-5">
-              {filtered.map((poke) => (
-                <SpecimenEntry
-                  key={poke.id}
-                  poke={poke}
-                  owned={collectionIds.includes(poke.id)}
-                  onToggleOwned={() => toggleCollection(poke.id)}
-                  onSelect={() => setSelected(poke)}
-                />
-              ))}
-            </div>
-
-            {/* Reflective footer: 신뢰 + 자기보상 카피 */}
-            <p className="mt-12 text-center text-[11px] font-bold tracking-wider uppercase text-mute/70">
-              ✦ Authentic Trainer's Catalogue · 1996—{new Date().getFullYear()} ✦
-            </p>
+            <DexControlPanel
+              query={query}
+              onQuery={setQuery}
+              typeFilter={typeFilter}
+              onType={setTypeFilter}
+              allTypes={allTypes}
+              filteredCount={filtered.length}
+              totalCount={POKEDEX.length}
+              hasActiveFilter={hasActiveFilter}
+              onReset={resetFilters}
+            />
+            {typeFilter !== '전체' && <TypeDetailCard type={typeFilter} matchCount={filtered.length} />}
           </>
-        )}
-      </main>
+        }
+        catalogue={
+          <DexCatalogueBody
+            loading={loading}
+            error={error}
+            saleOnly={saleOnly}
+            filtered={filtered}
+            collectionIds={collectionIds}
+            toggleCollection={toggleCollection}
+            setSelected={setSelected}
+            hasActiveFilter={hasActiveFilter}
+            resetFilters={resetFilters}
+            fetchData={fetchData}
+          />
+        }
+      />
+
+      {/* 기존 DexHero는 디바이스 위쪽 인트로 — 토글 가능. 현재는 숨김. */}
+      <div className="hidden">
+        <DexHero
+          stats={stats}
+          loading={loading}
+          saleOnly={saleOnly}
+          onToggleSale={() => setSaleOnly((v) => !v)}
+        />
+      </div>
+
+      {/* ── (이전 main 영역은 PokedexShell.catalogue로 이동) ── */}
 
       {selectedEnriched && (
         <CatalogueModal
@@ -205,6 +184,63 @@ export default function DexPage() {
 // ═══════════════════════════════════════════════════════════
 // HERO  ── "도감 디바이스 상단 패널"
 // ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// DEX CATALOGUE BODY ── PokedexShell.catalogue 슬롯에 들어가는 본문
+// (기존 main 영역의 그리드/스켈레톤/에러/빈 상태 처리를 그대로 옮김)
+// ═══════════════════════════════════════════════════════════
+function DexCatalogueBody({
+  loading, error, saleOnly, filtered, collectionIds, toggleCollection, setSelected,
+  hasActiveFilter, resetFilters, fetchData,
+}) {
+  if (loading) return <SkeletonGrid />
+  if (error) return (
+    <StateBlock
+      tone="alert"
+      icon="⚡️"
+      title="도감 신호가 끊어졌어요"
+      desc="네트워크를 확인하고 다시 시도해주세요."
+      action={<DexButton variant="device" onClick={fetchData}>다시 연결</DexButton>}
+    />
+  )
+  if (filtered.length === 0) return (
+    <StateBlock
+      icon={saleOnly ? '🛒' : '🔍'}
+      title={saleOnly ? '지금 막 매진이에요' : '조건에 맞는 포켓몬이 없어요'}
+      desc={saleOnly ? '아직 등록된 매물이 없어요. 곧 새 매물이 올라옵니다.' : '검색어나 타입을 바꿔보세요.'}
+      action={hasActiveFilter ? <DexButton variant="ghost" onClick={resetFilters}>전체 도감 보기</DexButton> : null}
+    />
+  )
+  return (
+    <>
+      <div className="flex items-baseline justify-between mb-5 px-1">
+        <div className="font-mono text-[11px] font-bold uppercase tracking-[0.22em] text-mute">
+          {saleOnly ? 'IN STOCK' : 'NATIONAL DEX'}
+          <span className="ml-2 text-ink tabular-nums">{String(filtered.length).padStart(3, '0')}</span>
+        </div>
+        <div className="hidden sm:block font-mono text-[10px] text-mute/70 tracking-wider uppercase">
+          Sale · Owned · #ID
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-5">
+        {filtered.map((poke) => (
+          <SpecimenEntry
+            key={poke.id}
+            poke={poke}
+            owned={collectionIds.includes(poke.id)}
+            onToggleOwned={() => toggleCollection(poke.id)}
+            onSelect={() => setSelected(poke)}
+          />
+        ))}
+      </div>
+
+      <p className="mt-10 text-center text-[11px] font-bold tracking-wider uppercase text-mute/70">
+        ✦ Authentic Trainer's Catalogue · 1996—{new Date().getFullYear()} ✦
+      </p>
+    </>
+  )
+}
+
 function DexHero({ stats, loading, saleOnly, onToggleSale }) {
   return (
     <section
@@ -318,8 +354,14 @@ function DexControlPanel({
   filteredCount, totalCount, hasActiveFilter, onReset,
 }) {
   return (
-    <div className="sticky top-[108px] z-30 bg-paper border-b-2 border-ink shadow-[0_2px_0_rgba(0,0,0,0.06)]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-2.5">
+    <div
+      className="rounded-xl px-3 py-2.5 sm:px-4 sm:py-3"
+      style={{
+        background: 'rgba(0,0,0,0.25)',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05), inset 0 0 0 1px rgba(142,194,90,0.15)',
+      }}
+    >
+      <div className="flex items-center gap-2.5">
         {/* LCD 미니 검색 */}
         <label className="relative shrink-0">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-grass/80 pointer-events-none">
