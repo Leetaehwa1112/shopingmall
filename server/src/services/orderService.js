@@ -265,12 +265,21 @@ const updateOrderStatus = async (orderId, status) => {
  * 결제 정보 정정(예: 가상계좌 발급 후 카드 재결제) 같은 운영 케이스 대응.
  */
 const ADMIN_PATCHABLE = ['paymentMethod', 'memo']
+const PAYMENT_METHODS = ['card', 'toss', 'kakao', 'bank', 'escrow']
 const adminUpdateFields = async (orderId, patch = {}) => {
   const order = await Order.findById(orderId)
   if (!order) throw new AppError('주문을 찾을 수 없습니다.', 404)
   for (const key of Object.keys(patch)) {
     if (!ADMIN_PATCHABLE.includes(key)) continue
-    order[key] = patch[key]
+    if (key === 'paymentMethod') {
+      // 모델은 payment.method (중첩) — 클라이언트 친화 alias로 paymentMethod 받음.
+      if (!PAYMENT_METHODS.includes(patch[key])) {
+        throw new AppError(`paymentMethod는 ${PAYMENT_METHODS.join('|')} 중 하나여야 합니다.`)
+      }
+      order.payment.method = patch[key]
+    } else {
+      order[key] = patch[key]
+    }
   }
   await order.save()
   return order
