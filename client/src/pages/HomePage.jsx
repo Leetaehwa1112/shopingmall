@@ -995,24 +995,66 @@ function ComingSoonPanel() {
   )
 }
 
+// 스켈레톤 — FeaturedLivePanel의 골격을 그대로 모사해 layout shift 0에 가깝게.
+//   ① 빨간 LIVE 헤더 ② 카드+정보 ③ 카운트다운 띠 ④ 거대 CTA ⑤ 시청자 ⑥ 다음 LOT 힌트
 function HeroPanelSkeleton() {
   return (
-    <div className="surface-pop overflow-hidden animate-pulse" aria-busy="true" aria-label="콘텐츠 로딩 중">
-      <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b-2 border-line">
-        <div className="h-3 w-24 bg-bone-2 rounded" />
-        <div className="h-3 w-16 bg-bone-2 rounded" />
-      </div>
-      <div className="flex gap-4 p-5">
-        <div className="shrink-0 w-[120px] h-[168px] bg-bone-2 rounded-lg" />
-        <div className="flex-1 space-y-3">
-          <div className="h-6 w-32 bg-bone-2 rounded" />
-          <div className="h-3 w-40 bg-bone-2 rounded" />
-          <div className="h-5 w-20 bg-bone-2 rounded-full mt-2" />
-          <div className="h-8 w-28 bg-bone-2 rounded mt-6" />
+    <div
+      className="rounded-2xl border-2 border-ink overflow-hidden relative shadow-[0_6px_0_#1a1a1a,0_12px_30px_rgba(220,38,38,0.18)]"
+      aria-busy="true"
+      aria-label="콘텐츠 로딩 중"
+    >
+      {/* ① 빨간 헤더 (실제 패널과 동일 톤·높이) */}
+      <div
+        className="relative px-4 py-3 border-b-2 border-ink"
+        style={{ background: 'linear-gradient(180deg, var(--color-dex) 0%, var(--color-dex-d) 100%)' }}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-3 h-3 rounded-full bg-white/80" />
+            <span className="inline-block h-5 w-12 rounded bg-white/40" />
+            <span className="inline-block h-3 w-16 rounded bg-white/25" />
+          </div>
+          <span className="inline-block h-5 w-12 rounded-md bg-black/25" />
         </div>
       </div>
-      <div className="px-5 pb-5">
-        <div className="h-10 w-full bg-bone-2 rounded-lg" />
+
+      {/* ② 카드 + 정보 — 카드 placeholder 사이즈는 PokeCard 'sm'과 동일 (160×224) */}
+      <div className="bg-paper animate-pulse">
+        <div className="flex gap-4 p-5">
+          <div className="shrink-0 w-[160px] h-[224px] bg-bone-2 rounded-lg" />
+          <div className="flex-1 min-w-0 flex flex-col justify-between">
+            <div className="space-y-2">
+              <div className="h-7 w-32 bg-bone-2 rounded" />
+              <div className="h-3 w-44 bg-bone-2 rounded" />
+              <div className="h-5 w-20 bg-bone-2 rounded-full mt-1" />
+            </div>
+            <div className="space-y-1.5">
+              <div className="h-2.5 w-16 bg-bone-2 rounded" />
+              <div className="h-7 w-28 bg-bone-2 rounded" />
+              <div className="h-2.5 w-20 bg-bone-2 rounded" />
+            </div>
+          </div>
+        </div>
+
+        {/* ③ 카운트다운 띠 — bg-ink (실제 패널과 동일) */}
+        <div className="px-5 pb-2 -mt-1">
+          <div className="rounded-lg bg-ink px-3 py-2 flex items-center justify-between gap-2">
+            <span className="inline-block h-3 w-16 rounded bg-electric/40" />
+            <span className="inline-block h-4 w-20 rounded bg-white/30" />
+          </div>
+        </div>
+
+        {/* ④ 거대 CTA */}
+        <div className="px-5 pb-5">
+          <div className="h-12 w-full rounded-md bg-bone-2" />
+          {/* ⑤ 시청자 카운트 라인 */}
+          <div className="mt-2 flex justify-center">
+            <div className="h-3 w-40 rounded bg-bone-2" />
+          </div>
+          {/* ⑥ 다음 LOT 힌트 한 줄 */}
+          <div className="mt-2 h-9 w-full rounded-lg bg-bone-2/70" />
+        </div>
       </div>
     </div>
   )
