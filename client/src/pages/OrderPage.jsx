@@ -66,6 +66,26 @@ export default function OrderPage() {
       return
     }
 
+    // ─── 결제 시작 전 클라이언트 검증 ───────────────────────────
+    // 결제(돈 빠짐) → 주문 생성(서버 검증 실패) 순서가 되면 환불 처리 골치.
+    // 서버 검증과 동일한 규칙으로 사전 검증해서 결제 자체를 막는다.
+    const validationErrors = []
+    if (!form.name?.trim()) validationErrors.push('수령인 이름을 입력해주세요.')
+    else if (form.name.length > 50) validationErrors.push('수령인 이름은 50자 이하로 입력해주세요.')
+    if (!form.phone?.trim() || !/^[0-9+\-\s()]{8,20}$/.test(form.phone.trim())) {
+      validationErrors.push('연락처를 올바르게 입력해주세요. (숫자/하이픈 8-20자)')
+    }
+    if (form.shipping !== 'pickup') {
+      if (!form.zip || !/^[0-9\-]{3,10}$/.test(String(form.zip))) {
+        validationErrors.push('우편번호를 올바르게 입력해주세요. (3-10자리 숫자)')
+      }
+      if (!form.addr1?.trim()) validationErrors.push('기본 주소를 입력해주세요.')
+    }
+    if (validationErrors.length) {
+      toast({ type: 'error', message: validationErrors.join(' / ') })
+      return
+    }
+
     const payInfo = PAY_METHODS.find((m) => m.id === form.method) || PAY_METHODS[0]
     const paymentId = 'PV-' + Date.now().toString(36).toUpperCase()
     const orderName = items.length === 1
