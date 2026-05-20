@@ -92,13 +92,27 @@ export default function OrderCompletePage() {
         </div>
       )}
 
-      <div className="flex justify-center gap-3 mb-10 flex-wrap relative sparkle-host">
+      <div className="flex flex-col items-center gap-3 mb-10 relative sparkle-host">
         <Sparkles always />
-        {order.items.map((c, idx) => (
-          <div key={c._id || c.id || idx} className="float-bob">
-            <PokeCard card={c} size="sm" interactive={false} showShine={false} eager />
-          </div>
-        ))}
+        <div className="flex justify-center gap-3 flex-wrap">
+          {order.items.map((c, idx) => (
+            <div key={c._id || c.id || idx} className="float-bob">
+              <PokeCard card={c} size="sm" interactive={false} showShine={false} eager />
+            </div>
+          ))}
+        </div>
+        {/* 상품명 명시 — 팩(itemType:pack)도 nameKo 우선 표시 */}
+        <div className="text-center mt-2 space-y-1">
+          {order.items.map((c, idx) => {
+            const name = c.nameKo || c.name || '상품'
+            const qty = c.qty || 1
+            return (
+              <div key={`name-${c._id || c.id || idx}`} className="font-display text-base font-bold text-ink">
+                {name}{qty > 1 ? <span className="text-mute font-bold ml-1.5">× {qty}</span> : null}
+              </div>
+            )
+          })}
+        </div>
       </div>
 
       <div className="surface-pop p-8 mb-6">
