@@ -13,7 +13,13 @@ const getPacks = async (req, res) => {
       Pack.find(filter).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)).lean(),
       Pack.countDocuments(filter),
     ]);
-    res.json({ success: true, total, data: packs });
+    res.json({
+      success: true,
+      total,
+      page: Number(page),
+      totalPages: Math.ceil(total / Number(limit)),
+      data: packs,
+    });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };
 

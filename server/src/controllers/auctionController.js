@@ -22,7 +22,8 @@ function buildProductFromApplication(app) {
     category: "promo",
     grade: {
       company: app.gradeCompany,
-      score: Number(app.gradeScore),
+      // NaN 가드 — gradeScore가 String이고 비숫자면 0 fallback (validation 통과)
+      score: Number.isFinite(Number(app.gradeScore)) ? Number(app.gradeScore) : 0,
       country: app.cardCountry || "USA",
       cert: app.gradeCert || "",
     },
@@ -319,7 +320,7 @@ const updateApplication = async (req, res) => {
         description: application.description || "",
         grade: {
           company: application.gradeCompany,
-          score: Number(application.gradeScore),
+          score: Number.isFinite(Number(application.gradeScore)) ? Number(application.gradeScore) : 0,
           country: application.cardCountry || "USA",
           cert: application.gradeCert || "",
         },
