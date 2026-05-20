@@ -516,11 +516,6 @@ function AuctionLivePage({ lots, loading, error }) {
           0%   { transform: translateX(0); }
           100% { transform: translateX(-50%); }
         }
-        /* 미니 플레이어 등장 — 살짝 튀어오르듯 */
-        @keyframes mini-pop {
-          from { transform: translateY(20px) scale(0.92); opacity: 0; }
-          to   { transform: translateY(0) scale(1); opacity: 1; }
-        }
         .focus-ring:focus-visible {
           outline: none;
           box-shadow: 0 0 0 3px #facc15, 0 0 0 5px #0d1730;
@@ -599,28 +594,58 @@ function BroadcastStream({ lot, liveCount, onBid }) {
   const [muted, setMuted] = useState(true)
 
   // ── 미니 플레이어 : 본 방송이 화면 밖으로 스크롤되면 우하단으로 핀 ──
+  //   IntersectionObserver는 threshold 교차 시점에만 발화하므로
+  //   미세한 스크롤 위치 변화에서 상태가 못 따라오는 경우가 있어서
+  //   rAF로 throttle 된 scroll 리스너로 매 프레임 정확히 판정한다.
   const containerRef = useRef(null)
   const [pinned, setPinned] = useState(false)
   const [dismissed, setDismissed] = useState(false)
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
-    const obs = new IntersectionObserver(
-      ([entry]) => {
-        const rect = entry.boundingClientRect
-        // 본 화면이 헤더 아래쪽으로 충분히 사라진 경우에만 핀
-        setPinned(rect.bottom < 80)
-      },
-      { threshold: 0 }
-    )
-    obs.observe(el)
-    return () => obs.disconnect()
+    let raf = 0
+    let lastPinned = false
+    const HEADER_OFFSET = 72 // 헤더 높이 보정 (그 아래로 사라지면 핀)
+    const HYSTERESIS = 24    // 토글 깜빡임 방지용 히스테리시스 — 핀/언핀 트리거 차이
+    const evaluate = () => {
+      const rect = el.getBoundingClientRect()
+      // 핀: 본 방송이 헤더 아래로 완전히 사라져 보이지 않을 때 (rect.bottom 가 작아짐)
+      // 언핀: 본 방송이 다시 화면에 보이기 시작할 때 (HYSTERESIS 만큼 여유)
+      const next = lastPinned
+        ? rect.bottom < HEADER_OFFSET + HYSTERESIS  // 핀 상태 → 언핀 트리거가 약간 더 멀어야 함
+        : rect.bottom < HEADER_OFFSET                // 언핀 상태 → 더 가까이서 핀 트리거
+      if (next !== lastPinned) {
+        lastPinned = next
+        setPinned(next)
+      }
+    }
+    const onScroll = () => {
+      if (raf) return
+      raf = requestAnimationFrame(() => {
+        raf = 0
+        evaluate()
+      })
+    }
+    evaluate() // 초기 1회
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
+    return () => {
+      if (raf) cancelAnimationFrame(raf)
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+    }
   }, [])
   // LOT 바뀌면 닫기 상태 리셋 — 새 LOT은 다시 보여줘야 함
   useEffect(() => { setDismissed(false) }, [lot.id])
+  // 부드러운 스크롤 복귀 — 헤더 오프셋 보정
   const expand = () => {
-    containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const el = containerRef.current
+    if (!el) return
+    const top = el.getBoundingClientRect().top + window.pageYOffset - 24
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
   }
+  // 미니 플레이어 가시성: pinned 이고 dismissed 아닐 때 보임 (트랜지션 위해 unmount 안 함)
+  const miniVisible = pinned && !dismissed
 
   const current = lot.currentBid || lot.startingBid || 0
   const nextMin = Math.round(current * 1.05 / 1000) * 1000 || current + 1000
@@ -958,20 +983,20 @@ function BroadcastStream({ lot, liveCount, onBid }) {
       </div>
     </section>
 
-    {/* 미니 플레이어 — 본 화면이 화면 밖으로 스크롤되면 우하단으로 핀 */}
-    {pinned && !dismissed && (
-      <MiniBroadcastPlayer
-        lot={lot}
-        viewers={viewers}
-        current={current}
-        clockText={clockText}
-        isCritical={isCritical}
-        isUrgent={isUrgent}
-        onBid={onBid}
-        onClose={() => setDismissed(true)}
-        onExpand={expand}
-      />
-    )}
+    {/* 미니 플레이어 — 본 화면이 화면 밖으로 스크롤되면 우하단으로 핀
+        unmount 하지 않고 visible prop으로 opacity/transform 트랜지션 처리 */}
+    <MiniBroadcastPlayer
+      visible={miniVisible}
+      lot={lot}
+      viewers={viewers}
+      current={current}
+      clockText={clockText}
+      isCritical={isCritical}
+      isUrgent={isUrgent}
+      onBid={onBid}
+      onClose={() => setDismissed(true)}
+      onExpand={expand}
+    />
     </>
   )
 }
@@ -983,19 +1008,23 @@ function BroadcastStream({ lot, liveCount, onBid }) {
 //   - X 버튼 → 세션 동안 숨김 (LOT 바뀌면 다시 등장)
 //   - 미니 안 "지금 입찰" 빨강 버튼 → 동일 시트
 function MiniBroadcastPlayer({
-  lot, viewers, current, clockText, isCritical, isUrgent, onBid, onClose, onExpand,
+  visible, lot, viewers, current, clockText, isCritical, isUrgent, onBid, onClose, onExpand,
 }) {
   const img = lot.images?.[0] || lot.image
   return (
     <div
-      className="hidden lg:block fixed bottom-4 right-4 z-50 w-[300px] rounded-xl border-2 border-ink overflow-hidden"
+      className={`hidden lg:block fixed bottom-4 right-4 z-50 w-[300px] rounded-xl border-2 border-ink overflow-hidden transition-all duration-300 ease-out ${
+        visible
+          ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
+          : 'opacity-0 translate-y-4 scale-95 pointer-events-none'
+      }`}
       style={{
         background: '#0a0a0a',
-        boxShadow: '0 10px 30px rgba(0,0,0,0.55), 0 0 0 1px rgba(250,204,21,0.12)',
-        animation: 'mini-pop 0.28s ease-out',
+        boxShadow: visible ? '0 10px 30px rgba(0,0,0,0.55), 0 0 0 1px rgba(250,204,21,0.12)' : 'none',
       }}
       role="region"
       aria-label="라이브 미니 플레이어"
+      aria-hidden={!visible}
     >
       {/* 상단 베젤 — LIVE + 컨트롤 */}
       <div className="px-2.5 py-1.5 flex items-center justify-between gap-2 bg-ink border-b border-electric/15">
