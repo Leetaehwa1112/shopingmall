@@ -146,7 +146,18 @@ async function seed() {
     console.log(`Cleared ${oldProductIds.length} previously published auction Products.`);
   }
   await AuctionApplication.deleteMany({ status: { $in: ['live', 'upcoming'] } });
-  console.log('Cleared existing live/upcoming auctions.');
+  console.log('Cleared existing live/upcoming auction applications.');
+
+  // Orphan 청소 — AuctionApplication.publishedProduct에 연결되지 않은 sale_type=auction Product 삭제.
+  // 옛 시드(SKU 하드코딩) 잔재 또는 수동 생성 후 신청서가 사라진 경우를 잡아냄.
+  const remainingApps = await AuctionApplication.find({}).select('publishedProduct').lean();
+  const linkedIds = new Set(remainingApps.map((a) => String(a.publishedProduct)).filter(Boolean));
+  const orphans = await Product.find({ sale_type: 'auction' }).select('_id sku').lean();
+  const orphanIds = orphans.filter((p) => !linkedIds.has(String(p._id))).map((p) => p._id);
+  if (orphanIds.length) {
+    await Product.deleteMany({ _id: { $in: orphanIds } });
+    console.log(`Cleared ${orphanIds.length} orphan auction Products (not linked to any application).`);
+  }
 
   let liveCount = 0, upcomingCount = 0;
   for (const a of MOCK_AUCTIONS) {
