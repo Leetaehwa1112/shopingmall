@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { CATEGORIES } from '@/api/cards'
 import { normalizeProduct } from '@/api/normalize'
 import api from '@/api/axios'
@@ -9,6 +9,7 @@ import Icon from '@/components/common/Icon'
 import Sparkles from '@/components/common/Sparkles'
 import Eyebrow from '@/components/common/Eyebrow'
 import useToastStore from '@/store/toastStore'
+import useAuthStore from '@/store/authStore'
 import { formatKRW, formatKRWFull, timeUntil } from '@/utils/format'
 
 const PAGE_SIZE = 8
@@ -393,6 +394,9 @@ function DigitClock({ t, tone = 'urgent' }) {
 function AuctionLivePage({ lots, loading, error }) {
   const [showAll, setShowAll] = useState(false)
   const [featuredId, setFeaturedId] = useState(null)
+  const [bidLot, setBidLot] = useState(null)
+  // BidFeed로 "내 입찰" 시스템 메시지를 흘려보내는 가벼운 이벤트 채널
+  const [userBidEvent, setUserBidEvent] = useState(null)
 
   // 마감 임박 LOT부터 정렬 — 메인 화면에 올라가는 LOT 선정 기준
   const sorted = useMemo(() => {
@@ -403,6 +407,8 @@ function AuctionLivePage({ lots, loading, error }) {
     if (featuredId) return sorted.find((c) => c.id === featuredId) || sorted[0]
     return sorted[0]
   }, [sorted, featuredId])
+
+  const openBid = (lot) => setBidLot(lot)
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 pb-28 lg:pb-10">
@@ -415,7 +421,7 @@ function AuctionLivePage({ lots, loading, error }) {
 
       {/* === 2. 라이브 방송 플레이어 — 페이지 최대 비주얼 === */}
       {!error && !loading && featured && (
-        <BroadcastStream lot={featured} liveCount={sorted.length} />
+        <BroadcastStream lot={featured} liveCount={sorted.length} onBid={() => openBid(featured)} />
       )}
 
       {/* === 3. 상태별 본문 === */}
@@ -427,19 +433,20 @@ function AuctionLivePage({ lots, loading, error }) {
         <EmptyState />
       ) : (
         <div className="mt-5 grid lg:grid-cols-[1fr_320px] gap-5">
-          <FeaturedLot lot={featured} />
+          <FeaturedLot lot={featured} onBid={() => openBid(featured)} />
           <LiveSidebar
             featured={featured}
             upcoming={sorted.filter((c) => c.id !== featured.id).slice(0, 4)}
             onPickLot={setFeaturedId}
             onOpenAll={() => setShowAll(true)}
+            userBidEvent={userBidEvent}
           />
         </div>
       )}
 
-      {/* === 3. 모바일 sticky CTA — 항상 시야 === */}
+      {/* === 4. 모바일 sticky CTA — 항상 시야 === */}
       {featured && !loading && !error && (
-        <MobileStickyCta lot={featured} />
+        <MobileStickyCta lot={featured} onBid={() => openBid(featured)} />
       )}
 
       {showAll && (
@@ -448,6 +455,17 @@ function AuctionLivePage({ lots, loading, error }) {
           featuredId={featured?.id}
           onClose={() => setShowAll(false)}
           onPickLot={(id) => { setFeaturedId(id); setShowAll(false) }}
+        />
+      )}
+
+      {/* === 5. 입찰 시트 (in-place) === */}
+      {bidLot && (
+        <QuickBidSheet
+          lot={bidLot}
+          onClose={() => setBidLot(null)}
+          onSuccess={(amt) =>
+            setUserBidEvent({ id: `me-${Date.now()}`, amount: amt, lotId: bidLot.id, t: Date.now() })
+          }
         />
       )}
 
@@ -550,7 +568,7 @@ function CounterPokeballs({ liveCount }) {
 //  - 하단 티커 : 다음 최소가 · 입찰 수 · 시청자 마키
 // ═══════════════════════════════════════════════════════════════
 
-function BroadcastStream({ lot, liveCount }) {
+function BroadcastStream({ lot, liveCount, onBid }) {
   const [, setNow] = useState(Date.now())
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000)
@@ -836,6 +854,28 @@ function BroadcastStream({ lot, liveCount }) {
                   {clockText}
                 </div>
               </div>
+
+              {/* 방송 화면 안 큰 입찰 CTA (현장 즉시 입찰) */}
+              {onBid && (
+                <button
+                  type="button"
+                  onClick={onBid}
+                  className="focus-ring relative overflow-hidden inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-md font-extrabold text-sm sm:text-base border-2 border-ink shadow-[0_3px_0_#1a1a1a] hover:-translate-y-0.5 hover:shadow-[0_4px_0_#1a1a1a] active:translate-y-0 active:shadow-[0_1px_0_#1a1a1a] transition-all bg-fire text-paper"
+                  aria-label="지금 입찰 참여하기"
+                >
+                  <Icon name="gavel" size={14} strokeWidth={2.6} />
+                  지금 입찰
+                  <span
+                    aria-hidden="true"
+                    className="absolute top-0 left-0 h-full w-1/3 pointer-events-none"
+                    style={{
+                      background:
+                        'linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)',
+                      animation: 'shine-sweep 3.4s ease-in-out infinite',
+                    }}
+                  />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1076,9 +1116,7 @@ function HealingStage({ img, alt, viewers, lotId }) {
 // ═══════════════════════════════════════════════════════════════
 // 2) Featured LOT — 정보 위계 재배치 (시간 → 가격 → CTA)
 // ═══════════════════════════════════════════════════════════════
-function FeaturedLot({ lot }) {
-  const navigate = useNavigate()
-
+function FeaturedLot({ lot, onBid }) {
   // 시청자 카운트 — 라이브 분위기 (실제 소켓 없이도)
   const seedViewers = useMemo(
     () => 80 + ((lot.id?.charCodeAt?.(0) || 7) * 13) % 240,
@@ -1118,7 +1156,7 @@ function FeaturedLot({ lot }) {
           current={current}
           nextMin={nextMin}
           viewers={viewers}
-          onBid={() => navigate(`/product/${lot.id}`)}
+          onBid={onBid}
         />
       </div>
     </section>
@@ -1319,7 +1357,7 @@ function TrustItem({ icon, title, sub, tone = 'grass' }) {
 //    - 위: 다음 LOT (카운터 위 포켓볼 줄지어 대기)
 //    - 아래: 입찰 피드 (빌의 PC CRT 모니터 톤)
 // ═══════════════════════════════════════════════════════════════
-function LiveSidebar({ featured, upcoming, onPickLot, onOpenAll }) {
+function LiveSidebar({ featured, upcoming, onPickLot, onOpenAll, userBidEvent }) {
   return (
     <aside className="flex flex-col gap-4 lg:max-h-[calc(100vh-9rem)] lg:overflow-hidden lg:sticky lg:top-24">
       {/* 다음 LOT — 카운터 줄 */}
@@ -1390,7 +1428,7 @@ function LiveSidebar({ featured, upcoming, onPickLot, onOpenAll }) {
       </div>
 
       {/* 입찰 피드 — 실시간 입찰 모니터 */}
-      <BidFeed lot={featured} />
+      <BidFeed lot={featured} userBidEvent={userBidEvent} />
     </aside>
   )
 }
@@ -1404,7 +1442,7 @@ const FEED_NAMES = [
 ]
 const FEED_REACT = ['🔥', '⚡', '✨', '👀', '💥', '⭐', '🎯', '🛎️']
 
-function BidFeed({ lot }) {
+function BidFeed({ lot, userBidEvent }) {
   const seedRef = useRef(Math.max(1000, lot.currentBid || 0))
   const [items, setItems] = useState(() => [
     { id: 'sys', sys: true, msg: `시작가 ${formatKRWFull(seedRef.current)}부터 입찰을 받아요`, t: Date.now() },
@@ -1414,6 +1452,22 @@ function BidFeed({ lot }) {
     seedRef.current = Math.max(1000, lot.currentBid || 0)
     setItems([{ id: `sys-${lot.id}`, sys: true, msg: `${lot.nameKo || lot.name} 라이브 시작!`, t: Date.now() }])
   }, [lot.id, lot.currentBid, lot.nameKo, lot.name])
+
+  // 내 입찰 — 모달에서 성공 콜백 → 피드에 강조 메시지
+  useEffect(() => {
+    if (!userBidEvent || userBidEvent.lotId !== lot.id) return
+    seedRef.current = Math.max(seedRef.current, userBidEvent.amount)
+    setItems((arr) => [
+      ...arr.slice(-30),
+      {
+        id: userBidEvent.id,
+        kind: 'me',
+        who: '나의 입찰',
+        amt: userBidEvent.amount,
+        t: userBidEvent.t,
+      },
+    ])
+  }, [userBidEvent, lot.id])
 
   useEffect(() => {
     const tick = () => {
@@ -1502,6 +1556,36 @@ function BidFeed({ lot }) {
 }
 
 function FeedRow({ item }) {
+  if (item.kind === 'me') {
+    return (
+      <div
+        className="relative z-10 flex items-center justify-between gap-2 px-2.5 py-2 rounded-md border-2 border-electric"
+        style={{
+          animation: 'bid-pop 0.3s ease-out',
+          background:
+            'linear-gradient(90deg, rgba(250,204,21,0.18), rgba(250,204,21,0.05))',
+          boxShadow: '0 0 0 1px rgba(250,204,21,0.35), 0 0 12px rgba(250,204,21,0.35)',
+        }}
+      >
+        <span className="inline-flex items-center gap-1.5 min-w-0">
+          <span
+            className="w-5 h-5 rounded-full grid place-items-center font-mono text-[9px] font-extrabold bg-electric text-ink border-2 border-ink shrink-0"
+            aria-hidden="true"
+          >
+            ★
+          </span>
+          <span className="text-[12px] font-extrabold text-electric truncate"
+            style={{ textShadow: '0 0 6px rgba(250,204,21,0.55)' }}>
+            {item.who}
+          </span>
+        </span>
+        <span className="font-mono text-[12.5px] font-extrabold text-electric tabular-nums"
+          style={{ textShadow: '0 0 6px rgba(250,204,21,0.55)' }}>
+          {formatKRWFull(item.amt)}
+        </span>
+      </div>
+    )
+  }
   if (item.sys) {
     return (
       <div
@@ -1556,8 +1640,7 @@ function FeedRow({ item }) {
 // ═══════════════════════════════════════════════════════════════
 // 모바일 sticky CTA — 회복기 톤 (포켓볼 마크 + 광택 스윕)
 // ═══════════════════════════════════════════════════════════════
-function MobileStickyCta({ lot }) {
-  const navigate = useNavigate()
+function MobileStickyCta({ lot, onBid }) {
   const current = lot.currentBid || lot.startingBid || 0
   return (
     <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 px-3 pb-3 pt-2 bg-paper/95 backdrop-blur-sm border-t-2 border-ink">
@@ -1574,7 +1657,7 @@ function MobileStickyCta({ lot }) {
         </div>
         <button
           type="button"
-          onClick={() => navigate(`/product/${lot.id}`)}
+          onClick={onBid}
           className="focus-ring relative overflow-hidden inline-flex items-center gap-2 px-4 py-3 rounded-full font-extrabold text-sm border-2 border-ink shadow-[0_3px_0_#1a1a1a] active:translate-y-0.5 active:shadow-[0_1px_0_#1a1a1a] transition-all bg-fire text-paper shrink-0"
           aria-label="입찰 참여하기"
         >
@@ -1836,5 +1919,328 @@ function ModalLotRow({ lot, index, active, onPick }) {
         </span>
       </span>
     </button>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// QuickBidSheet — 페이지를 떠나지 않고 즉시 입찰
+// ───────────────────────────────────────────────────────────────
+//  - POST /products/:id/bid  (ProductDetailPage 와 동일한 엔드포인트)
+//  - 인증 안 됐으면 토스트 + /login 으로 안내
+//  - 빠른 증액 칩: 다음 최소 / +100만 / +500만 / 최대(즉시낙찰)
+//  - 성공 시 React Query 캐시 즉시 갱신 → 방송 화면·전광판·CTA 가 갱신
+//  - onSuccess 콜백으로 BidFeed에 "나의 입찰" 시스템 메시지 푸시
+// ═══════════════════════════════════════════════════════════════
+function QuickBidSheet({ lot, onClose, onSuccess }) {
+  const navigate = useNavigate()
+  const { isAuthenticated } = useAuthStore()
+  const toast = useToastStore((s) => s.push)
+  const queryClient = useQueryClient()
+
+  // 입찰 규칙 (ProductDetailPage 와 동일)
+  const roundUpToMan = (n) => Math.ceil(n / 10000) * 10000
+  const baseline = lot.currentBid || lot.startPrice || lot.startingBid || 0
+  const minBid = roundUpToMan(baseline + 1000000)
+  const maxBid = lot.buyNowPrice || (lot.startPrice || lot.price || 0) * 5 || minBid * 10
+
+  const [amount, setAmount] = useState(String(minBid))
+  const [submitting, setSubmitting] = useState(false)
+
+  // ESC + body scroll lock
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape' && !submitting) onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prev
+    }
+  }, [onClose, submitting])
+
+  const setQuick = (target) => setAmount(String(target))
+  const parsed = parseInt(String(amount).replace(/[^0-9]/g, '')) || 0
+  const isValid = parsed >= minBid && parsed <= maxBid
+  const wouldInstantWin = lot.buyNowPrice && parsed >= lot.buyNowPrice
+
+  const submit = async () => {
+    if (!isAuthenticated) {
+      toast({
+        type: 'error',
+        title: '로그인이 필요해요',
+        message: '입찰하려면 먼저 로그인해주세요.',
+      })
+      onClose()
+      navigate('/login')
+      return
+    }
+    if (!parsed || parsed < minBid) {
+      toast({
+        type: 'error',
+        title: '입찰 실패',
+        message: `최소 ${formatKRWFull(minBid)} 이상 입찰해주세요`,
+      })
+      return
+    }
+    if (parsed > maxBid) {
+      toast({
+        type: 'error',
+        title: '입찰 한도 초과',
+        message: `최대 ${formatKRWFull(maxBid)} 까지 입찰 가능해요`,
+      })
+      return
+    }
+    if (parsed >= baseline * 2 && baseline > 0) {
+      const ok = window.confirm(
+        `정말 ${formatKRWFull(parsed)} 으로 입찰하시겠어요?\n\n` +
+          `현재가(${formatKRWFull(baseline)})의 ${(parsed / baseline).toFixed(1)}배입니다.\n` +
+          `입찰은 취소할 수 없으니 한 번 더 확인해주세요.`
+      )
+      if (!ok) return
+    }
+    if (submitting) return
+    setSubmitting(true)
+    try {
+      const { data } = await api.post(`/products/${lot.id}/bid`, { amount: parsed })
+      const { instantWin, currentBid, bidCount, bidHistory } = data.data
+      // React Query 캐시 즉시 갱신 — 방송/전광판/CTA 가 한번에 반영
+      queryClient.setQueryData(['products', 'auction'], (old) => {
+        if (!Array.isArray(old)) return old
+        return old.map((p) =>
+          (p.id || p._id) === (lot.id || lot._id)
+            ? {
+                ...p,
+                currentBid,
+                bidCount,
+                bidHistory,
+                ...(instantWin
+                  ? { status: 'sold_out', endsAt: new Date().toISOString() }
+                  : {}),
+              }
+            : p
+        )
+      })
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+      toast({
+        type: 'success',
+        title: instantWin ? '🎉 즉시낙찰 성공!' : '두근두근! 입찰 완료',
+        message: `${formatKRWFull(parsed)} ${instantWin ? '으로 낙찰됨' : '입찰됨'}`,
+      })
+      onSuccess?.(parsed)
+      onClose()
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        '입찰에 실패했어요. 잠시 후 다시 시도해주세요.'
+      toast({
+        type: 'error',
+        title: '입찰 실패',
+        message: Array.isArray(msg) ? msg[0] : msg,
+      })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const img = lot.images?.[0] || lot.image
+  const t = lot.endsAt ? timeUntil(lot.endsAt) : null
+  const quickOptions = [
+    { label: '다음 최소', value: minBid, primary: true },
+    { label: '+100만', value: roundUpToMan(parsed + 1000000 || minBid + 1000000) },
+    { label: '+500만', value: roundUpToMan(parsed + 5000000 || minBid + 5000000) },
+    ...(lot.buyNowPrice
+      ? [{ label: `즉시낙찰 ${formatKRW(lot.buyNowPrice)}`, value: lot.buyNowPrice, gold: true }]
+      : []),
+  ].filter((o) => o.value <= maxBid)
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="입찰 참여"
+      className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center p-0 sm:p-6"
+    >
+      <button
+        type="button"
+        aria-label="닫기"
+        onClick={() => !submitting && onClose()}
+        className="absolute inset-0 bg-ink/65 backdrop-blur-sm"
+      />
+      <div
+        className="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border-2 border-ink bg-paper shadow-[0_8px_0_#1a1a1a] overflow-hidden"
+        style={{ animation: 'modal-in 0.22s ease-out' }}
+      >
+        {/* 헤더 — 빨간 띠 */}
+        <div className="bg-fire px-4 sm:px-5 py-3 flex items-center justify-between border-b-2 border-ink">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <PokeballMark size={28} />
+            <div className="min-w-0">
+              <div className="font-mono text-[9.5px] font-extrabold uppercase tracking-[0.22em] text-paper/85">
+                LIVE BID · 즉시 입찰
+              </div>
+              <div className="font-display text-sm sm:text-base font-extrabold text-paper truncate">
+                {lot.nameKo || lot.name}
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => !submitting && onClose()}
+            disabled={submitting}
+            aria-label="닫기"
+            className="focus-ring w-8 h-8 rounded-full bg-paper border-2 border-ink shadow-[0_2px_0_rgba(0,0,0,0.35)] hover:-translate-y-0.5 disabled:opacity-50 transition-all inline-flex items-center justify-center shrink-0"
+          >
+            <Icon name="close" size={12} strokeWidth={2.8} className="text-ink" />
+          </button>
+        </div>
+
+        {/* 본문 */}
+        <div className="px-4 sm:px-5 py-4 sm:py-5 flex flex-col gap-4 bg-paper">
+          {/* 카드 요약 — 썸네일 + 메타 */}
+          <div className="flex items-center gap-3">
+            <div className="w-14 h-18 rounded-md bg-bone-2 border-2 border-ink overflow-hidden shrink-0">
+              {img && <img src={img} alt="" className="w-full h-full object-cover" />}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <SerialTag>
+                  LOT-{String(lot.id || '').slice(-4).toUpperCase() || '0000'}
+                </SerialTag>
+                {lot.grade?.grade != null && (
+                  <span className="px-1.5 py-0.5 rounded bg-electric text-ink font-mono text-[10px] font-extrabold border-2 border-ink">
+                    {lot.grade.cert || 'PSA'} · {lot.grade.grade}
+                  </span>
+                )}
+              </div>
+              <div className="mt-1 flex items-baseline gap-2 flex-wrap">
+                <span className="font-mono text-[10px] font-bold text-mute uppercase tracking-wider">현재가</span>
+                <span className="font-display text-lg font-extrabold text-ink tabular-nums leading-none">
+                  {formatKRWFull(baseline)}
+                </span>
+                {t && !t.ended && (
+                  <span className="font-mono text-[10px] font-extrabold text-fire tabular-nums">
+                    ⏱ {t.d > 0 ? `${t.d}D` : `${String(t.h).padStart(2, '0')}:${String(t.m).padStart(2, '0')}`}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 입찰 금액 입력 */}
+          <div>
+            <label
+              htmlFor="bid-amount"
+              className="text-[10.5px] font-mono font-extrabold uppercase tracking-[0.18em] text-mute inline-flex items-center gap-1.5"
+            >
+              <LiveDot size={4} />
+              나의 입찰가
+            </label>
+            <div className="mt-1.5 relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 font-display text-lg font-extrabold text-mute pointer-events-none">
+                ₩
+              </span>
+              <input
+                id="bid-amount"
+                type="text"
+                inputMode="numeric"
+                value={
+                  parsed
+                    ? parsed.toLocaleString()
+                    : amount.replace(/[^0-9]/g, '')
+                }
+                onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, ''))}
+                disabled={submitting}
+                className={`focus-ring w-full pl-9 pr-3 py-3 rounded-lg border-2 bg-paper font-display text-xl sm:text-2xl font-extrabold text-ink tabular-nums tracking-tight outline-none transition-colors ${
+                  isValid ? 'border-ink' : 'border-rose'
+                }`}
+                aria-invalid={!isValid}
+                aria-describedby="bid-help"
+              />
+            </div>
+            <div
+              id="bid-help"
+              className={`mt-1.5 text-[11px] font-bold ${
+                isValid ? 'text-mute' : 'text-rose'
+              }`}
+            >
+              최소 <span className="font-mono font-extrabold text-grass">{formatKRWFull(minBid)}</span>
+              {' · '}최대 <span className="font-mono font-extrabold text-ink">{formatKRWFull(maxBid)}</span>
+              {wouldInstantWin && (
+                <span className="ml-2 text-fire">🎯 즉시낙찰 가격이에요</span>
+              )}
+            </div>
+          </div>
+
+          {/* 빠른 증액 칩 */}
+          <div className="flex flex-wrap gap-1.5">
+            {quickOptions.map((o) => (
+              <button
+                key={o.label}
+                type="button"
+                onClick={() => setQuick(o.value)}
+                disabled={submitting}
+                className={`focus-ring inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-extrabold border-2 transition-all shadow-[0_2px_0_#1a1a1a] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 ${
+                  o.gold
+                    ? 'bg-electric text-ink border-ink'
+                    : o.primary
+                    ? 'bg-fire text-paper border-ink'
+                    : 'bg-paper text-ink border-ink'
+                }`}
+              >
+                {o.label}
+                {!o.label.startsWith('즉시') && (
+                  <span className="font-mono opacity-80 tabular-nums">
+                    · {formatKRW(o.value)}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* 제출 */}
+          <button
+            type="button"
+            onClick={submit}
+            disabled={submitting || !isValid}
+            className="focus-ring relative overflow-hidden w-full inline-flex items-center justify-center gap-2 px-5 py-4 rounded-2xl font-extrabold text-base sm:text-lg border-2 border-ink shadow-[0_5px_0_#1a1a1a] hover:-translate-y-1 hover:shadow-[0_6px_0_#1a1a1a] active:translate-y-0 active:shadow-[0_2px_0_#1a1a1a] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-[0_5px_0_#1a1a1a] transition-all bg-fire text-paper"
+          >
+            {submitting ? (
+              <>
+                <span
+                  className="inline-block w-4 h-4 rounded-full border-2 border-paper border-t-transparent"
+                  style={{ animation: 'spin 0.8s linear infinite' }}
+                  aria-hidden="true"
+                />
+                입찰 중...
+              </>
+            ) : (
+              <>
+                <Icon name="gavel" size={18} strokeWidth={2.6} />
+                {wouldInstantWin ? '즉시낙찰 받기' : `${formatKRW(parsed)} 입찰하기`}
+              </>
+            )}
+            {!submitting && (
+              <span
+                aria-hidden="true"
+                className="absolute top-0 left-0 h-full w-1/3 pointer-events-none"
+                style={{
+                  background:
+                    'linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)',
+                  animation: 'shine-sweep 3.4s ease-in-out infinite',
+                }}
+              />
+            )}
+          </button>
+
+          <p className="text-[10.5px] text-mute font-medium leading-relaxed text-center">
+            입찰은 취소할 수 없어요. 낙찰 시 결제는 안전한 에스크로로 보호돼요.
+          </p>
+        </div>
+
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    </div>
   )
 }
