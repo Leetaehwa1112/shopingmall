@@ -373,6 +373,13 @@ function AuctionLivePage({ lots, loading, error }) {
         <BroadcastStream lot={liveLot} onBid={() => openBid(liveLot)} />
       )}
 
+      {/* 모바일 전용 — 방송 패널 바로 아래 입찰 로그 */}
+      {!error && !loading && liveLot && (
+        <div className="lg:hidden mt-4">
+          <BidFeed lot={liveLot} userBidEvent={userBidEvent} />
+        </div>
+      )}
+
       {/* === 3. 상태별 본문 === */}
       {error ? (
         <ErrorState />
@@ -1347,8 +1354,10 @@ function LiveSidebar({ featured, upcoming, onOpenAll, userBidEvent }) {
         </button>
       </div>
 
-      {/* 입찰 피드 — 실시간 입찰 모니터 */}
-      <BidFeed lot={featured} userBidEvent={userBidEvent} />
+      {/* 입찰 피드 — 데스크탑만 (모바일은 방송 패널 바로 아래에 표시) */}
+      <div className="hidden lg:block">
+        <BidFeed lot={featured} userBidEvent={userBidEvent} />
+      </div>
     </aside>
   )
 }
