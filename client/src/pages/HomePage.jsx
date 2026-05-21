@@ -54,12 +54,20 @@ export default function HomePage() {
 
   // 파생값 memoize — auctions 참조 변경 시에만 재계산.
   // 정책: 동시 LIVE 1건. 나머지는 'upcoming' (시작 전 예고).
+  // "사실상 LIVE" 보정: 서버 status가 'upcoming'이어도 startsAt이 이미 지나갔다면
+  // 화면 상으로는 LIVE로 취급 — auto-promote 스케줄러 부재를 클라이언트에서 보완.
   const { liveAuctions, upcomingAuctions, FEATURED_LIVE, TOP_LOT } = useMemo(() => {
-    const live = auctions.filter(
-      (a) => a.status === 'active' && (!a.endsAt || a.endsAt - Date.now() > 0)
-    )
+    const now = Date.now()
+    const isEffectiveLive = (a) => {
+      const notEnded = !a.endsAt || a.endsAt - now > 0
+      const started = !a.startsAt || a.startsAt <= now
+      return notEnded && started && (a.status === 'active' || a.status === 'upcoming')
+    }
+    const live = auctions
+      .filter(isEffectiveLive)
+      .sort((a, b) => (a.lotOrder || 0) - (b.lotOrder || 0))
     const upcoming = auctions
-      .filter((a) => a.status === 'upcoming')
+      .filter((a) => a.status === 'upcoming' && a.startsAt && a.startsAt > now)
       .sort((a, b) => (a.lotOrder || 0) - (b.lotOrder || 0) || (a.startsAt || Infinity) - (b.startsAt || Infinity))
     // featured = 현재 무대 위 LOT (LIVE 1건). LIVE가 없으면 다음 예정 LOT을 카드로 보여줌.
     const featured = live[0] || null
@@ -181,10 +189,15 @@ export default function HomePage() {
           <div className="order-1 lg:order-2">
             {loading ? (
               <HeroLoader />
-            ) : FEATURED_LIVE ? (
-              <FeaturedLivePanel card={FEATURED_LIVE} nextLot={upcomingAuctions[0]} />
-            ) : upcomingAuctions[0] ? (
-              <NextAuctionPanel card={upcomingAuctions[0]} queueCount={upcomingAuctions.length} />
+            ) : TOP_LOT ? (
+              // 현재 무대 위 LOT — LIVE면 그대로, LIVE 없으면 다음 예정 LOT.
+              // 어느 쪽이든 동일한 회전 카드 형태로 노출. isLive prop으로 라벨/카운트다운 분기.
+              <FeaturedLivePanel
+                card={TOP_LOT}
+                isLive={!!FEATURED_LIVE}
+                nextLot={FEATURED_LIVE ? upcomingAuctions[0] : upcomingAuctions[1]}
+                queueCount={upcomingAuctions.length}
+              />
             ) : buyNow[0] ? (
               <FeaturedBuyNowPanel card={buyNow[0]} />
             ) : (
@@ -466,9 +479,8 @@ function useIsNarrow() {
   return narrow
 }
 
-function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
-  const lotEnded = card.endsAt && timeUntil(card.endsAt).ended
-  // 카드 호버 시 우하단 미니방송 토글
+function FeaturedLivePanel({ card, compact = false, nextLot = null, isLive = true, queueCount = 0 }) {
+  // 카드 호버 시 우하단 미니방송 토글 — LIVE 전용
   const [broadcastVisible, setBroadcastVisible] = useState(false)
   const isNarrow = useIsNarrow()
   // 모바일 viewport(<640)에선 카드 lg(300x420) 너무 커서 3D 회전 시 좌우 삐져나옴 → md(220x308)
@@ -484,19 +496,19 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
 
   // compact 분기 제거 — 모바일도 동일한 회전 카드 사용 (미니방송은 lg+ 에서만 표시).
 
-  // 데스크탑 — "옥션 카탈로그" 무드. 시네마틱 회전 + 미세 부유 + 사선 축.
-  // 인터랙션:
-  //   - 카드 클릭 → /auctions 경매장으로 바로 진입
-  //   - 카드 호버 → 우하단 MiniBroadcastPlayer (라이브 미니방송) 등장
-  //   - 호버 해제 → 미니방송 사라짐 (visible 토글)
-  // 카드 데이터는 FEATURED_LIVE — 서버의 status=active 첫 경매 (현재 실제 LIVE 진행 중인 카드)
-  const t = card.endsAt ? timeUntil(card.endsAt) : null
+  // "옥션 카탈로그" 무드 — 시네마틱 회전 + 미세 부유 + 사선 축.
+  //   - 카드 클릭 → /auctions 경매장 진입
+  //   - LIVE면 카드 호버 → 우하단 MiniBroadcastPlayer 토글
+  //   - UPCOMING(다음 차례)면 회전 모션은 유지하되 미니방송 비노출 + 시작 카운트다운으로 라벨링
+  // isLive=true → endsAt까지, isLive=false → startsAt까지 카운트다운
+  const targetTime = isLive ? card.endsAt : card.startsAt
+  const t = targetTime ? timeUntil(targetTime) : null
   const isCritical = t && !t.ended && t.totalMs < 1000 * 60 * 10
   const isUrgent = t && !t.ended && t.totalMs < 1000 * 60 * 60
   const clockText = !t
     ? '상시 진행'
     : t.ended
-    ? '방송 종료'
+    ? (isLive ? '방송 종료' : '곧 시작')
     : `${t.d > 0 ? `${t.d}D ` : ''}${String(t.h).padStart(2, '0')}:${String(t.m).padStart(2, '0')}:${String(t.s).padStart(2, '0')}`
 
   return (
@@ -504,9 +516,9 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
       <div
         className="inline-block group/card oscar-stage"
         role="img"
-        aria-label={`현재 LIVE 경매 카드: ${card.nameKo}`}
-        onMouseEnter={() => setBroadcastVisible(true)}
-        onMouseLeave={() => setBroadcastVisible(false)}
+        aria-label={isLive ? `현재 LIVE 경매 카드: ${card.nameKo}` : `다음 LOT 예고 카드: ${card.nameKo}`}
+        onMouseEnter={() => isLive && setBroadcastVisible(true)}
+        onMouseLeave={() => isLive && setBroadcastVisible(false)}
         style={{
           perspective: '1800px',
           filter: 'drop-shadow(0 24px 40px rgba(0,0,0,0.38)) drop-shadow(0 10px 16px rgba(220,38,38,0.22))',
@@ -533,16 +545,19 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
         </div>
       </div>
 
-      {/* 카드 호버 시 우하단에 라이브 미니방송 */}
-      <MiniBroadcastPlayer
-        visible={broadcastVisible}
-        lot={card}
-        viewers={viewers}
-        current={card.currentBid || card.startPrice}
-        clockText={clockText}
-        isCritical={isCritical}
-        isUrgent={isUrgent}
-      />
+      {/* 카드 호버 시 우하단에 라이브 미니방송 — LIVE 한정.
+          UPCOMING(다음 차례 LOT)은 미니방송 비노출 (아직 방송 시작 전이므로) */}
+      {isLive && (
+        <MiniBroadcastPlayer
+          visible={broadcastVisible}
+          lot={card}
+          viewers={viewers}
+          current={card.currentBid || card.startPrice}
+          clockText={clockText}
+          isCritical={isCritical}
+          isUrgent={isUrgent}
+        />
+      )}
       <style>{`
         @keyframes oscar-spin-cinema {
           0%, 6%    { transform: rotateY(0deg); }       /* hold front */
@@ -581,64 +596,6 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
         .oscar-front { transform: rotateY(0deg); }
         .oscar-back  { transform: rotateY(180deg); }
       `}</style>
-    </div>
-  )
-}
-
-// LIVE가 없을 때만 노출되는 다음 경매 카운트다운 패널
-function NextAuctionPanel({ card, queueCount }) {
-  return (
-    <div className="rounded-2xl border-2 border-ink bg-paper overflow-hidden shadow-[0_4px_0_#1a1a1a]">
-      <div className="px-4 py-3 border-b-2 border-ink bg-bone-2 flex items-center justify-between">
-        <span className="inline-flex items-center gap-2">
-          <span className="led led-yellow led-pulse" style={{ width: 8, height: 8 }} aria-hidden="true" />
-          <span className="font-display font-extrabold text-ink text-base">곧 시작</span>
-          <span className="text-[10px] font-bold text-mute uppercase tracking-widest">· LOT #{card.lotOrder || '-'}</span>
-        </span>
-        <span className="text-[10px] font-bold text-mute">{queueCount}건 대기열</span>
-      </div>
-      <Link to={`/products/${card.id}`} className="block group" aria-label={`예정 경매: ${card.nameKo}`}>
-        <div className="flex gap-4 p-5">
-          <div className="shrink-0 holo-sheen rounded-lg opacity-90">
-            <PokeCard card={card} size="sm" />
-          </div>
-          <div className="min-w-0 flex flex-col justify-between flex-1">
-            <div>
-              <h2 className="font-display text-xl sm:text-2xl font-bold text-ink leading-tight mb-1 group-hover:text-dex transition-colors">
-                {card.nameKo}
-              </h2>
-              <div className="text-xs text-mute mb-2 truncate font-medium">
-                {card.name} · {card.setShort || card.set} · {card.year}
-              </div>
-              <GradeBadge grade={card.grade} size="sm" />
-            </div>
-            <div className="mt-3">
-              <div className="text-[10px] font-bold tracking-[0.18em] uppercase text-mute">시작가</div>
-              <div className="font-display text-2xl font-bold text-ink leading-none tabular-nums">
-                {formatKRW(card.startPrice)}
-              </div>
-            </div>
-          </div>
-        </div>
-        {card.startsAt && (
-          <div className="px-5 pb-3">
-            <div className="rounded-lg bg-ink text-white px-3 py-2 flex items-center justify-between gap-2">
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-electric">
-                <Icon name="clock" size={11} strokeWidth={2.6} aria-hidden="true" />
-                시작까지
-              </span>
-              <Countdown endsAt={card.startsAt} size="sm" label={false} />
-            </div>
-          </div>
-        )}
-      </Link>
-      <div className="px-5 pb-5">
-        <Link to="/auctions" className="block" aria-label="경매 일정 전체 보기">
-          <Button variant="pop" size="md" className="w-full">
-            경매 일정 전체 보기 <Icon name="arrow" size={13} strokeWidth={2.5} />
-          </Button>
-        </Link>
-      </div>
     </div>
   )
 }
