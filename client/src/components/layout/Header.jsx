@@ -2,6 +2,8 @@ import { useRef, useState, useEffect } from 'react'
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import useAuthStore from '@/store/authStore'
 import useCartStore from '@/store/cartStore'
+import useLocaleStore from '@/store/localeStore'
+import { useT } from '@/i18n'
 import Pokeball from '@/components/common/Pokeball'
 import Icon from '@/components/common/Icon'
 
@@ -13,6 +15,11 @@ export default function Header() {
   const user = useAuthStore((s) => s.user)
   const logout = useAuthStore((s) => s.logout)
   const cartCount = useCartStore((s) => (s.items || []).reduce((sum, i) => sum + (i.qty || 1), 0))
+  const locale = useLocaleStore((s) => s.locale)
+  const setLocale = useLocaleStore((s) => s.setLocale)
+  const t = useT()
+  // <html lang> 동기화 — 새 locale에 맞춰 즉시 갱신 (SEO/접근성)
+  useEffect(() => { document.documentElement.lang = locale }, [locale])
   const navigate = useNavigate()
   const loc = useLocation()
   const [searchQuery, setSearchQuery] = useState('')
@@ -46,22 +53,42 @@ export default function Header() {
           <div className="flex gap-4">
             <span className="inline-flex items-center gap-1.5">
               <span className="led led-yellow led-pulse" style={{ width: 6, height: 6 }} />
-              <span className="font-bold">두근두근 LIVE 경매</span>
+              <span className="font-bold">{t('header.ribbon.live')}</span>
             </span>
             <span className="hidden sm:inline-flex items-center gap-1.5 text-white/70">
               <span className="led led-blue" style={{ width: 6, height: 6 }} />
-              PSA·BGS·CGC 인증
+              {t('header.ribbon.cert')}
             </span>
             <span className="hidden md:inline-flex items-center gap-1.5 text-white/70">
               <span className="led led-green" style={{ width: 6, height: 6 }} />
-              안심 배송 + 보험
+              {t('header.ribbon.delivery')}
             </span>
           </div>
           <div className="hidden md:flex gap-3 items-center">
             <span className="font-mono text-electric font-bold">1588-0420</span>
             <span className="text-white/30">|</span>
-            <span className="text-white/50">EN</span>
-            <span>KR</span>
+            <button
+              type="button"
+              onClick={() => setLocale('en')}
+              aria-label="Switch to English"
+              aria-pressed={locale === 'en'}
+              className={`font-bold tracking-wide transition-colors ${
+                locale === 'en' ? 'text-electric' : 'text-white/50 hover:text-white'
+              }`}
+            >
+              EN
+            </button>
+            <button
+              type="button"
+              onClick={() => setLocale('ko')}
+              aria-label="한국어로 보기"
+              aria-pressed={locale === 'ko'}
+              className={`font-bold tracking-wide transition-colors ${
+                locale === 'ko' ? 'text-electric' : 'text-white/50 hover:text-white'
+              }`}
+            >
+              KR
+            </button>
           </div>
         </div>
       </div>
@@ -84,7 +111,7 @@ export default function Header() {
             <div className="font-display font-bold text-[26px] tracking-tight text-ink">
               Poké<span className="text-dex">vault</span>
             </div>
-            <div className="pixel-label text-mute mt-1.5">트레이너 옥션</div>
+            <div className="pixel-label text-mute mt-1.5">{t('header.logo.sub')}</div>
           </div>
         </Link>
 
@@ -98,8 +125,8 @@ export default function Header() {
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="어떤 카드를 찾고 계세요?"
-              aria-label="카드 검색"
+              placeholder={t('nav.search.placeholder')}
+              aria-label={t('nav.search.placeholder')}
               className="w-full h-10 pl-11 pr-3 rounded-full bg-bone-2 border-2 border-transparent text-sm font-bold text-ink placeholder:text-mute placeholder:font-medium focus:bg-paper focus:border-ink outline-none transition-all"
             />
           </label>
@@ -109,13 +136,13 @@ export default function Header() {
           <NavLink to="/auctions" className={linkCls}>
             <span className="inline-flex items-center gap-1.5">
               <span className="led led-red led-pulse" style={{ width: 6, height: 6 }} />
-              경매
+              {t('nav.auctions')}
             </span>
           </NavLink>
-          <NavLink to="/products" className={linkCls}>희귀카드</NavLink>
-          <NavLink to="/packs" className={linkCls}>카드팩</NavLink>
-          <NavLink to="/dex" className={linkCls}>도감</NavLink>
-          {isAdmin && <NavLink to="/admin" className={linkCls}>관리자</NavLink>}
+          <NavLink to="/products" className={linkCls}>{t('nav.products')}</NavLink>
+          <NavLink to="/packs" className={linkCls}>{t('nav.packs')}</NavLink>
+          <NavLink to="/dex" className={linkCls}>{t('nav.dex')}</NavLink>
+          {isAdmin && <NavLink to="/admin" className={linkCls}>{t('nav.admin')}</NavLink>}
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -123,7 +150,7 @@ export default function Header() {
             type="button"
             onClick={() => setSearchOpen(true)}
             className="md:hidden w-10 h-10 rounded-full bg-bone-2 hover:bg-line flex items-center justify-center text-ink transition-colors"
-            aria-label="검색 열기"
+            aria-label={t('nav.search.placeholder')}
           >
             <Icon name="search" size={18} strokeWidth={1.8} />
           </button>
@@ -131,11 +158,11 @@ export default function Header() {
             to="/sell"
             className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-paper border-2 border-ink text-[12px] font-bold text-ink hover:bg-electric transition-colors shadow-[0_2px_0_#1a1a1a]"
           >
-            <Icon name="plus" size={12} strokeWidth={2.8} /> 내 카드 출품
+            <Icon name="plus" size={12} strokeWidth={2.8} /> {t('nav.sell').replace(/^\+\s*/, '')}
           </Link>
           <Link to="/cart"
             className="relative w-10 h-10 rounded-full bg-bone-2 hover:bg-electric hover:rotate-6 transition-all flex items-center justify-center text-ink"
-            aria-label="장바구니">
+            aria-label={t('nav.cart')}>
             <Icon name="cart" size={18} strokeWidth={2} />
             {cartCount > 0 && (
               <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] bg-dex text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-paper px-1 animate-pulse">
@@ -147,9 +174,9 @@ export default function Header() {
             <UserDropdown user={user} logout={logout} navigate={navigate} />
           ) : (
             <div className="flex items-center gap-2">
-              <Link to="/login" className="hidden sm:inline text-sm font-bold text-mute hover:text-ink">로그인</Link>
+              <Link to="/login" className="hidden sm:inline text-sm font-bold text-mute hover:text-ink">{t('nav.login')}</Link>
               <Link to="/register" className="btn btn-pop btn-sm">
-                트레이너 되기
+                {t('nav.signup')}
               </Link>
             </div>
           )}

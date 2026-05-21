@@ -13,6 +13,7 @@ import Button from '@/components/common/Button'
 import Pokeball from '@/components/common/Pokeball'
 import Icon from '@/components/common/Icon'
 import MiniBroadcastPlayer from '@/components/common/MiniBroadcastPlayer'
+import { useT } from '@/i18n'
 import Eyebrow from '@/components/common/Eyebrow'
 import Sparkles from '@/components/common/Sparkles'
 import SectionHead from '@/components/common/SectionHead'
@@ -32,6 +33,7 @@ const fetchFeaturedPacks = () =>
     .then((r) => ({ list: r.data.data.map(normalizePack), total: r.data.total ?? 0 }))
 
 export default function HomePage() {
+  const t = useT()
   const auctionsQ = useQuery({ queryKey: ['home-auctions'], queryFn: fetchAuctions })
   const buyNowQ   = useQuery({ queryKey: ['home-buynow'],   queryFn: fetchBuynow })
   const packsQ    = useQuery({ queryKey: ['home-packs'],    queryFn: fetchFeaturedPacks })
@@ -66,13 +68,13 @@ export default function HomePage() {
 
   // CTA — 라이브가 있으면 LIVE 카드 이름을 직접 노출 (5초 컷, 정체성 강조)
   const heroPrimaryCta = FEATURED_LIVE
-    ? `🔴 지금 ${FEATURED_LIVE.nameKo || FEATURED_LIVE.name} 입찰 중!`
+    ? `🔴 ${t('hero.cta.primary.live', { name: FEATURED_LIVE.nameKo || FEATURED_LIVE.name })}`
     : upcomingAuctions.length > 0
       ? `다음 경매 일정 보기 · ${upcomingAuctions.length}건 예정`
-      : '즉시구매 카드 보기'
+      : t('hero.cta.primary.buynow')
   const heroPrimaryTo = FEATURED_LIVE ? `/products/${FEATURED_LIVE.id}` : '/auctions'
   // 보조 CTA — LIVE 유무와 상관없이 카드팩 바로 구매 진입점으로 통일.
-  const heroSecondaryCta = '카드팩 바로구매'
+  const heroSecondaryCta = t('hero.cta.secondary.packs')
   const heroSecondaryTo = '/packs'
 
   return (
@@ -118,23 +120,23 @@ export default function HomePage() {
             <Sparkles always className="hidden lg:block" />
 
             <Eyebrow tone="ink" dot dotColor="red" className="mb-5">
-              지금 두근거리는 옥션
+              {t('hero.eyebrow')}
             </Eyebrow>
 
             <h1 className="font-display text-[42px] sm:text-5xl lg:text-[68px] font-bold text-ink leading-[1.02] tracking-tight mb-5">
-              어릴 적<br className="hidden sm:inline" />
+              {t('hero.headline.line1')}<br className="hidden sm:inline" />
               <span className="relative inline-block">
-                <span className="relative z-10">갖고 싶었던</span>
+                <span className="relative z-10">{t('hero.headline.line2.before')}</span>
                 <span className="absolute -bottom-1 left-0 right-0 h-4 bg-electric -z-0 rounded-full" aria-hidden="true" />
               </span>{' '}
-              그 카드,
+              {t('hero.headline.line2.after')}
               <br />
-              <span className="text-dex">오늘 우리</span> 컬렉션으로
+              <span className="text-dex">{t('hero.headline.line3.before')}</span> {t('hero.headline.line3.after')}
             </h1>
 
             <p className="text-base lg:text-[18px] text-mute leading-relaxed max-w-xl mb-8 font-medium">
-              PSA·BGS·CGC 인증 카드만 모았어요. 100% 정품 보증, 가품이면 전액 환불.<br />
-              <span className="text-ink font-bold">트레이너의 마당에 오신 걸 환영해요.</span>
+              {t('hero.paragraph.line1')}<br />
+              <span className="text-ink font-bold">{t('hero.paragraph.line2')}</span>
             </p>
 
             <div className="flex flex-wrap gap-3 mb-8">
@@ -151,10 +153,10 @@ export default function HomePage() {
             </div>
 
             {/* fun trust chips */}
-            <ul className="flex flex-wrap items-center gap-2" aria-label="신뢰 보증 요약">
-              <li className="chip-type chip-type-grass">정품 100%</li>
-              <li className="chip-type chip-type-electric">PSA·BGS·CGC</li>
-              <li className="chip-type chip-type-water">안심 배송</li>
+            <ul className="flex flex-wrap items-center gap-2" aria-label="trust chips">
+              <li className="chip-type chip-type-grass">{t('hero.chip.authentic')}</li>
+              <li className="chip-type chip-type-electric">{t('hero.chip.certs')}</li>
+              <li className="chip-type chip-type-water">{t('hero.chip.delivery')}</li>
             </ul>
           </div>
 
@@ -183,13 +185,13 @@ export default function HomePage() {
           <CategoryTile
             to="/auctions"
             icon="flame"
-            label="경매"
+            label={t('cat.auctions')}
             desc={
               FEATURED_LIVE
                 ? `🔴 LIVE · ${FEATURED_LIVE.nameKo || FEATURED_LIVE.name}`
                 : upcomingAuctions.length > 0
-                  ? `🕒 ${upcomingAuctions.length}건 예정`
-                  : '곧 오픈!'
+                  ? `🕒 ${t('cat.auctions.desc.live', { n: upcomingAuctions.length })}`
+                  : t('cat.auctions.desc.soon')
             }
             tone="fire"
             ledPulse={!!FEATURED_LIVE}
@@ -198,27 +200,27 @@ export default function HomePage() {
           <CategoryTile
             to="/products?type=buynow"
             icon="bolt"
-            label="즉시구매"
-            desc={buyNowTotal > 0 ? `⚡ ${buyNowTotal}건 즉시 발송` : '준비 중'}
+            label={t('cat.buynow')}
+            desc={buyNowTotal > 0 ? `⚡ ${t('cat.buynow.desc.live', { n: buyNowTotal })}` : t('cat.buynow.desc.soon')}
             tone="electric"
             disabled={!loading && buyNowTotal === 0}
           />
           <CategoryTile
             to="/packs"
             icon="package"
-            label="카드팩 · 박스"
-            desc={packsTotal > 0 ? `🎁 ${packsTotal}건 미개봉` : '준비 중'}
+            label={t('cat.packs')}
+            desc={packsTotal > 0 ? `🎁 ${t('cat.packs.desc.live', { n: packsTotal })}` : t('cat.packs.desc.soon')}
             tone="water"
             disabled={!loading && packsTotal === 0}
           />
           <CategoryTile
             to="/products"
             icon="trophy"
-            label="전체 카탈로그"
+            label={t('cat.all')}
             desc={
               auctionsTotal + buyNowTotal > 0
-                ? `🌟 ${(auctionsTotal + buyNowTotal).toLocaleString()}종 카드`
-                : '🌟 모든 카드'
+                ? `🌟 ${(auctionsTotal + buyNowTotal).toLocaleString()}`
+                : `🌟 ${t('cat.all.desc')}`
             }
             tone="psychic"
           />
