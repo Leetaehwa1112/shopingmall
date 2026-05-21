@@ -694,134 +694,125 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
     )
   }
 
-  // 데스크탑 — 컴팩트 단면: 카드 sm + 좌우 정보 + 2칸 분할(마감/CTA) + 압축 푸터.
-  // 한 화면(스크롤 0회)에서 모든 정보 보이도록 ~350px 내외로 압축.
+  // 데스크탑 — 미니멀 쇼케이스: 박스/배너 제거, 카드(lg)를 주인공으로.
+  // 카드 아래로 LIVE 칩 → 이름 → 메타 → 가격/마감 2칸 → CTA → 시청자/NEXT 한 줄.
   return (
-    <div className="rounded-2xl border-2 border-ink overflow-hidden relative shadow-[0_6px_0_#1a1a1a,0_12px_30px_rgba(220,38,38,0.18)]">
-      {/* LIVE 헤더 */}
-      <div
-        className="relative px-4 py-2.5 border-b-2 border-ink overflow-hidden"
-        style={{
-          background: lotEnded
-            ? 'linear-gradient(180deg, #6b7280 0%, #4b5563 100%)'
-            : 'linear-gradient(180deg, var(--color-dex) 0%, var(--color-dex-d) 100%)',
-        }}
+    <div className="text-center px-2">
+      {/* 카드 — lg 사이즈, drop-shadow + sway */}
+      <Link
+        to={`/products/${card.id}`}
+        className="inline-block mb-4 group/card"
+        aria-label={`${card.nameKo} 경매 상세`}
+        style={{ filter: 'drop-shadow(0 18px 32px rgba(0,0,0,0.32)) drop-shadow(0 6px 12px rgba(220,38,38,0.20))' }}
       >
-        {!lotEnded && (
-          <span
-            aria-hidden="true"
-            className="absolute inset-0 pointer-events-none opacity-50"
-            style={{
-              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
-              animation: 'shine-sweep 3.2s ease-in-out infinite',
-            }}
-          />
-        )}
-        <div className="relative flex items-center justify-between gap-2">
-          <div className="inline-flex items-center gap-2">
-            {!lotEnded && (
-              <span aria-hidden="true" className="relative inline-flex items-center justify-center" style={{ width: 12, height: 12 }}>
-                <span className="absolute inset-0 rounded-full bg-white opacity-70" style={{ animation: 'live-ring 1.4s ease-out infinite' }} />
-                <span className="relative rounded-full bg-white" style={{ width: 10, height: 10 }} />
-              </span>
-            )}
-            <span className="font-display font-extrabold text-white text-base tracking-tight">{lotEnded ? 'CLOSED' : 'LIVE'}</span>
-            <span className="text-[10px] font-bold text-white/85 uppercase tracking-widest">· LOT #{card.lotOrder || 1}</span>
-          </div>
-          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-black/30 border border-white/30 text-white text-[11px] font-bold tabular-nums">
-            <Icon name="eye" size={11} strokeWidth={2.4} aria-hidden="true" />
-            {viewers.toLocaleString()}
-          </span>
-        </div>
-      </div>
-
-      {/* 카드(sm) + 정보 — 좌우 flex */}
-      <Link to={`/products/${card.id}`} className="block group bg-paper" aria-label={`${card.nameKo} 경매 상세`}>
-        <div className="flex gap-4 p-4">
-          <div className="shrink-0 holo-sheen rounded-lg">
-            <PokeCard card={card} size="sm" />
-          </div>
-          <div className="min-w-0 flex flex-col justify-between flex-1">
-            <div>
-              <div className="flex items-center gap-2 flex-wrap mb-1">
-                <h2 className="font-display text-xl sm:text-2xl font-bold text-ink leading-tight group-hover:text-dex transition-colors">
-                  {card.nameKo}
-                </h2>
-                <GradeBadge grade={card.grade} size="sm" />
-              </div>
-              <div className="text-[11px] text-mute mb-2 truncate font-medium">
-                {card.name} · {card.setShort || card.set} · {card.year}
-              </div>
-            </div>
-            <div>
-              <div className="text-[10px] font-bold tracking-[0.18em] uppercase text-dex">
-                {lotEnded ? '최종 입찰가' : '현재 입찰가'}
-              </div>
-              <div className="font-display text-2xl sm:text-[28px] font-bold text-ink leading-none tabular-nums">
-                {formatKRW(card.currentBid || card.startPrice)}
-              </div>
-              <div className="text-[10px] font-mono text-mute mt-0.5">
-                {card.bidCount || 0}회 입찰
-              </div>
-            </div>
-          </div>
+        <div className="card-sway-wrap">
+          <PokeCard card={card} size="lg" />
         </div>
       </Link>
 
-      {/* 액션 영역 — 마감 + CTA 2칸 분할 */}
-      <div className="px-4 pb-4 bg-paper space-y-2">
-        {!lotEnded && card.endsAt ? (
-          <div className="grid grid-cols-[auto_1fr] gap-2">
-            <div className="rounded-lg bg-ink text-white px-3 py-2 flex items-center gap-2 whitespace-nowrap">
-              <Icon name="clock" size={12} strokeWidth={2.6} className="text-electric" aria-hidden="true" />
+      {/* LIVE 칩 — 박스 없이 인라인 (배너 대체) */}
+      <div className="inline-flex items-center gap-2 mb-3 text-[10px] font-bold tracking-[0.18em] uppercase">
+        {!lotEnded ? (
+          <>
+            <span className="relative inline-flex" style={{ width: 8, height: 8 }} aria-hidden="true">
+              <span className="absolute inset-0 rounded-full bg-dex opacity-70" style={{ animation: 'live-ring 1.4s ease-out infinite' }} />
+              <span className="relative rounded-full bg-dex" style={{ width: 8, height: 8 }} />
+            </span>
+            <span className="text-dex">LIVE</span>
+          </>
+        ) : (
+          <span className="text-mute">CLOSED</span>
+        )}
+        <span className="text-ink/30">·</span>
+        <span className="text-ink/70">LOT #{card.lotOrder || 1}</span>
+        <span className="text-ink/30">·</span>
+        <span className="inline-flex items-center gap-1 text-ink/70">
+          <Icon name="eye" size={10} strokeWidth={2.4} aria-hidden="true" />
+          {viewers.toLocaleString()}
+        </span>
+      </div>
+
+      {/* 이름 + PSA */}
+      <Link to={`/products/${card.id}`} className="inline-block group/title" aria-label={`${card.nameKo} 경매 상세`}>
+        <div className="flex items-center justify-center gap-2.5 flex-wrap mb-1">
+          <h2 className="font-display text-3xl sm:text-[34px] font-bold text-ink leading-none group-hover/title:text-dex transition-colors">
+            {card.nameKo}
+          </h2>
+          <GradeBadge grade={card.grade} size="sm" />
+        </div>
+      </Link>
+
+      {/* 메타 */}
+      <div className="text-[11px] text-mute font-medium mb-3.5">
+        {card.name} · {card.setShort || card.set} · {card.year}
+      </div>
+
+      {/* 가격 + 마감 — 2칸 분할 (가격 좌, 마감 우) */}
+      <div className="grid grid-cols-2 gap-4 mb-3.5 text-left">
+        <div>
+          <div className="text-[10px] font-bold tracking-[0.18em] uppercase text-dex mb-1">
+            {lotEnded ? '최종 입찰가' : '현재 입찰가'}
+          </div>
+          <div className="font-display text-[28px] sm:text-[32px] font-bold text-ink leading-none tabular-nums">
+            {formatKRW(card.currentBid || card.startPrice)}
+          </div>
+          <div className="text-[10px] font-mono text-mute mt-1.5">
+            {card.bidCount || 0}회 입찰
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="text-[10px] font-bold tracking-[0.18em] uppercase text-mute mb-1 inline-flex items-center gap-1 justify-end w-full">
+            <Icon name="clock" size={10} strokeWidth={2.5} aria-hidden="true" />
+            {lotEnded ? '경매 종료' : '마감까지'}
+          </div>
+          {!lotEnded && card.endsAt ? (
+            <div className="flex justify-end">
               <Countdown endsAt={card.endsAt} size="sm" label={false} />
             </div>
-            <Link to="/auctions" className="block" aria-label="경매장 둘러보기">
-              <button type="button" className="btn btn-pop relative overflow-hidden w-full h-full">
-                <Icon name="gavel" size={14} strokeWidth={2.6} />
-                <span className="hidden sm:inline">경매 보러가기</span>
-                <span className="sm:hidden">경매</span>
-                <Icon name="arrow" size={12} strokeWidth={2.6} />
-                <span aria-hidden="true" className="absolute top-0 left-0 h-full w-1/3 pointer-events-none"
-                  style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)', animation: 'shine-sweep 3.4s ease-in-out infinite' }}
-                />
-              </button>
-            </Link>
-          </div>
-        ) : (
-          <Button variant="secondary" size="md" className="w-full" disabled aria-disabled="true">입찰 종료</Button>
-        )}
-
-        {/* 푸터 — 시청자 + NEXT 한 줄 압축 */}
-        <div className="flex items-center justify-between gap-3 text-[10.5px] font-bold pt-0.5 min-w-0">
-          <span className="text-mute shrink-0 inline-flex items-center gap-1">
-            <span className="relative inline-flex" style={{ width: 6, height: 6 }} aria-hidden="true">
-              <span className="absolute inset-0 rounded-full bg-dex opacity-70" style={{ animation: 'live-ring 1.4s ease-out infinite' }} />
-              <span className="relative rounded-full bg-dex" style={{ width: 6, height: 6 }} />
-            </span>
-            <span className="text-dex font-extrabold">{viewers}</span>
-            <span>명 시청중</span>
-          </span>
-          {nextLot && (
-            <Link
-              to="/auctions"
-              className="inline-flex items-center gap-1.5 min-w-0 text-ink/70 hover:text-ink transition-colors"
-              aria-label={`다음 경매: ${nextLot.nameKo || nextLot.name}`}
-            >
-              <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded bg-ink text-electric text-[8px] font-mono font-extrabold tabular-nums shrink-0">
-                {nextLot.lotOrder || '·'}
-              </span>
-              <span className="shrink-0">NEXT</span>
-              <span className="font-extrabold text-ink truncate">{nextLot.nameKo || nextLot.name}</span>
-              <span className="text-mute shrink-0">{nextLot.startsAt ? `· ${formatRelativeStart(nextLot.startsAt)}` : ''}</span>
-            </Link>
+          ) : (
+            <div className="font-mono text-base font-bold text-mute">CLOSED</div>
           )}
         </div>
       </div>
 
+      {/* CTA */}
+      {lotEnded ? (
+        <Button variant="secondary" size="md" className="w-full" disabled aria-disabled="true">입찰 종료</Button>
+      ) : (
+        <Link to="/auctions" className="block" aria-label="경매장 둘러보기">
+          <button type="button" className="btn btn-pop btn-lg relative overflow-hidden w-full">
+            <Icon name="gavel" size={16} strokeWidth={2.6} />
+            두근두근 경매 보러가기
+            <Icon name="arrow" size={14} strokeWidth={2.6} />
+            <span aria-hidden="true" className="absolute top-0 left-0 h-full w-1/3 pointer-events-none"
+              style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)', animation: 'shine-sweep 3.4s ease-in-out infinite' }}
+            />
+          </button>
+        </Link>
+      )}
+
+      {/* NEXT (있을 때만, subtle) */}
+      {nextLot && (
+        <Link
+          to="/auctions"
+          className="mt-3 inline-flex items-center gap-1.5 text-[10.5px] font-bold text-ink/55 hover:text-ink transition-colors"
+          aria-label={`다음 경매: ${nextLot.nameKo || nextLot.name}`}
+        >
+          <span>NEXT</span>
+          <span className="font-extrabold text-ink/85 truncate max-w-[180px]">{nextLot.nameKo || nextLot.name}</span>
+          <span className="text-mute">{nextLot.startsAt ? `· ${formatRelativeStart(nextLot.startsAt)}` : ''}</span>
+          <Icon name="arrow" size={10} strokeWidth={2.5} aria-hidden="true" />
+        </Link>
+      )}
+
       <style>{`
         @keyframes live-ring { 0%{transform:scale(1);opacity:.85} 80%{transform:scale(2.4);opacity:0} 100%{transform:scale(2.4);opacity:0} }
         @keyframes shine-sweep { 0%{transform:translateX(-120%)} 100%{transform:translateX(260%)} }
+        @keyframes card-float-sway {
+          0%,100% { transform: translateY(0) rotate(-1deg); }
+          50%     { transform: translateY(-8px) rotate(1deg); }
+        }
+        .card-sway-wrap { animation: card-float-sway 6s ease-in-out infinite; transform-origin: center bottom; }
       `}</style>
     </div>
   )
