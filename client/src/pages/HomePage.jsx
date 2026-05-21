@@ -712,13 +712,13 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
           <div className="oscar-face oscar-front">
             <PokeCard card={card} size="lg" interactive={false} />
           </div>
-          {/* Back — 1세대 포켓몬 카드 백 SVG */}
+          {/* Back — 1세대 포켓몬 카드 백 원본 (Bulbapedia) */}
           <div className="oscar-face oscar-back" aria-hidden="true">
             <img
-              src="/card-back.svg"
+              src="/card-back.jpg"
               alt=""
               draggable={false}
-              style={{ width: 300, height: 420, borderRadius: 12, display: 'block' }}
+              style={{ width: 300, height: 420, borderRadius: 12, display: 'block', objectFit: 'cover' }}
             />
           </div>
         </div>
