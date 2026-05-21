@@ -5,6 +5,7 @@ import { formatKRW, timeUntil } from '@/api/cards'
 import { normalizeProduct, normalizePack } from '@/api/normalize'
 import api from '@/api/axios'
 import PokeCard from '@/components/common/PokeCard'
+import CardBack from '@/components/common/CardBack'
 import CardTile from '@/components/common/CardTile'
 import PackTile from '@/components/common/PackTile'
 import Countdown from '@/components/common/Countdown'
@@ -161,19 +162,30 @@ export default function HomePage() {
             </ul>
           </div>
 
-          {/* RIGHT — 회전 카드. 모바일에선 첫 번째 (order-1), 데스크탑은 우측 두 번째 (order-2).
-              로딩 중엔 아무것도 안 보임 (skeleton 노이즈 제거). 데이터 도착 후 카드만 노출. */}
-          {!loading && (FEATURED_LIVE || upcomingAuctions[0] || buyNow[0]) ? (
-            <div className="order-1 lg:order-2">
-              {FEATURED_LIVE ? (
-                <FeaturedLivePanel card={FEATURED_LIVE} nextLot={upcomingAuctions[0]} />
-              ) : upcomingAuctions[0] ? (
-                <NextAuctionPanel card={upcomingAuctions[0]} queueCount={upcomingAuctions.length} />
-              ) : (
-                <FeaturedBuyNowPanel card={buyNow[0]} />
-              )}
-            </div>
-          ) : null}
+          {/* RIGHT — 회전 카드. 모바일 order-1 / 데스크탑 order-2.
+              로딩 중엔 CardBack 한 장만 노출 → 카드가 항상 제일 먼저 보임 (UX).
+              데이터 도착 후 실제 hero panel로 교체. */}
+          <div className="order-1 lg:order-2">
+            {loading ? (
+              <div className="flex justify-center items-center py-6">
+                <div className="card-fit-stage">
+                  <CardBack size="lg" />
+                </div>
+              </div>
+            ) : FEATURED_LIVE ? (
+              <FeaturedLivePanel card={FEATURED_LIVE} nextLot={upcomingAuctions[0]} />
+            ) : upcomingAuctions[0] ? (
+              <NextAuctionPanel card={upcomingAuctions[0]} queueCount={upcomingAuctions.length} />
+            ) : buyNow[0] ? (
+              <FeaturedBuyNowPanel card={buyNow[0]} />
+            ) : (
+              <div className="flex justify-center items-center py-6">
+                <div className="card-fit-stage">
+                  <CardBack size="lg" />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
