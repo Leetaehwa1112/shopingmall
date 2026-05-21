@@ -161,20 +161,19 @@ export default function HomePage() {
             </ul>
           </div>
 
-          {/* RIGHT — 회전 카드. 모바일에선 첫 번째 (order-1), 데스크탑은 우측 두 번째 (order-2) */}
-          <div className="order-1 lg:order-2">
-            {loading ? (
-              <HeroPanelSkeleton />
-            ) : FEATURED_LIVE ? (
-              <FeaturedLivePanel card={FEATURED_LIVE} nextLot={upcomingAuctions[0]} />
-            ) : upcomingAuctions[0] ? (
-              <NextAuctionPanel card={upcomingAuctions[0]} queueCount={upcomingAuctions.length} />
-            ) : buyNow[0] ? (
-              <FeaturedBuyNowPanel card={buyNow[0]} />
-            ) : (
-              <ComingSoonPanel />
-            )}
-          </div>
+          {/* RIGHT — 회전 카드. 모바일에선 첫 번째 (order-1), 데스크탑은 우측 두 번째 (order-2).
+              로딩 중엔 아무것도 안 보임 (skeleton 노이즈 제거). 데이터 도착 후 카드만 노출. */}
+          {!loading && (FEATURED_LIVE || upcomingAuctions[0] || buyNow[0]) ? (
+            <div className="order-1 lg:order-2">
+              {FEATURED_LIVE ? (
+                <FeaturedLivePanel card={FEATURED_LIVE} nextLot={upcomingAuctions[0]} />
+              ) : upcomingAuctions[0] ? (
+                <NextAuctionPanel card={upcomingAuctions[0]} queueCount={upcomingAuctions.length} />
+              ) : (
+                <FeaturedBuyNowPanel card={buyNow[0]} />
+              )}
+            </div>
+          ) : null}
         </div>
       </section>
 
