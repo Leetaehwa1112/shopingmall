@@ -66,14 +66,11 @@ export default function HomePage() {
     return { liveAuctions: live, upcomingAuctions: upcoming, FEATURED_LIVE: featured, TOP_LOT: topLot }
   }, [auctions])
 
-  // CTA — 라이브가 있으면 LIVE 카드 이름을 직접 노출 (5초 컷, 정체성 강조)
-  const heroPrimaryCta = FEATURED_LIVE
-    ? `🔴 ${t('hero.cta.primary.live', { name: FEATURED_LIVE.nameKo || FEATURED_LIVE.name })}`
-    : upcomingAuctions.length > 0
-      ? `다음 경매 일정 보기 · ${upcomingAuctions.length}건 예정`
-      : t('hero.cta.primary.buynow')
-  const heroPrimaryTo = FEATURED_LIVE ? `/products/${FEATURED_LIVE.id}` : '/auctions'
-  // 보조 CTA — LIVE 유무와 상관없이 카드팩 바로 구매 진입점으로 통일.
+  // CTA — 회전 카드가 이미 LIVE 카드명/입찰 상태를 보여주므로 hero CTA는 단순 진입점만.
+  // (이전 "🔴 지금 ○○○ 입찰 중!" 라이브 입찰 배너 제거 — 카드와 정보 중복)
+  const heroPrimaryCta = t('hero.cta.primary.buynow')
+  const heroPrimaryTo = '/products?type=buynow'
+  // 보조 CTA — LIVE 유무와 상관없이 카드팩 바로 구매 진입점.
   const heroSecondaryCta = t('hero.cta.secondary.packs')
   const heroSecondaryTo = '/packs'
 
@@ -188,9 +185,9 @@ export default function HomePage() {
             label={t('cat.auctions')}
             desc={
               FEATURED_LIVE
-                ? `🔴 LIVE · ${FEATURED_LIVE.nameKo || FEATURED_LIVE.name}`
+                ? t('cat.auctions.desc.live', { n: liveAuctions.length + upcomingAuctions.length })
                 : upcomingAuctions.length > 0
-                  ? `🕒 ${t('cat.auctions.desc.live', { n: upcomingAuctions.length })}`
+                  ? t('cat.auctions.desc.live', { n: upcomingAuctions.length })
                   : t('cat.auctions.desc.soon')
             }
             tone="fire"
