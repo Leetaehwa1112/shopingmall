@@ -46,17 +46,24 @@ export default function AdminLayout() {
           <NavLink to="/admin" end className={link}>
             <Icon name="trophy" size={16} strokeWidth={1.6} /> 대시보드
           </NavLink>
-          <div className="px-4 pt-4 pb-1 text-[10px] font-bold tracking-[0.18em] text-mute uppercase">상품</div>
+
+          <div className="px-4 pt-5 pb-1 text-[10px] font-bold tracking-[0.18em] text-mute uppercase">카탈로그</div>
           <NavLink to="/admin/products" className={link}>
             <Icon name="package" size={16} strokeWidth={1.6} /> 카드 관리
           </NavLink>
           <NavLink to="/admin/packs" className={link}>
-            <Icon name="bolt" size={16} strokeWidth={1.6} /> 카드팩 관리
+            <Icon name="star" size={16} strokeWidth={1.6} /> 카드팩 관리
           </NavLink>
-          <div className="px-4 pt-4 pb-1 text-[10px] font-bold tracking-[0.18em] text-mute uppercase">운영</div>
+
+          <div className="px-4 pt-5 pb-1 text-[10px] font-bold tracking-[0.18em] text-mute uppercase">거래</div>
+          <NavLink to="/admin/auctions" className={link}>
+            <Icon name="flame" size={16} strokeWidth={1.6} /> 경매 관리
+          </NavLink>
           <NavLink to="/admin/orders" className={link}>
             <Icon name="cart" size={16} strokeWidth={1.6} /> 주문 관리
           </NavLink>
+
+          <div className="px-4 pt-5 pb-1 text-[10px] font-bold tracking-[0.18em] text-mute uppercase">회원</div>
           <NavLink to="/admin/users" className={link}>
             <Icon name="shield" size={16} strokeWidth={1.6} /> 고객 관리
           </NavLink>

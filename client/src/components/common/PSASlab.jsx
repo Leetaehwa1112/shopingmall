@@ -1,5 +1,7 @@
 import PokeCard from './PokeCard'
 
+const FLAG = { USA: '🇺🇸', JPN: '🇯🇵', KOR: '🇰🇷' }
+
 // PSA / BGS / CGC 슬랩 (인증 케이스) 시각화
 export default function PSASlab({ card, size = 'lg' }) {
   const dims = {
@@ -30,7 +32,7 @@ export default function PSASlab({ card, size = 'lg' }) {
         <div className="font-display font-black tracking-wider mt-1" style={{ fontSize: dims.labelH * 0.4 }}>
           {card.grade.company} {card.grade.score}
         </div>
-        <div className="font-mono text-[10px] tracking-[0.2em] mt-1">{card.grade.label}</div>
+        <div className="text-lg mt-1">{FLAG[card.grade.country] ?? '🌐'}</div>
         {/* Side text */}
         <div className="absolute top-1.5 left-2 font-mono text-[9px] opacity-70">★★★★★</div>
         <div className="absolute top-1.5 right-2 font-mono text-[9px] opacity-70">VERIFIED</div>

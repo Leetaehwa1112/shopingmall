@@ -37,8 +37,13 @@ const createUser = async (req, res) => {
     const { email, name, password, user_type, profile_image, phone, address } =
       req.body;
 
-    // 이메일 중복 체크
-    const existingUser = await User.findOne({ email });
+    if (!email) {
+      return res.status(400).json({ success: false, message: "이메일은 필수입니다." });
+    }
+
+    // 이메일 중복 체크 (소문자로 정규화 후 비교)
+    const normalizedEmail = email.toLowerCase().trim();
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return res
         .status(400)
@@ -224,6 +229,18 @@ const getMe = async (req, res) => {
   }
 };
 
+// [GET] /api/users/check-email?email=xxx - 이메일 중복 확인 (public)
+const checkEmail = async (req, res) => {
+  try {
+    const email = (req.query.email || '').toLowerCase().trim();
+    if (!email) return res.status(400).json({ success: false, message: '이메일을 입력해주세요.' });
+    const exists = await User.exists({ email });
+    res.json({ success: true, available: !exists });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
@@ -234,4 +251,5 @@ module.exports = {
   removeFromWishlist,
   loginUser,
   getMe,
+  checkEmail,
 };

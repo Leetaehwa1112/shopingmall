@@ -8,41 +8,63 @@ import { formatKRW, timeUntil } from '@/api/cards'
 import useWishlistStore from '@/store/wishlistStore'
 
 export default function CardTile({ card }) {
-  const wished = useWishlistStore((s) => s.has(card.id))
+  const cardId = card.id || card._id
+  const wished = useWishlistStore((s) => s.has(cardId))
   const toggle = useWishlistStore((s) => s.toggle)
   const [pop, setPop] = useState(false)
 
   const onWish = (e) => {
     e.preventDefault()
     e.stopPropagation()
-    toggle(card.id)
+    toggle(cardId)
     if (!wished) {
       setPop(true)
       setTimeout(() => setPop(false), 500)
     }
   }
 
-  const entryNum = String(parseInt(card.id.replace(/\D/g, '').slice(0, 3) || '001')).padStart(3, '0')
+  // Lot 번호: card.lot_number > card.number > cardId 끝자리 fallback
+  // 숫자 형태일 때만 3자리 zero-pad (예: "4" → "004"). 텍스트(Promo 등)는 그대로.
+  const lotLabel = (() => {
+    const pad = (s) => /^\d+$/.test(s) ? s.padStart(3, '0') : s
+    if (card.lot_number) return pad(String(card.lot_number))
+    if (card.number) return pad(String(card.number).split('/')[0])
+    const digits = String(cardId).replace(/\D/g, '')
+    return (digits.slice(-3) || '001').padStart(3, '0')
+  })()
+
+  const cardType = card.type || card.sale_type
+  const auctionEnded = cardType === 'auction' && card.endsAt && card.endsAt - Date.now() <= 0
 
   return (
-    <Link to={`/products/${card.id}`} className="group block surface-card overflow-hidden">
+    <Link to={`/products/${cardId}`} className="group block surface-card overflow-hidden">
       {/* Status strip — micro pixel label */}
       <div className="px-4 pt-4 flex justify-between items-center">
-        {card.type === 'auction' ? (
-          <span className="inline-flex items-center gap-2">
-            <span className="led led-red led-pulse" style={{ width: 7, height: 7 }} />
-            <span className="pixel-label text-dex">LIVE · No.{entryNum}</span>
-          </span>
+        {cardType === 'auction' ? (
+          auctionEnded ? (
+            <span className="inline-flex items-center gap-2">
+              <span className="led" style={{ width: 7, height: 7, background: '#9aa1a8' }} />
+              <span className="pixel-label text-mute">CLOSED · No.{lotLabel}</span>
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-2">
+              <span className="led led-red led-pulse" style={{ width: 7, height: 7 }} />
+              <span className="pixel-label text-dex">LIVE · No.{lotLabel}</span>
+            </span>
+          )
         ) : (
           <span className="inline-flex items-center gap-2">
             <span className="led led-blue" style={{ width: 7, height: 7 }} />
-            <span className="pixel-label text-blue">BUY NOW · No.{entryNum}</span>
+            <span className="pixel-label text-blue">BUY NOW · No.{lotLabel}</span>
           </span>
         )}
         <button
+          type="button"
           onClick={onWish}
-          className={`transition-colors ${wished ? 'text-gold' : 'text-mute hover:text-ink'} ${pop ? 'scale-125' : ''}`}
-          aria-label="관심"
+          onMouseDown={(e) => e.preventDefault()}
+          className={`relative z-10 p-1.5 -m-1.5 rounded-full transition-colors ${wished ? 'text-gold' : 'text-mute hover:text-ink'} ${pop ? 'scale-125' : ''}`}
+          aria-label={wished ? '관심 해제' : '관심 등록'}
+          aria-pressed={wished}
         >
           <Icon name="star" size={18} strokeWidth={1.8} style={{ fill: wished ? 'currentColor' : 'none' }} />
         </button>
@@ -73,7 +95,7 @@ export default function CardTile({ card }) {
 
         {/* Price block */}
         <div className="pt-3 border-t border-line">
-          {card.type === 'auction' ? <AuctionFooter card={card} /> : <BuyNowFooter card={card} />}
+          {cardType === 'auction' ? <AuctionFooter card={card} /> : <BuyNowFooter card={card} />}
         </div>
       </div>
     </Link>
@@ -87,13 +109,24 @@ function AuctionFooter({ card }) {
     return () => clearInterval(id)
   }, [])
   const t = timeUntil(card.endsAt)
-  const urgent = t.totalMs < 1000 * 60 * 60
+  const ended = t.ended
+  const urgent = !ended && t.totalMs < 1000 * 60 * 60
+
+  // 단일 상태칩 — 종료 / 마감 임박 / 종료까지 중 하나만
+  const statusTone = ended
+    ? 'bg-bone-2 text-mute'
+    : urgent
+      ? 'bg-dex/8 text-dex'
+      : 'bg-bone-2/60 text-mute'
+  const statusLabel = ended ? '경매 종료' : urgent ? '마감 임박' : '종료까지'
 
   return (
     <div className="space-y-2.5">
       <div className="flex justify-between items-baseline">
         <div>
-          <div className="text-[9px] text-mute font-bold tracking-[0.15em] uppercase mb-0.5">현재 입찰가</div>
+          <div className="text-[9px] text-mute font-bold tracking-[0.15em] uppercase mb-0.5">
+            {ended ? '최종 입찰가' : '현재 입찰가'}
+          </div>
           <div className="font-display text-2xl font-bold text-ink leading-none tabular-nums">
             {formatKRW(card.currentBid)}
           </div>
@@ -103,14 +136,16 @@ function AuctionFooter({ card }) {
           <div className="font-mono text-sm font-bold text-ink">{card.bidCount}회</div>
         </div>
       </div>
-      <div className={`flex items-center justify-between rounded-lg px-3 py-1.5 ${
-        urgent ? 'bg-dex/8 text-dex' : 'bg-bone-2/60 text-mute'
-      }`}>
+      <div className={`flex items-center justify-between rounded-lg px-3 py-1.5 ${statusTone}`}>
         <span className="text-[10px] font-bold inline-flex items-center gap-1.5 tracking-wider">
           <Icon name="clock" size={11} strokeWidth={2.2} />
-          {urgent ? '마감 임박' : '종료까지'}
+          {statusLabel}
         </span>
-        <Countdown endsAt={card.endsAt} size="sm" label={false} />
+        {ended ? (
+          <span className="text-[10px] font-mono font-bold tracking-wider">—</span>
+        ) : (
+          <Countdown endsAt={card.endsAt} size="sm" label={false} />
+        )}
       </div>
     </div>
   )

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useCartStore from '@/store/cartStore'
 import { formatKRWFull } from '@/api/cards'
+import api from '@/api/axios'
 import Button from '@/components/common/Button'
 import Pokeball from '@/components/common/Pokeball'
 import Icon from '@/components/common/Icon'
@@ -22,31 +23,55 @@ export default function CheckoutPage() {
   const [agree, setAgree] = useState(false)
   const [processing, setProcessing] = useState(false)
 
+
   if (!pending.items) return <div className="p-20 text-center text-mute">진행중인 주문이 없습니다.</div>
 
-  const pay = (e) => {
+  const pay = async (e) => {
     e.preventDefault()
     if (!agree) return alert('약관에 동의해주세요')
     setProcessing(true)
-    setTimeout(() => {
-      const orderId = 'PV-' + Date.now().toString(36).toUpperCase()
-      sessionStorage.setItem('last-order', JSON.stringify({ ...pending, method, orderId }))
+    try {
+      const { form } = pending
+      const { data } = await api.post('/orders', {
+        shippingMethod:   form.shipping,
+        recipient:        form.name,
+        phone:            form.phone,
+        address: {
+          zipcode: form.zip,
+          street:  form.addr1,
+          detail:  form.addr2 || '',
+          city:    '',
+        },
+        requireSignature: form.signature,
+        insuranceEnabled: form.insurance,
+        memo:             form.memo || '',
+        paymentMethod:    method,
+      })
+      sessionStorage.setItem('last-order', JSON.stringify({
+        ...pending,
+        method,
+        orderId:   data.data.orderNumber,
+        serverOrder: data.data,
+      }))
       sessionStorage.removeItem('pending-order')
       clear()
       navigate('/order-complete')
-    }, 2400)
+    } catch (err) {
+      setProcessing(false)
+      alert(err.response?.data?.message || '결제 처리 중 오류가 발생했습니다.')
+    }
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-12">
-      <div className="mb-10">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+      <div className="mb-6 sm:mb-10">
         <div className="pixel-label text-mute mb-3">Payment</div>
-        <h1 className="font-display text-4xl font-bold text-ink tracking-tight">결제</h1>
+        <h1 className="font-display text-2xl sm:text-4xl font-bold text-ink tracking-tight">결제</h1>
       </div>
 
-      <form onSubmit={pay} className="grid lg:grid-cols-3 gap-8">
+      <form onSubmit={pay} className="grid lg:grid-cols-3 gap-6 lg:gap-8">
         <div className="lg:col-span-2 space-y-6">
-          <div className="surface-soft p-6">
+          <div className="surface-soft p-5 sm:p-6">
             <h3 className="font-display text-xl font-bold text-ink mb-5">결제 수단</h3>
             <div className="space-y-2">
               {METHODS.map((m) => (
@@ -94,7 +119,7 @@ export default function CheckoutPage() {
         </div>
 
         <aside>
-          <div className="surface-soft p-6 elev-2 sticky top-32">
+          <div className="surface-soft p-5 sm:p-6 elev-2 lg:sticky lg:top-32">
             <div className="pixel-label text-mute mb-5">Final Amount</div>
             <div className="space-y-1.5 text-sm pb-4 border-b border-line">
               {pending.items?.map((c) => (
@@ -138,7 +163,7 @@ function Processing() {
   }, [])
   return (
     <div className="fixed inset-0 bg-bone/95 backdrop-blur-sm z-50 flex items-center justify-center">
-      <div className="dex-casing p-10 max-w-md w-full mx-6">
+      <div className="dex-casing p-6 sm:p-10 max-w-md w-full mx-4 sm:mx-6">
         <div className="flex justify-center gap-2 mb-6">
           <span className="led led-blue led-pulse" />
           <span className="led led-yellow led-pulse" style={{ animationDelay: '0.2s' }} />

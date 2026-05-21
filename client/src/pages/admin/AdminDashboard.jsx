@@ -1,8 +1,22 @@
-import { AUCTION_CARDS, formatKRW } from '@/api/cards'
+import { useState, useEffect } from 'react'
+import api from '@/api/axios'
+import { formatKRW } from '@/api/cards'
 import Countdown from '@/components/common/Countdown'
 
 export default function AdminDashboard() {
-  const totalBidValue = AUCTION_CARDS.reduce((s, c) => s + c.currentBid, 0)
+  const [stats, setStats] = useState(null)
+
+  useEffect(() => {
+    api.get('/stats/dashboard')
+      .then(({ data }) => setStats(data.data))
+      .catch(() => setStats(null))
+  }, [])
+
+  const auctions = stats?.auctions || []
+  const totalBidValue = stats?.totalBidValue ?? 0
+  const activeAuctions = stats?.activeAuctions ?? '—'
+  const totalProducts = stats?.totalProducts ?? '—'
+  const totalPacks = stats?.totalPacks ?? '—'
 
   return (
     <div className="space-y-8 max-w-7xl">
@@ -12,10 +26,10 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPI label="오늘 거래액" value="₩47.8M" delta="+18.2%" trend="up" led="red" />
-        <KPI label="진행중 옥션" value={AUCTION_CARDS.length} sub="활성 입찰" led="yellow" />
-        <KPI label="총 입찰가치" value={formatKRW(totalBidValue)} led="blue" />
-        <KPI label="신규 회원" value="12" delta="+12" trend="up" led="green" />
+        <KPI label="활성 상품" value={totalProducts} sub="등록된 카드" led="blue" />
+        <KPI label="진행중 옥션" value={activeAuctions} sub="활성 입찰" led="yellow" />
+        <KPI label="총 입찰가치" value={stats ? formatKRW(totalBidValue) : '—'} led="red" />
+        <KPI label="카드팩" value={totalPacks} sub="활성 팩" led="green" />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
@@ -31,15 +45,18 @@ export default function AdminDashboard() {
             </span>
           </div>
           <div className="space-y-2">
-            {AUCTION_CARDS.map((c) => (
-              <div key={c.id} className="flex justify-between items-center py-3 px-4 bg-bone-2/50 rounded-lg">
+            {auctions.length === 0 && (
+              <div className="text-sm text-mute py-4 text-center">진행중인 경매가 없습니다</div>
+            )}
+            {auctions.map((c) => (
+              <div key={c._id} className="flex justify-between items-center py-3 px-4 bg-bone-2/50 rounded-lg">
                 <div>
-                  <div className="font-bold text-ink">{c.nameKo}</div>
-                  <div className="text-xs text-mute font-mono mt-0.5">{c.bidCount} bids · {c.watchers} watching</div>
+                  <div className="font-bold text-ink">{c.nameKo || '—'}</div>
+                  <div className="text-xs text-mute font-mono mt-0.5">{c.bidCount ?? 0} bids · {c.watchers ?? 0} watching</div>
                 </div>
                 <div className="text-right">
                   <div className="font-mono text-ink font-bold tabular-nums">{formatKRW(c.currentBid)}</div>
-                  <Countdown endsAt={c.endsAt} size="sm" label={false} />
+                  {c.endsAt && <Countdown endsAt={c.endsAt} size="sm" label={false} />}
                 </div>
               </div>
             ))}

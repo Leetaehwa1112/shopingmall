@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import useAuthStore from '@/store/authStore'
 import useToastStore from '@/store/toastStore'
 import Button from '@/components/common/Button'
 import Icon from '@/components/common/Icon'
-import { Link } from 'react-router-dom'
+import api from '@/api/axios'
 
 const STEPS = [
   { id: 'info',   label: '카드 정보' },
@@ -21,7 +21,7 @@ export default function SellPage() {
   const [step, setStep] = useState(0)
   const [form, setForm] = useState({
     name: '', nameKo: '', set: '', year: '', number: '',
-    company: 'PSA', score: '10', cert: '',
+    company: 'PSA', score: '10', cert: '', country: 'USA',
     type: 'auction', startPrice: '', buyNowPrice: '', endsAt: '', minIncrement: '1000000',
     description: '',
   })
@@ -39,12 +39,37 @@ export default function SellPage() {
     )
   }
 
+  const [submitting, setSubmitting] = useState(false)
   const next = () => setStep(Math.min(step + 1, STEPS.length - 1))
   const prev = () => setStep(Math.max(step - 1, 0))
 
-  const submit = () => {
-    toast({ type: 'success', title: '경매 등록 요청 접수', message: '검수 후 1-2일 내 등록 완료됩니다.' })
-    setTimeout(() => navigate('/mypage'), 1500)
+  const submit = async () => {
+    setSubmitting(true)
+    try {
+      await api.post('/auctions', {
+        name: form.name,
+        nameKo: form.nameKo,
+        set: form.set,
+        year: form.year,
+        number: form.number,
+        gradeCompany: form.company,
+        gradeScore: form.score,
+        gradeCert: form.cert,
+        cardCountry: form.country,
+        saleType: form.type,
+        startPrice: Number(form.startPrice),
+        buyNowPrice: form.buyNowPrice ? Number(form.buyNowPrice) : null,
+        endsAt: form.endsAt || null,
+        minIncrement: Number(form.minIncrement),
+      })
+      toast({ type: 'success', title: '경매 등록 요청 접수', message: '검수 후 1-2일 내 등록 완료됩니다.' })
+      setTimeout(() => navigate('/mypage'), 1500)
+    } catch (err) {
+      const msg = err.response?.data?.message
+      toast({ type: 'error', title: '신청 실패', message: Array.isArray(msg) ? msg.join(', ') : msg || '오류가 발생했습니다.' })
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -116,6 +141,19 @@ export default function SellPage() {
               </div>
               <Field label="점수" value={form.score} onChange={(v) => setForm({...form, score: v})} placeholder="10" />
               <Field label="인증서 번호" value={form.cert} onChange={(v) => setForm({...form, cert: v})} placeholder="52819374" />
+            </div>
+            <div className="mt-4">
+              <Lbl>카드 언어판</Lbl>
+              <div className="flex gap-3">
+                {[['USA', '🇺🇸', 'US판'], ['JPN', '🇯🇵', 'JP판'], ['KOR', '🇰🇷', 'KR판']].map(([val, flag, label]) => (
+                  <button key={val} type="button" onClick={() => setForm({...form, country: val})}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all ${
+                      form.country === val ? 'border-ink bg-ink/[0.04] elev-1' : 'border-line hover:border-ink/30'
+                    }`}>
+                    <span className="text-xl">{flag}</span> {label}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="mt-5 p-4 bg-bone-2/50 rounded-xl">
               <div className="text-sm font-bold text-ink mb-2">📋 위탁 조건</div>
@@ -192,6 +230,7 @@ export default function SellPage() {
               <Row k="카드명" v={`${form.nameKo} / ${form.name}`} />
               <Row k="세트 · 연도 · 번호" v={`${form.set} · ${form.year} · #${form.number}`} />
               <Row k="등급" v={`${form.company} ${form.score} (Cert #${form.cert})`} />
+              <Row k="언어판" v={{ USA: '🇺🇸 US판', JPN: '🇯🇵 JP판', KOR: '🇰🇷 KR판' }[form.country]} />
               <Row k="판매 유형" v={form.type === 'auction' ? '옥션' : '즉시 구매'} />
               {form.type === 'auction' ? (
                 <>
@@ -220,7 +259,7 @@ export default function SellPage() {
         {step < STEPS.length - 1 ? (
           <Button variant="primary" onClick={next}>다음 <Icon name="arrow" size={14} strokeWidth={2.2} /></Button>
         ) : (
-          <Button variant="accent" onClick={submit}>경매 등록 요청 <Icon name="arrow" size={14} strokeWidth={2.2} /></Button>
+          <Button variant="accent" onClick={submit} disabled={submitting}>{submitting ? '제출 중...' : '경매 등록 요청'} <Icon name="arrow" size={14} strokeWidth={2.2} /></Button>
         )}
       </div>
     </div>

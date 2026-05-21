@@ -36,7 +36,7 @@ export default function OrderCompletePage() {
         </div>
         <h1 className="font-display text-4xl font-bold text-ink tracking-tight mb-2">결제가 완료되었습니다</h1>
         <p className="text-sm text-mute">컬렉션에 카드가 추가되었습니다. 안전하게 배송됩니다.</p>
-        <div className="font-mono text-xs text-mute mt-4">ORDER · {order.orderId}</div>
+        <div className="font-mono text-xs text-mute mt-4">ORDER · {order.serverOrder?.orderNumber || order.orderId}</div>
       </div>
 
       <div className="flex justify-center gap-3 mb-10 flex-wrap">
@@ -79,7 +79,7 @@ export default function OrderCompletePage() {
       </div>
 
       <div className="flex gap-3 justify-center">
-        <Link to="/mypage"><Button variant="primary" size="lg">컬렉션 보기</Button></Link>
+        <Link to="/my-orders"><Button variant="primary" size="lg">주문 목록 보기</Button></Link>
         <Link to="/products"><Button variant="secondary" size="lg">계속 쇼핑</Button></Link>
       </div>
     </div>
