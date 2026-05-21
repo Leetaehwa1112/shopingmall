@@ -6,6 +6,7 @@ import { normalizeProduct } from '@/api/normalize'
 import api from '@/api/axios'
 import CardTile from '@/components/common/CardTile'
 import Icon from '@/components/common/Icon'
+import SetSymbol from '@/components/common/SetSymbol'
 import Sparkles from '@/components/common/Sparkles'
 import Eyebrow from '@/components/common/Eyebrow'
 import MiniBroadcastPlayer from '@/components/common/MiniBroadcastPlayer'
@@ -18,18 +19,19 @@ const PAGE_SIZE = 8
 // ─── Pokémon TCG 에라 비주얼 메타 ─────────────────────────────
 // 각 시대를 대표하는 아이콘 + 톤 컬러. TCG 카드 셋 심볼처럼 동그란
 // 컬러 배지로 보여줌. (실제 셋 심볼은 IP 이슈 → 추상화)
+// 각 시대를 대표하는 톤 컬러 + 짧은 라벨. 심볼은 SetSymbol 컴포넌트가 그림.
 const ERA_META = {
-  all:      { icon: 'grid',     tone: 'ink',      short: '전체' },
-  base:     { icon: 'trophy',   tone: 'fire',     short: 'WotC' },     // 1999
-  neo:      { icon: 'bolt',     tone: 'electric', short: 'Neo' },      // 2000
-  ex:       { icon: 'flame',    tone: 'fire',     short: 'EX·DP·BW' }, // 2003-2010
-  xy:       { icon: 'star',     tone: 'electric', short: 'XY·SM' },    // 2013-2018
-  swsh:     { icon: 'shield',   tone: 'water',    short: 'SwSh' },     // 2019
-  sv:       { icon: 'star',     tone: 'psychic',  short: 'S·V' },      // 2022+
-  japanese: { icon: 'bell',     tone: 'fire',     short: '일본판' },
-  promo:    { icon: 'star',     tone: 'electric', short: '프로모' },
-  pack:     { icon: 'package',  tone: 'water',    short: '부스터팩' },
-  box:      { icon: 'layers',   tone: 'psychic',  short: '박스' },
+  all:      { tone: 'ink',      short: '전체' },
+  base:     { tone: 'fire',     short: 'WotC' },     // 1999-2003
+  neo:      { tone: 'electric', short: 'Neo' },      // 2000-2001
+  ex:       { tone: 'psychic',  short: 'EX·DP·BW' }, // 2003-2010 (다이아 = 보라)
+  xy:       { tone: 'electric', short: 'XY·SM' },    // 2013-2018 (별/태양)
+  swsh:     { tone: 'water',    short: 'SwSh' },     // 2019-2022
+  sv:       { tone: 'fire',     short: 'S·V' },      // 2022+ (Scarlet)
+  japanese: { tone: 'fire',     short: '일본판' },
+  promo:    { tone: 'electric', short: '프로모' },
+  pack:     { tone: 'water',    short: '부스터팩' },
+  box:      { tone: 'psychic',  short: '박스' },
 }
 
 // 톤별 배경/텍스트 — HomePage.toneBg 와 동일 톤
@@ -183,12 +185,12 @@ function MarketPage({
                   aria-pressed={active}
                   className={`group relative shrink-0 w-[88px] sm:w-[96px] flex flex-col items-center gap-2 px-2 py-3 rounded-2xl border-2 transition-all ${bgCls} ${active ? 'shadow-[0_3px_0_#1a1a1a] -translate-y-0.5' : 'hover:-translate-y-0.5 hover:shadow-[0_3px_0_#1a1a1a]'}`}
                 >
-                  {/* 셋 심볼 배지 — 동그란 컬러 원 안에 아이콘 */}
+                  {/* 셋 심볼 배지 — TCG 카드 셋 심볼 스타일 (채워진 실루엣) */}
                   <span
                     className={`inline-flex items-center justify-center w-11 h-11 rounded-full border-2 border-ink ${badgeCls}`}
                     aria-hidden="true"
                   >
-                    <Icon name={meta.icon} size={20} strokeWidth={2.2} />
+                    <SetSymbol era={c.id} size={22} />
                   </span>
                   {/* 라벨 — 짧게 한 줄 (ERA_META.short 우선) */}
                   <span className="text-[11px] font-extrabold leading-tight text-center [word-break:keep-all] whitespace-nowrap">
