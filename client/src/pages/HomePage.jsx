@@ -201,12 +201,19 @@ export default function HomePage() {
             disabled={!loading && !FEATURED_LIVE && upcomingAuctions.length === 0}
           />
           <CategoryTile
-            to="/products?type=buynow"
-            icon="bolt"
-            label={t('cat.buynow')}
-            desc={buyNowTotal > 0 ? `⚡ ${t('cat.buynow.desc.live', { n: buyNowTotal })}` : t('cat.buynow.desc.soon')}
-            tone="electric"
-            disabled={!loading && buyNowTotal === 0}
+            to="/auctions"
+            icon="flame"
+            label="두근두근 Live 경매"
+            desc={
+              FEATURED_LIVE
+                ? t('cat.auctions.desc.live', { n: liveAuctions.length + upcomingAuctions.length })
+                : upcomingAuctions.length > 0
+                  ? t('cat.auctions.desc.live', { n: upcomingAuctions.length })
+                  : t('cat.auctions.desc.soon')
+            }
+            tone="fire"
+            ledPulse={!!FEATURED_LIVE}
+            disabled={!loading && !FEATURED_LIVE && upcomingAuctions.length === 0}
           />
           <CategoryTile
             to="/packs"
@@ -924,7 +931,7 @@ function CategoryTile({ to, icon, label, desc, tone = 'fire', ledPulse = false, 
         <Icon name={icon} size={20} strokeWidth={2} aria-hidden="true" />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="font-display text-base lg:text-lg font-bold text-ink leading-tight inline-flex items-center gap-2 whitespace-nowrap">
+        <div className="font-display text-[11px] sm:text-sm lg:text-base font-bold text-ink leading-tight flex flex-wrap items-center gap-1 [word-break:keep-all]">
           {label}
           {ledPulse && <span className="led led-red led-pulse" style={{ width: 6, height: 6 }} aria-hidden="true" />}
         </div>
