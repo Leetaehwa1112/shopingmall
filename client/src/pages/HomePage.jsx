@@ -481,14 +481,12 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
 
   return (
     <div className="text-center px-2" style={{ marginTop: 28 }}>
-      <Link
-        to="/auctions"
+      <div
         className="inline-block group/card oscar-stage"
-        aria-label={`경매장으로 이동 — 현재 LIVE: ${card.nameKo}`}
+        role="img"
+        aria-label={`현재 LIVE 경매 카드: ${card.nameKo}`}
         onMouseEnter={() => setBroadcastVisible(true)}
         onMouseLeave={() => setBroadcastVisible(false)}
-        onFocus={() => setBroadcastVisible(true)}
-        onBlur={() => setBroadcastVisible(false)}
         style={{
           perspective: '1800px',
           filter: 'drop-shadow(0 24px 40px rgba(0,0,0,0.38)) drop-shadow(0 10px 16px rgba(220,38,38,0.22))',
@@ -513,7 +511,7 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
             </div>
           </div>
         </div>
-      </Link>
+      </div>
 
       {/* 카드 호버 시 우하단에 라이브 미니방송 */}
       <MiniBroadcastPlayer
