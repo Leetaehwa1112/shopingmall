@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420" preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3a5fa5"/>
+      <stop offset="50%" stop-color="#274780"/>
+      <stop offset="100%" stop-color="#1c3563"/>
+    </linearGradient>
+    <radialGradient id="ballHi" cx="35%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+      <circle cx="10" cy="10" r="1" fill="#ffffff" opacity="0.08"/>
+    </pattern>
+  </defs>
+
+  <!-- Card body -->
+  <rect x="0" y="0" width="300" height="420" rx="14" fill="url(#bg)"/>
+  <rect x="0" y="0" width="300" height="420" rx="14" fill="url(#dots)"/>
+
+  <!-- Inner double border -->
+  <rect x="10" y="10" width="280" height="400" rx="10" fill="none" stroke="#16294d" stroke-width="3"/>
+  <rect x="18" y="18" width="264" height="384" rx="6" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.18"/>
+
+  <!-- Yellow Pokémon wordmark -->
+  <g transform="translate(150,68)">
+    <text text-anchor="middle" font-family="Impact, 'Arial Black', sans-serif" font-size="34" font-weight="900" fill="#FFCB05" stroke="#16294d" stroke-width="3" paint-order="stroke fill" letter-spacing="0.5">
+      Pokémon
+    </text>
+  </g>
+
+  <!-- Big Pokeball in center -->
+  <g transform="translate(150,225)">
+    <!-- Outer ring -->
+    <circle r="92" fill="#16294d" />
+    <circle r="86" fill="#ffffff" stroke="#16294d" stroke-width="3"/>
+    <!-- Red top half -->
+    <path d="M -86 0 A 86 86 0 0 1 86 0 Z" fill="#E03A36"/>
+    <!-- Black middle band -->
+    <rect x="-90" y="-7" width="180" height="14" fill="#16294d"/>
+    <!-- Center white circle -->
+    <circle r="22" fill="#ffffff" stroke="#16294d" stroke-width="5"/>
+    <circle r="9" fill="#16294d"/>
+    <!-- Highlight overlay -->
+    <ellipse cx="-30" cy="-32" rx="36" ry="20" fill="url(#ballHi)"/>
+  </g>
+
+  <!-- Decorative dashes top-corners -->
+  <g stroke="#FFCB05" stroke-width="2" opacity="0.65">
+    <line x1="30" y1="40" x2="60" y2="40"/>
+    <line x1="270" y1="40" x2="240" y2="40"/>
+    <line x1="30" y1="48" x2="50" y2="48"/>
+    <line x1="270" y1="48" x2="250" y2="48"/>
+  </g>
+
+  <!-- Footer text -->
+  <g transform="translate(150,360)">
+    <text text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#FFCB05" font-weight="700" letter-spacing="3" opacity="0.85">
+      TRADING CARD GAME
+    </text>
+  </g>
+  <text x="150" y="390" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#ffffff" opacity="0.45">
+    © 1995, 96, 98, 99 Nintendo, Creatures, GAMEFREAK
+  </text>
+</svg>

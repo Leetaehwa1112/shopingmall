@@ -694,26 +694,57 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
     )
   }
 
-  // 데스크탑 — 카드만 노출. 모든 UI 노이즈 제거, 카드가 유일한 주인공.
+  // 데스크탑 — 카드만 노출. 오스카 트로피처럼 Y축 360° 자동 회전, 뒷면은 1세대 카드 백.
   // 클릭 시 상품 상세로 이동.
   return (
     <div className="text-center px-2">
       <Link
         to={`/products/${card.id}`}
-        className="inline-block group/card"
+        className="inline-block group/card oscar-stage"
         aria-label={`${card.nameKo} 경매 상세`}
-        style={{ filter: 'drop-shadow(0 22px 36px rgba(0,0,0,0.34)) drop-shadow(0 8px 14px rgba(220,38,38,0.22))' }}
+        style={{
+          perspective: '1600px',
+          filter: 'drop-shadow(0 22px 36px rgba(0,0,0,0.34)) drop-shadow(0 8px 14px rgba(220,38,38,0.22))',
+        }}
       >
-        <div className="card-sway-wrap">
-          <PokeCard card={card} size="lg" />
+        <div className="oscar-inner">
+          {/* Front — 실제 카드 */}
+          <div className="oscar-face oscar-front">
+            <PokeCard card={card} size="lg" interactive={false} />
+          </div>
+          {/* Back — 1세대 포켓몬 카드 백 SVG */}
+          <div className="oscar-face oscar-back" aria-hidden="true">
+            <img
+              src="/card-back.svg"
+              alt=""
+              draggable={false}
+              style={{ width: 300, height: 420, borderRadius: 12, display: 'block' }}
+            />
+          </div>
         </div>
       </Link>
       <style>{`
-        @keyframes card-float-sway {
-          0%,100% { transform: translateY(0) rotate(-1deg); }
-          50%     { transform: translateY(-8px) rotate(1deg); }
+        @keyframes oscar-spin {
+          0%   { transform: rotateY(0deg); }
+          100% { transform: rotateY(360deg); }
         }
-        .card-sway-wrap { animation: card-float-sway 6s ease-in-out infinite; transform-origin: center bottom; }
+        .oscar-stage { position: relative; }
+        .oscar-inner {
+          position: relative;
+          width: 300px;
+          height: 420px;
+          transform-style: preserve-3d;
+          animation: oscar-spin 7s linear infinite;
+        }
+        .oscar-face {
+          position: absolute;
+          inset: 0;
+          backface-visibility: hidden;
+          -webkit-backface-visibility: hidden;
+          border-radius: 12px;
+        }
+        .oscar-front { transform: rotateY(0deg); }
+        .oscar-back  { transform: rotateY(180deg); }
       `}</style>
     </div>
   )
