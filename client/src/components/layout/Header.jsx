@@ -184,14 +184,14 @@ export default function Header() {
             </div>
           )}
 
-          {/* 햄버거 — lg 미만에서만 노출 (lg에선 nav가 인라인). 모바일에선 하단 탭바와 분담 */}
+          {/* 햄버거 — lg 미만에서 노출. 모바일에선 하단 탭바(5탭)에 없는 메뉴 (도감/판매/로그인 등) 접근 */}
           <button
             type="button"
             onClick={() => setMenuOpen((v) => !v)}
             aria-label={menuOpen ? '메뉴 닫기' : '메뉴 열기'}
             aria-expanded={menuOpen}
             aria-controls="mobile-nav-panel"
-            className="lg:hidden hidden md:flex w-11 h-11 rounded-full bg-bone-2 hover:bg-electric items-center justify-center text-ink transition-colors border-2 border-transparent hover:border-ink"
+            className="lg:hidden flex w-11 h-11 rounded-full bg-bone-2 hover:bg-electric items-center justify-center text-ink transition-colors border-2 border-transparent hover:border-ink"
           >
             <Icon name={menuOpen ? 'close' : 'menu'} size={18} strokeWidth={2.2} />
           </button>

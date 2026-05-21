@@ -30,7 +30,9 @@ export default function MiniBroadcastPlayer({
   const img = lot.images?.[0] || lot.image
   return (
     <div
-      className={`hidden lg:block fixed bottom-4 right-4 z-50 w-[300px] rounded-2xl border-2 border-ink bg-paper overflow-hidden transition-all duration-300 ease-out ${
+      // 모바일: 우측 하단 PIP (youtube 스타일). 하단 탭바(64) + sticky CTA 위로 띄움.
+      // 데스크탑(lg+): 우측 하단 300px, bottom 16px.
+      className={`mini-broadcast fixed right-3 lg:right-4 z-50 w-[180px] lg:w-[300px] rounded-2xl border-2 border-ink bg-paper overflow-hidden transition-all duration-300 ease-out ${
         visible
           ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto shadow-[0_6px_0_#1a1a1a,0_12px_30px_rgba(13,23,48,0.25)]'
           : 'opacity-0 translate-y-4 scale-95 pointer-events-none shadow-none'

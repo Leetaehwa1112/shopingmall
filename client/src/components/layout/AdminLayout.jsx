@@ -17,6 +17,7 @@ export default function AdminLayout() {
   const { isAdmin, user } = useAuthStore()
   const location = useLocation()
   const [badges, setBadges] = useState({ pendingAuctions: 0, todayOrders: 0, lowStock: 0 })
+  const [drawerOpen, setDrawerOpen] = useState(false)
 
   useEffect(() => {
     if (!isAdmin) return
@@ -34,6 +35,17 @@ export default function AdminLayout() {
       .catch(() => {})
     return () => { alive = false }
   }, [isAdmin, location.pathname])
+
+  // 라우트 이동 시 모바일 드로어 자동 닫힘
+  useEffect(() => { setDrawerOpen(false) }, [location.pathname])
+
+  // ESC로 드로어 닫기
+  useEffect(() => {
+    if (!drawerOpen) return
+    const handler = (e) => { if (e.key === 'Escape') setDrawerOpen(false) }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [drawerOpen])
 
   if (!isAdmin) {
     return (
@@ -56,8 +68,28 @@ export default function AdminLayout() {
     <div className="min-h-screen min-h-dvh flex bg-bone">
       <ToastContainer />
 
-      {/* ── Sidebar ─────────────────────────────────────────── */}
-      <aside className="w-56 bg-paper border-r border-ink/15 flex-shrink-0 flex flex-col sticky top-0 h-screen h-dvh">
+      {/* ── Mobile backdrop (드로어 열렸을 때) ──────────────── */}
+      {drawerOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-ink/50 backdrop-blur-sm z-40"
+          onClick={() => setDrawerOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* ── Sidebar ─────────────────────────────────────────────
+          데스크탑: sticky 좌측 사이드바.
+          모바일: fixed 드로어 (햄버거 클릭 시 슬라이드 인). */}
+      <aside
+        className={`
+          w-64 lg:w-56 bg-paper border-r border-ink/15 flex flex-col
+          fixed inset-y-0 left-0 z-50 transition-transform duration-200 ease-out
+          ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}
+          lg:static lg:translate-x-0 lg:flex-shrink-0 lg:sticky lg:top-0 lg:h-screen lg:h-dvh
+          h-screen h-dvh
+        `}
+        aria-label="관리자 메뉴"
+      >
         <Link to="/" className="block px-4 py-4 border-b border-ink/10">
           <div className="flex items-center gap-2">
             <Pokeball size={24} />
@@ -113,8 +145,8 @@ export default function AdminLayout() {
 
       {/* ── Main column ─────────────────────────────────────── */}
       <main className="flex-1 min-w-0 flex flex-col">
-        <TopBar user={user} />
-        <div className="flex-1 px-6 py-5 overflow-x-hidden">
+        <TopBar user={user} onMenuClick={() => setDrawerOpen(true)} />
+        <div className="flex-1 px-3 sm:px-6 py-4 sm:py-5 overflow-x-hidden">
           <Outlet context={{ badges }} />
         </div>
       </main>
@@ -159,28 +191,38 @@ function NavItem({ to, end, icon, label, badge, badgeTone = 'red', sub }) {
   )
 }
 
-function TopBar({ user }) {
+function TopBar({ user, onMenuClick }) {
   const [q, setQ] = useState('')
   const time = useMemo(() => new Date().toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }), [])
 
   return (
-    <div className="bg-paper border-b border-ink/10 px-6 py-2.5 flex items-center gap-4 sticky top-0 z-30">
+    <div className="bg-paper border-b border-ink/10 px-3 sm:px-6 py-2.5 flex items-center gap-2 sm:gap-4 sticky top-0 z-30">
+      {/* 모바일 햄버거 — 드로어 토글 */}
+      <button
+        type="button"
+        onClick={onMenuClick}
+        aria-label="관리자 메뉴 열기"
+        className="lg:hidden w-10 h-10 rounded-md border border-ink/15 hover:bg-bone-2 flex items-center justify-center text-ink shrink-0"
+      >
+        <Icon name="menu" size={18} strokeWidth={2.2} />
+      </button>
       <div className="relative flex-1 max-w-md">
         <Icon name="search" size={13} strokeWidth={2} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-mute pointer-events-none" />
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="SKU · 주문번호 · 회원명 · 카드명 검색"
+          placeholder="검색..."
+          aria-label="관리자 검색"
           className="w-full bg-bone-2/50 border border-ink/15 rounded-lg pl-8 pr-3 py-1.5 text-xs text-ink placeholder:text-mute focus:border-ink focus:bg-paper outline-none transition-colors"
         />
       </div>
-      <div className="flex items-center gap-3 text-[11px]">
-        <span className="text-mute font-mono hidden md:inline">{time}</span>
-        <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md font-bold">
+      <div className="flex items-center gap-2 sm:gap-3 text-[11px]">
+        <span className="text-mute font-mono hidden lg:inline">{time}</span>
+        <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md font-bold whitespace-nowrap">
           <span className="led led-green led-pulse" style={{ width: 5, height: 5 }} />
-          SYSTEM OK
+          <span className="hidden sm:inline">SYSTEM </span>OK
         </span>
-        <span className="font-bold text-ink hidden sm:inline">{user?.name}</span>
+        <span className="font-bold text-ink hidden md:inline">{user?.name}</span>
       </div>
     </div>
   )
