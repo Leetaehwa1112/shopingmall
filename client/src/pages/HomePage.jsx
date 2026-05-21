@@ -694,87 +694,21 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
     )
   }
 
-  // 데스크탑 — 극단 미니멀: LIVE/시청자 칩 + 카드 + 가격값 + 카운트다운 + CTA + NEXT.
-  // 이름/PSA/메타/라벨 전부 제거. 텍스트 노이즈 최소화로 카드가 압도적 주인공.
+  // 데스크탑 — 카드만 노출. 모든 UI 노이즈 제거, 카드가 유일한 주인공.
+  // 클릭 시 상품 상세로 이동.
   return (
     <div className="text-center px-2">
-      {/* LIVE 칩 — 카드 위 (시청자수만 포함, LOT# 제거) */}
-      <div className="inline-flex items-center gap-2 mb-3 text-[10.5px] font-bold tracking-[0.18em] uppercase">
-        {!lotEnded ? (
-          <>
-            <span className="relative inline-flex" style={{ width: 7, height: 7 }} aria-hidden="true">
-              <span className="absolute inset-0 rounded-full bg-dex opacity-70" style={{ animation: 'live-ring 1.4s ease-out infinite' }} />
-              <span className="relative rounded-full bg-dex" style={{ width: 7, height: 7 }} />
-            </span>
-            <span className="text-dex">LIVE</span>
-          </>
-        ) : (
-          <span className="text-mute">CLOSED</span>
-        )}
-        <span className="text-ink/25">·</span>
-        <span className="inline-flex items-center gap-1 text-ink/65">
-          <Icon name="eye" size={11} strokeWidth={2.4} aria-hidden="true" />
-          {viewers.toLocaleString()}
-        </span>
-      </div>
-
-      {/* 카드 — md 사이즈 (왼쪽 헤드라인 칼럼과 무게 균형) */}
       <Link
         to={`/products/${card.id}`}
-        className="inline-block mb-5 group/card"
+        className="inline-block group/card"
         aria-label={`${card.nameKo} 경매 상세`}
-        style={{ filter: 'drop-shadow(0 14px 26px rgba(0,0,0,0.28)) drop-shadow(0 5px 10px rgba(220,38,38,0.18))' }}
+        style={{ filter: 'drop-shadow(0 22px 36px rgba(0,0,0,0.34)) drop-shadow(0 8px 14px rgba(220,38,38,0.22))' }}
       >
         <div className="card-sway-wrap">
-          <PokeCard card={card} size="md" />
+          <PokeCard card={card} size="lg" />
         </div>
       </Link>
-
-      {/* 가격 + 카운트다운 — 라벨 없이 값만, 베이스라인 정렬 */}
-      <div className="flex items-baseline justify-center gap-5 mb-4 flex-wrap">
-        <div className="font-display text-[34px] sm:text-[40px] font-bold text-ink leading-none tabular-nums">
-          {formatKRW(card.currentBid || card.startPrice)}
-        </div>
-        {!lotEnded && card.endsAt && (
-          <div className="inline-flex">
-            <Countdown endsAt={card.endsAt} size="sm" label={false} />
-          </div>
-        )}
-      </div>
-
-      {/* CTA */}
-      {lotEnded ? (
-        <Button variant="secondary" size="md" className="w-full" disabled aria-disabled="true">입찰 종료</Button>
-      ) : (
-        <Link to="/auctions" className="block" aria-label="경매장 둘러보기">
-          <button type="button" className="btn btn-pop btn-lg relative overflow-hidden w-full">
-            <Icon name="gavel" size={16} strokeWidth={2.6} />
-            두근두근 경매 보러가기
-            <Icon name="arrow" size={14} strokeWidth={2.6} />
-            <span aria-hidden="true" className="absolute top-0 left-0 h-full w-1/3 pointer-events-none"
-              style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)', animation: 'shine-sweep 3.4s ease-in-out infinite' }}
-            />
-          </button>
-        </Link>
-      )}
-
-      {/* NEXT — 한 줄 subtle */}
-      {nextLot && (
-        <Link
-          to="/auctions"
-          className="mt-3 inline-flex items-center gap-1.5 text-[10.5px] font-bold text-ink/55 hover:text-ink transition-colors"
-          aria-label={`다음 경매: ${nextLot.nameKo || nextLot.name}`}
-        >
-          <span>NEXT</span>
-          <span className="font-extrabold text-ink/85 truncate max-w-[180px]">{nextLot.nameKo || nextLot.name}</span>
-          <span className="text-mute">{nextLot.startsAt ? `· ${formatRelativeStart(nextLot.startsAt)}` : ''}</span>
-          <Icon name="arrow" size={10} strokeWidth={2.5} aria-hidden="true" />
-        </Link>
-      )}
-
       <style>{`
-        @keyframes live-ring { 0%{transform:scale(1);opacity:.85} 80%{transform:scale(2.4);opacity:0} 100%{transform:scale(2.4);opacity:0} }
-        @keyframes shine-sweep { 0%{transform:translateX(-120%)} 100%{transform:translateX(260%)} }
         @keyframes card-float-sway {
           0%,100% { transform: translateY(0) rotate(-1deg); }
           50%     { transform: translateY(-8px) rotate(1deg); }
