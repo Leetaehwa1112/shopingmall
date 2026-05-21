@@ -111,7 +111,7 @@ export default function HomePage() {
           <Pokeball size={180} />
         </div>
 
-        <div className="relative max-w-7xl mx-auto grid lg:grid-cols-[1.15fr_1fr] gap-10 lg:gap-14 items-center">
+        <div className="relative max-w-7xl mx-auto grid lg:grid-cols-[1.15fr_1fr] gap-10 lg:gap-14 items-start">
           {/* LEFT */}
           <div className="sparkle-host relative">
             <Sparkles always className="hidden lg:block" />
@@ -694,14 +694,34 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
     )
   }
 
-  // 데스크탑 — 미니멀 쇼케이스: 박스/배너 제거, 카드(lg)를 주인공으로.
-  // 카드 아래로 LIVE 칩 → 이름 → 메타 → 가격/마감 2칸 → CTA → 시청자/NEXT 한 줄.
+  // 데스크탑 — 극단 미니멀: LIVE/시청자 칩 + 카드 + 가격값 + 카운트다운 + CTA + NEXT.
+  // 이름/PSA/메타/라벨 전부 제거. 텍스트 노이즈 최소화로 카드가 압도적 주인공.
   return (
     <div className="text-center px-2">
-      {/* 카드 — lg 사이즈, drop-shadow + sway */}
+      {/* LIVE 칩 — 카드 위 (시청자수만 포함, LOT# 제거) */}
+      <div className="inline-flex items-center gap-2 mb-3 text-[10.5px] font-bold tracking-[0.18em] uppercase">
+        {!lotEnded ? (
+          <>
+            <span className="relative inline-flex" style={{ width: 7, height: 7 }} aria-hidden="true">
+              <span className="absolute inset-0 rounded-full bg-dex opacity-70" style={{ animation: 'live-ring 1.4s ease-out infinite' }} />
+              <span className="relative rounded-full bg-dex" style={{ width: 7, height: 7 }} />
+            </span>
+            <span className="text-dex">LIVE</span>
+          </>
+        ) : (
+          <span className="text-mute">CLOSED</span>
+        )}
+        <span className="text-ink/25">·</span>
+        <span className="inline-flex items-center gap-1 text-ink/65">
+          <Icon name="eye" size={11} strokeWidth={2.4} aria-hidden="true" />
+          {viewers.toLocaleString()}
+        </span>
+      </div>
+
+      {/* 카드 — lg 사이즈, 주인공 */}
       <Link
         to={`/products/${card.id}`}
-        className="inline-block mb-4 group/card"
+        className="inline-block mb-5 group/card"
         aria-label={`${card.nameKo} 경매 상세`}
         style={{ filter: 'drop-shadow(0 18px 32px rgba(0,0,0,0.32)) drop-shadow(0 6px 12px rgba(220,38,38,0.20))' }}
       >
@@ -710,69 +730,16 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
         </div>
       </Link>
 
-      {/* LIVE 칩 — 박스 없이 인라인 (배너 대체) */}
-      <div className="inline-flex items-center gap-2 mb-3 text-[10px] font-bold tracking-[0.18em] uppercase">
-        {!lotEnded ? (
-          <>
-            <span className="relative inline-flex" style={{ width: 8, height: 8 }} aria-hidden="true">
-              <span className="absolute inset-0 rounded-full bg-dex opacity-70" style={{ animation: 'live-ring 1.4s ease-out infinite' }} />
-              <span className="relative rounded-full bg-dex" style={{ width: 8, height: 8 }} />
-            </span>
-            <span className="text-dex">LIVE</span>
-          </>
-        ) : (
-          <span className="text-mute">CLOSED</span>
+      {/* 가격 + 카운트다운 — 라벨 없이 값만, 베이스라인 정렬 */}
+      <div className="flex items-baseline justify-center gap-5 mb-4 flex-wrap">
+        <div className="font-display text-[34px] sm:text-[40px] font-bold text-ink leading-none tabular-nums">
+          {formatKRW(card.currentBid || card.startPrice)}
+        </div>
+        {!lotEnded && card.endsAt && (
+          <div className="inline-flex">
+            <Countdown endsAt={card.endsAt} size="sm" label={false} />
+          </div>
         )}
-        <span className="text-ink/30">·</span>
-        <span className="text-ink/70">LOT #{card.lotOrder || 1}</span>
-        <span className="text-ink/30">·</span>
-        <span className="inline-flex items-center gap-1 text-ink/70">
-          <Icon name="eye" size={10} strokeWidth={2.4} aria-hidden="true" />
-          {viewers.toLocaleString()}
-        </span>
-      </div>
-
-      {/* 이름 + PSA */}
-      <Link to={`/products/${card.id}`} className="inline-block group/title" aria-label={`${card.nameKo} 경매 상세`}>
-        <div className="flex items-center justify-center gap-2.5 flex-wrap mb-1">
-          <h2 className="font-display text-3xl sm:text-[34px] font-bold text-ink leading-none group-hover/title:text-dex transition-colors">
-            {card.nameKo}
-          </h2>
-          <GradeBadge grade={card.grade} size="sm" />
-        </div>
-      </Link>
-
-      {/* 메타 */}
-      <div className="text-[11px] text-mute font-medium mb-3.5">
-        {card.name} · {card.setShort || card.set} · {card.year}
-      </div>
-
-      {/* 가격 + 마감 — 2칸 분할 (가격 좌, 마감 우) */}
-      <div className="grid grid-cols-2 gap-4 mb-3.5 text-left">
-        <div>
-          <div className="text-[10px] font-bold tracking-[0.18em] uppercase text-dex mb-1">
-            {lotEnded ? '최종 입찰가' : '현재 입찰가'}
-          </div>
-          <div className="font-display text-[28px] sm:text-[32px] font-bold text-ink leading-none tabular-nums">
-            {formatKRW(card.currentBid || card.startPrice)}
-          </div>
-          <div className="text-[10px] font-mono text-mute mt-1.5">
-            {card.bidCount || 0}회 입찰
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="text-[10px] font-bold tracking-[0.18em] uppercase text-mute mb-1 inline-flex items-center gap-1 justify-end w-full">
-            <Icon name="clock" size={10} strokeWidth={2.5} aria-hidden="true" />
-            {lotEnded ? '경매 종료' : '마감까지'}
-          </div>
-          {!lotEnded && card.endsAt ? (
-            <div className="flex justify-end">
-              <Countdown endsAt={card.endsAt} size="sm" label={false} />
-            </div>
-          ) : (
-            <div className="font-mono text-base font-bold text-mute">CLOSED</div>
-          )}
-        </div>
       </div>
 
       {/* CTA */}
@@ -791,7 +758,7 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
         </Link>
       )}
 
-      {/* NEXT (있을 때만, subtle) */}
+      {/* NEXT — 한 줄 subtle */}
       {nextLot && (
         <Link
           to="/auctions"
