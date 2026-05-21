@@ -19,9 +19,20 @@ function isChunkLoadError(err) {
     err.name === 'ChunkLoadError' ||
     /Loading chunk/i.test(msg) ||
     /Failed to fetch dynamically imported module/i.test(msg) ||
+    /error loading dynamically imported module/i.test(msg) ||
     /Importing a module script failed/i.test(msg) ||
     /ChunkLoadError/i.test(msg)
   )
+}
+
+// sessionStorage 플래그로 1회만 자동 새로고침 (무한루프 방지)
+function maybeReloadOnce() {
+  try {
+    if (!sessionStorage.getItem(RELOAD_KEY)) {
+      sessionStorage.setItem(RELOAD_KEY, String(Date.now()))
+      window.location.reload()
+    }
+  } catch {/* private mode etc. */}
 }
 
 class ErrorBoundary extends Component {
@@ -33,14 +44,8 @@ class ErrorBoundary extends Component {
 
   componentDidCatch(error, info) {
     if (isChunkLoadError(error)) {
-      // 1회만 자동 새로고침
-      try {
-        if (!sessionStorage.getItem(RELOAD_KEY)) {
-          sessionStorage.setItem(RELOAD_KEY, String(Date.now()))
-          window.location.reload()
-          return
-        }
-      } catch {/* private mode etc. */}
+      maybeReloadOnce()
+      return
     }
     // 디버깅 흔적
     // eslint-disable-next-line no-console
@@ -50,6 +55,26 @@ class ErrorBoundary extends Component {
   componentDidMount() {
     // 새 페이지에 무사히 도착했으니 플래그 클리어
     try { sessionStorage.removeItem(RELOAD_KEY) } catch {/* */}
+    // window 레벨 unhandledrejection 리스너 — Suspense가 못 잡는 비동기 dynamic import 실패 보완.
+    // 신배포 직후 stale HTML이 옛 청크 해시 fetch 실패 → ErrorBoundary는 동기 throw만 잡으니
+    // Promise reject 경로는 여기서 추가로 캐치하여 1회 새로고침.
+    this._onUnhandled = (e) => {
+      const err = e?.reason || e
+      if (isChunkLoadError(err)) {
+        e?.preventDefault?.()
+        maybeReloadOnce()
+      }
+    }
+    this._onError = (e) => {
+      if (isChunkLoadError(e?.error || e?.message)) maybeReloadOnce()
+    }
+    window.addEventListener('unhandledrejection', this._onUnhandled)
+    window.addEventListener('error', this._onError)
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('unhandledrejection', this._onUnhandled)
+    window.removeEventListener('error', this._onError)
   }
 
   reset = () => { this.setState({ error: null }) }
