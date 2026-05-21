@@ -47,8 +47,11 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 bg-paper border-b-2 border-ink">
-      {/* ── Top fun ribbon ─────────────────────────────────── */}
-      <div className="bg-ink text-white">
+      {/* ── Top fun ribbon — 모바일에선 숨김 (시각 노이즈 + 세로 공간 절약).
+          어차피 ribbon 우측 콘텐츠 (전화번호/EN-KR 토글)가 hidden md:flex라
+          모바일에선 좌측 LIVE 표시 한 줄만 남아서 ribbon 자체가 의미 약함.
+          LIVE 상태는 메인 콘텐츠/카드/탭바에서 더 명확하게 노출됨. */}
+      <div className="hidden md:block bg-ink text-white">
         <div className="max-w-7xl mx-auto px-6 h-8 flex items-center justify-between text-[11px] font-medium">
           <div className="flex gap-4">
             <span className="inline-flex items-center gap-1.5">

@@ -8,7 +8,7 @@ import GreetingDropdown from '@/components/common/GreetingDropdown'
 export default function Layout() {
   const loc = useLocation()
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen min-h-dvh flex flex-col">
       <ToastContainer />
       <GreetingDropdown />
       <Header />

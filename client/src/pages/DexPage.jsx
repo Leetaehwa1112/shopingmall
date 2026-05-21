@@ -117,7 +117,7 @@ export default function DexPage() {
   const resetFilters = () => { setQuery(''); setTypeFilter('전체'); setSaleOnly(false) }
 
   return (
-    <div className="min-h-screen bg-bone">
+    <div className="min-h-screen min-h-dvh bg-bone">
       {/*
         도감 디바이스로 전체 재포장 — 빨간 셸 안에 LCD(필터/상태) + 카탈로그 인서트.
         모든 상태·핸들러는 그대로, 표현 계층만 새 디자인 시스템으로 치환.
