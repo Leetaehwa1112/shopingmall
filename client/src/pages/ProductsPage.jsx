@@ -9,6 +9,8 @@ import Icon from '@/components/common/Icon'
 import SetSymbol from '@/components/common/SetSymbol'
 import Sparkles from '@/components/common/Sparkles'
 import Eyebrow from '@/components/common/Eyebrow'
+import EraSelector from '@/components/common/EraSelector'
+import FilterBar from '@/components/common/FilterBar'
 import MiniBroadcastPlayer from '@/components/common/MiniBroadcastPlayer'
 import useToastStore from '@/store/toastStore'
 import useAuthStore from '@/store/authStore'
@@ -16,41 +18,32 @@ import { formatKRW, formatKRWFull, timeUntil } from '@/utils/format'
 
 const PAGE_SIZE = 8
 
-// ─── Pokémon TCG 에라 비주얼 메타 ─────────────────────────────
-// 각 시대를 대표하는 아이콘 + 톤 컬러. TCG 카드 셋 심볼처럼 동그란
-// 컬러 배지로 보여줌. (실제 셋 심볼은 IP 이슈 → 추상화)
-// 각 시대를 대표하는 톤 컬러 + 짧은 라벨. 심볼은 SetSymbol 컴포넌트가 그림.
+// ─── Pokémon TCG 시대 메타 ─────────────────────────────────
+// 각 시대의 톤 컬러 + 짧은 라벨 + 연도 범위. SetSymbol(추상 셋 심볼)이 비주얼 담당.
+// IP 안전: 실제 공식 심볼을 베끼지 않고, 시대별 시각 시그니처를 재해석한 오리지널 도형 사용.
 const ERA_META = {
-  all:      { tone: 'ink',      short: '전체' },
-  base:     { tone: 'fire',     short: 'WotC' },     // 1999-2003
-  neo:      { tone: 'electric', short: 'Neo' },      // 2000-2001
-  ex:       { tone: 'psychic',  short: 'EX·DP·BW' }, // 2003-2010 (다이아 = 보라)
-  xy:       { tone: 'electric', short: 'XY·SM' },    // 2013-2018 (별/태양)
-  swsh:     { tone: 'water',    short: 'SwSh' },     // 2019-2022
-  sv:       { tone: 'fire',     short: 'S·V' },      // 2022+ (Scarlet)
-  japanese: { tone: 'fire',     short: '일본판' },
-  promo:    { tone: 'electric', short: '프로모' },
-  pack:     { tone: 'water',    short: '부스터팩' },
-  box:      { tone: 'psychic',  short: '박스' },
+  all:      { tone: 'ink',      short: '전체',       years: null         },
+  base:     { tone: 'fire',     short: 'WotC',       years: '1999—2003'  },
+  neo:      { tone: 'electric', short: 'Neo',        years: '2000—2001'  },
+  ex:       { tone: 'psychic',  short: 'EX·DP·BW',   years: '2003—2010'  },
+  xy:       { tone: 'electric', short: 'XY·SM',      years: '2013—2018'  },
+  swsh:     { tone: 'water',    short: 'SwSh',       years: '2019—2022'  },
+  sv:       { tone: 'fire',     short: 'S·V',        years: '2022—'      },
+  japanese: { tone: 'fire',     short: '일본판',     years: '한정·역수입' },
+  promo:    { tone: 'electric', short: '프로모',     years: '한정판'      },
+  pack:     { tone: 'water',    short: '부스터팩',   years: '미개봉'      },
+  box:      { tone: 'psychic',  short: '박스',       years: '미개봉'      },
 }
 
-// 톤별 배경/텍스트 — HomePage.toneBg 와 동일 톤
-const ERA_TONE_BG = {
-  ink:      'bg-ink/10 text-ink',
-  fire:     'bg-fire/15 text-fire',
-  electric: 'bg-electric/30 text-ink',
-  water:    'bg-water/15 text-water',
-  psychic:  'bg-psychic/15 text-psychic',
-  grass:    'bg-grass/15 text-grass',
-}
-const ERA_TONE_ACTIVE = {
-  ink:      'bg-ink text-electric border-ink',
-  fire:     'bg-fire text-paper border-ink',
-  electric: 'bg-electric text-ink border-ink',
-  water:    'bg-water text-paper border-ink',
-  psychic:  'bg-psychic text-paper border-ink',
-  grass:    'bg-grass text-paper border-ink',
-}
+// ─── 시대 그룹화 — UX 인지 부하 감소 ─────────────────────
+// 11개 카테고리를 한 줄에 쏟아내면 의사결정 피로 ↑.
+// 시대별 4그룹으로 묶어서 "어디서 찾을지" 명확하게 함.
+const ERA_GROUPS = [
+  { id: 'vintage', title: '빈티지', period: '1999—2003', eras: ['base', 'neo'] },
+  { id: 'modern',  title: '모던',   period: '2003—2018', eras: ['ex', 'xy']    },
+  { id: 'current', title: '현행',   period: '2019—',     eras: ['swsh', 'sv']  },
+  { id: 'special', title: '특수',   period: '한정·기타', eras: ['japanese', 'promo', 'pack', 'box'] },
+]
 
 export default function ProductsPage() {
   const loc = useLocation()
@@ -179,65 +172,44 @@ function MarketPage({
         )}
       </div>
 
-      {/* === ERA SET SYMBOLS — TCG 셋 심볼 스타일 카테고리 === */}
-      <div className="mb-8 lg:mb-10">
-        {/* 모바일: 가로 스크롤 / 데스크탑: wrap */}
-        <div className="-mx-4 sm:mx-0 px-4 sm:px-0 overflow-x-auto sm:overflow-visible scrollbar-hide">
-          <div className="flex sm:flex-wrap gap-3 sm:gap-4 pb-1">
-            {CATEGORIES.map((c) => {
-              const count = c.id === 'all' ? products.length : products.filter((s) => s.category === c.id).length
-              const active = cat === c.id
-              const meta = ERA_META[c.id] || ERA_META.all
-              const bgCls = active ? ERA_TONE_ACTIVE[meta.tone] : 'bg-paper border-ink/15 text-ink hover:border-ink'
-              const badgeCls = active ? 'bg-paper/25 text-paper' : ERA_TONE_BG[meta.tone]
-              return (
-                <button
-                  key={c.id}
-                  onClick={() => setCat(c.id)}
-                  aria-pressed={active}
-                  className={`group relative shrink-0 w-[96px] flex flex-col items-center gap-2 px-2 py-3 rounded-2xl border-2 transition-all ${bgCls} ${active ? 'shadow-[0_3px_0_#1a1a1a] -translate-y-0.5' : 'hover:-translate-y-0.5 hover:shadow-[0_3px_0_#1a1a1a]'}`}
-                >
-                  {/* 셋 심볼 배지 — 40×40 (8pt 그리드), 칩 너비의 40% 비율로 안정감 */}
-                  <span
-                    className={`inline-flex items-center justify-center w-10 h-10 rounded-full border-2 border-ink ${badgeCls}`}
-                    aria-hidden="true"
-                  >
-                    <SetSymbol era={c.id} size={20} />
-                  </span>
-                  {/* 라벨 — text-[12px], leading-snug, letter-spacing wide 살짝 */}
-                  <span
-                    className="text-[12px] font-extrabold text-center [word-break:keep-all] whitespace-nowrap"
-                    style={{ letterSpacing: '-0.01em', lineHeight: 1.2 }}
-                  >
-                    {meta.short || c.label}
-                  </span>
-                  {/* 카운트 칩 — 폰트 10, 패딩 균일 */}
-                  <span
-                    className={`text-[10px] font-mono font-bold tabular-nums px-1.5 py-0.5 rounded ${
-                      active ? 'bg-paper/20' : 'bg-bone-2 text-mute'
-                    }`}
-                  >
-                    {count}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
+      {/* === 시대별 카테고리 — EraSelector (Vintage/Modern/Current/Special 그룹화) === */}
+      <div className="mb-6 lg:mb-8">
+        <EraSelector
+          ariaLabel="포켓몬 TCG 시대 카테고리"
+          groups={ERA_GROUPS}
+          items={CATEGORIES.map((c) => {
+            const meta = ERA_META[c.id] || ERA_META.all
+            const count = c.id === 'all'
+              ? products.length
+              : products.filter((s) => s.category === c.id).length
+            return {
+              id: c.id,
+              label: meta.short || c.label,
+              tone: meta.tone,
+              years: meta.years,
+              count,
+            }
+          })}
+          value={cat}
+          onChange={setCat}
+        />
+      </div>
 
-        {/* 정렬 셀렉트 — 카테고리 아래 별도 줄. height 40 (8pt) */}
-        <div className="mt-6 flex justify-end">
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value)}
-            className="bg-paper border-2 border-ink rounded-full text-[13px] font-bold text-ink shadow-[0_2px_0_#1a1a1a] cursor-pointer hover:bg-electric/20 transition-colors"
-            style={{ height: 40, padding: '0 16px' }}
-          >
-            <option value="default">추천순</option>
-            <option value="price-asc">가격 낮은순</option>
-            <option value="price-desc">가격 높은순</option>
-          </select>
-        </div>
+      {/* === 활성 필터 + 정렬 통합 바 — sticky로 스크롤 시 따라옴 === */}
+      <div className="mb-5 lg:mb-6">
+        <FilterBar
+          activeLabel={ERA_META[cat]?.short || '전체'}
+          isAllOrEmpty={cat === 'all'}
+          onClearFilter={() => setCat('all')}
+          resultCount={filtered.length}
+          sortValue={sort}
+          onSortChange={setSort}
+          sortOptions={[
+            { value: 'default',    label: '추천순' },
+            { value: 'price-asc',  label: '가격 낮은순' },
+            { value: 'price-desc', label: '가격 높은순' },
+          ]}
+        />
       </div>
 
       {loading ? (

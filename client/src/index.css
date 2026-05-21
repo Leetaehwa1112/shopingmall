@@ -1155,3 +1155,12 @@ button { background: none; border: none; cursor: pointer; font-family: inherit; 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* iOS Safari <details><summary>의 기본 디스클로저 화살표 숨김.
+   Tailwind list-none 클래스는 list-style-type만 끄고 webkit 마커는 별도 */
+summary::-webkit-details-marker {
+  display: none;
+}
+summary {
+  -webkit-tap-highlight-color: transparent;
+}

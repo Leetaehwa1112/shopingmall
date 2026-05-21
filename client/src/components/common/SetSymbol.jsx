@@ -161,6 +161,46 @@ const SET_SYMBOLS = {
       <rect x="13" y="13" width="8" height="8" rx="1.5" fill="currentColor" />
     </>
   ),
+
+  // ETB · Elite Trainer Box — 손잡이 달린 대형 박스
+  etb: (
+    <>
+      <path d="M4 8h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V8z" fill="currentColor" />
+      <path d="M9 8V5.5a1.5 1.5 0 011.5-1.5h3A1.5 1.5 0 0115 5.5V8" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+      <path d="M4 12h16M12 9v12" stroke="#ffffff" strokeWidth="1.2" opacity="0.55" />
+    </>
+  ),
+
+  // Premium Collection · Bundle — 카드+팩+피규어 스택
+  bundle: (
+    <>
+      <path d="M3 17h18v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3z" fill="currentColor" />
+      <rect x="6" y="9" width="5" height="9" rx="0.8" fill="currentColor" opacity="0.85" />
+      <rect x="13" y="6" width="5" height="12" rx="0.8" fill="currentColor" />
+      <circle cx="8.5" cy="11" r="1.1" fill="#ffffff" opacity="0.55" />
+      <path d="M14 9h3M14 12h3" stroke="#ffffff" strokeWidth="1" opacity="0.45" />
+    </>
+  ),
+
+  // Tin · 원통형 컬렉션 틴
+  tin: (
+    <>
+      <path d="M5 6h14v13a2 2 0 01-2 2H7a2 2 0 01-2-2V6z" fill="currentColor" />
+      <ellipse cx="12" cy="6" rx="7" ry="2" fill="currentColor" opacity="0.7" />
+      <ellipse cx="12" cy="6" rx="7" ry="2" stroke="#ffffff" strokeWidth="1.2" fill="none" opacity="0.5" />
+      <path d="M8 11h8M8 15h8" stroke="#ffffff" strokeWidth="1" opacity="0.45" />
+    </>
+  ),
+
+  // Theme Deck · 시작 덱 — 카드 스택 + 작은 왕관
+  theme: (
+    <>
+      <rect x="6" y="9" width="13" height="13" rx="1.5" fill="currentColor" />
+      <rect x="4.5" y="7.5" width="13" height="13" rx="1.5" fill="currentColor" opacity="0.55" />
+      <rect x="3" y="6" width="13" height="13" rx="1.5" fill="currentColor" opacity="0.35" />
+      <path d="M8 3.5l1.5 2 1.5-2 1.5 2 1.5-2v3h-6v-3z" fill="currentColor" />
+    </>
+  ),
 }
 
 export default function SetSymbol({ era, size = 22, className = '' }) {
