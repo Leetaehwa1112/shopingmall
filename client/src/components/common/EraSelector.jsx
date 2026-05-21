@@ -218,10 +218,10 @@ function EraChip({ item, active, onClick }) {
       onClick={onClick}
       aria-pressed={active}
       aria-label={`${item.label}${typeof item.count === 'number' ? `, ${item.count}건` : ''}`}
-      className={`group relative w-[80px] flex flex-col items-center gap-1.5 px-1.5 pt-2.5 pb-2 rounded-2xl border-2 transition-all duration-200 will-change-transform ${
+      className={`group relative w-[80px] flex flex-col items-center gap-1.5 px-1.5 pt-2.5 pb-2 rounded-2xl border-2 transition-all duration-200 will-change-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 ${
         active
           ? `${tone.bg} ${tone.text} border-ink shadow-[0_3px_0_#1a1a1a,inset_0_-2px_0_rgba(0,0,0,0.18)] -translate-y-0.5`
-          : 'bg-paper border-ink/12 text-ink hover:border-ink hover:-translate-y-1 hover:shadow-[0_4px_0_#1a1a1a] hover:rotate-[-0.6deg] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2'
+          : 'bg-paper border-ink/12 text-ink hover:border-ink hover:-translate-y-1 hover:shadow-[0_4px_0_#1a1a1a] hover:rotate-[-0.6deg]'
       }`}
       style={{ minHeight: 108 }}
     >
