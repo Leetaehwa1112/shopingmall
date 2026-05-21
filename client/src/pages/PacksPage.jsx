@@ -37,13 +37,23 @@ export default function PacksPage() {
       {/* ── Hero ────────────────────────────────────────────── */}
       <div className="relative sparkle-host mb-10">
         <Sparkles always />
-        <Eyebrow tone="electric" led="yellow" pulse>
+        <Eyebrow tone="electric" dot dotColor="yellow" className="mb-4">
           SEALED PACKS · 두근두근 개봉
         </Eyebrow>
-        <h1 className="mt-4 font-display text-4xl lg:text-5xl font-bold text-ink tracking-tight leading-[1.1]">
+        <h1
+          className="font-display font-bold text-ink [word-break:keep-all]"
+          style={{
+            fontSize: 'clamp(28px, 5vw, 46px)',
+            lineHeight: 1.15,
+            letterSpacing: '-0.025em',
+          }}
+        >
           미개봉 카드팩
         </h1>
-        <p className="text-sm text-mute mt-4 max-w-2xl leading-relaxed font-medium">
+        <p
+          className="text-[15px] text-ink/60 mt-3 max-w-2xl font-medium [word-break:keep-all]"
+          style={{ lineHeight: 1.6 }}
+        >
           1세대 빈티지 부스터부터 25주년 한정판, 최신 ETB까지. 미개봉 인증을 마친 팩들이 당신의 개봉을 기다려요.
         </p>
       </div>

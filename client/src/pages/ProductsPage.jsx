@@ -137,14 +137,14 @@ function MarketPage({
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 lg:py-14">
       {/* === HEADER — 8pt 그리드 정합. 헤드라인 → 본문 24, 본문 → 칩 32. === */}
-      <div className="relative sparkle-host mb-8">
+      <div className="relative sparkle-host mb-10">
         <Sparkles always />
-        <Eyebrow tone="water" led="blue" className="whitespace-nowrap">
+        <Eyebrow tone="water" dot dotColor="blue" className="mb-4 whitespace-nowrap">
           MARKETPLACE · 정품 인증
         </Eyebrow>
         {/* H1 — 타입 스케일 28/36/46, line-height 1.15, letter-spacing tight */}
         <h1
-          className="font-display font-bold text-ink mt-4 [word-break:keep-all]"
+          className="font-display font-bold text-ink [word-break:keep-all]"
           style={{
             fontSize: 'clamp(28px, 5vw, 46px)',
             lineHeight: 1.15,
