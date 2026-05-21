@@ -799,29 +799,15 @@ function ComingSoonPanel() {
   )
 }
 
-// 스켈레톤 — FeaturedLivePanel의 골격을 그대로 모사해 layout shift 0에 가깝게.
-//   ① 빨간 LIVE 헤더 ② 카드+정보 ③ 카운트다운 띠 ④ 거대 CTA ⑤ 시청자 ⑥ 다음 LOT 힌트
+// 스켈레톤 — FeaturedLivePanel의 골격을 그대로 모사.
+// 상단 LIVE 헤더 띠는 로딩 노이즈가 강해서 통째로 제거. 카드+정보만 노출.
 function HeroPanelSkeleton() {
   return (
     <div
-      className="rounded-2xl border-2 border-ink overflow-hidden relative shadow-[0_6px_0_#1a1a1a,0_12px_30px_rgba(220,38,38,0.18)]"
+      className="rounded-2xl border-2 border-ink overflow-hidden relative shadow-[0_4px_0_#1a1a1a]"
       aria-busy="true"
       aria-label="콘텐츠 로딩 중"
     >
-      {/* ① 빨간 헤더 (실제 패널과 동일 톤·높이) */}
-      <div
-        className="relative px-4 py-3 border-b-2 border-ink"
-        style={{ background: 'linear-gradient(180deg, var(--color-dex) 0%, var(--color-dex-d) 100%)' }}
-      >
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="inline-block w-3 h-3 rounded-full bg-white/80" />
-            <span className="inline-block h-5 w-12 rounded bg-white/40" />
-            <span className="inline-block h-3 w-16 rounded bg-white/25" />
-          </div>
-          <span className="inline-block h-5 w-12 rounded-md bg-black/25" />
-        </div>
-      </div>
 
       {/* ② 카드 + 정보 — 카드 placeholder 사이즈는 PokeCard 'sm'과 동일 (160×224) */}
       <div className="bg-paper animate-pulse">
