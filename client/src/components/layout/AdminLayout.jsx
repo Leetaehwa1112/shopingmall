@@ -37,7 +37,7 @@ export default function AdminLayout() {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-6 bg-bone">
+      <div className="min-h-screen min-h-dvh flex items-center justify-center px-6 bg-bone">
         <div className="bg-paper border-2 border-ink rounded-2xl shadow-[0_6px_0_#1a1a1a] p-10 max-w-md text-center">
           <div className="w-14 h-14 mx-auto rounded-full bg-electric/30 border-2 border-ink flex items-center justify-center mb-4">
             <Icon name="lock" size={24} strokeWidth={2} className="text-ink" />
@@ -53,11 +53,11 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="min-h-screen flex bg-bone">
+    <div className="min-h-screen min-h-dvh flex bg-bone">
       <ToastContainer />
 
       {/* ── Sidebar ─────────────────────────────────────────── */}
-      <aside className="w-56 bg-paper border-r border-ink/15 flex-shrink-0 flex flex-col sticky top-0 h-screen">
+      <aside className="w-56 bg-paper border-r border-ink/15 flex-shrink-0 flex flex-col sticky top-0 h-screen h-dvh">
         <Link to="/" className="block px-4 py-4 border-b border-ink/10">
           <div className="flex items-center gap-2">
             <Pokeball size={24} />

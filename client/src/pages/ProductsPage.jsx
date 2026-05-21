@@ -1314,7 +1314,7 @@ function LiveSidebar({ featured, upcoming, onOpenAll, userBidEvent }) {
                     {c.lotOrder || '·'}
                   </span>
                   <span className="w-10 h-12 rounded-md bg-bone-2 border-2 border-ink overflow-hidden shrink-0">
-                    {img && <img src={img} alt="" className="w-full h-full object-cover" />}
+                    {img && <img src={img} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />}
                   </span>
                   <span className="flex-1 min-w-0">
                     <span className="block text-xs font-extrabold text-ink truncate">
@@ -1492,7 +1492,7 @@ function UpcomingQueueSection({ lots }) {
                     {c.lotOrder || '·'}
                   </span>
                   <div className="w-12 h-16 rounded-md bg-bone-2 border-2 border-ink overflow-hidden shrink-0">
-                    {img && <img src={img} alt="" className="w-full h-full object-cover" />}
+                    {img && <img src={img} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="font-display text-sm font-bold text-ink leading-tight truncate group-hover:text-dex transition-colors">
@@ -1943,7 +1943,7 @@ function ModalLotRow({ lot, index, active, onPick }) {
       }`}
     >
       <span className="relative w-16 h-20 rounded-lg bg-bone-2 border-2 border-ink overflow-hidden shrink-0">
-        {img && <img src={img} alt="" className="w-full h-full object-cover" />}
+        {img && <img src={img} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />}
         {active && (
           <span
             aria-hidden="true"
@@ -2165,7 +2165,7 @@ function QuickBidSheet({ lot, onClose, onSuccess }) {
           {/* 카드 요약 — 썸네일 + 메타 */}
           <div className="flex items-center gap-3">
             <div className="w-14 h-18 rounded-md bg-bone-2 border-2 border-ink overflow-hidden shrink-0">
-              {img && <img src={img} alt="" className="w-full h-full object-cover" />}
+              {img && <img src={img} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />}
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 flex-wrap">

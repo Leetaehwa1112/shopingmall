@@ -141,30 +141,31 @@ export default function ProductDetailPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-10">
-      {/* Breadcrumb */}
-      <div className="text-xs font-bold text-mute mb-8 flex items-center gap-2">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 lg:py-10">
+      {/* Breadcrumb — 모바일에선 가로 스크롤로 처리 */}
+      <div className="text-xs font-bold text-mute mb-4 lg:mb-8 flex items-center gap-2 overflow-x-auto whitespace-nowrap">
         <Link to="/" className="hover:text-ink">홈</Link>
         <Icon name="arrow" size={10} strokeWidth={2.2} className="opacity-50" />
         <Link to={cardType === 'auction' ? '/auctions' : '/products'} className="hover:text-ink">
           {cardType === 'auction' ? '경매' : '카탈로그'}
         </Link>
         <Icon name="arrow" size={10} strokeWidth={2.2} className="opacity-50" />
-        <span className="text-ink">{card.nameKo || card.name}</span>
+        <span className="text-ink truncate">{card.nameKo || card.name}</span>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-10 lg:gap-12">
+      <div className="grid lg:grid-cols-2 gap-4 lg:gap-12">
         {/* ═════════════════════════════════════════════════
             LEFT — 전시대 (Pack opening stage)
             ═════════════════════════════════════════════════ */}
-        <div className="space-y-4">
-          <div className="surface-pop sparkle-host holo-shine relative overflow-hidden p-8 sm:p-10 flex justify-center items-center min-h-[560px] bg-confetti">
+        <div className="space-y-3 lg:space-y-4">
+          <div className="surface-pop sparkle-host holo-shine relative overflow-hidden p-4 sm:p-8 lg:p-10 flex justify-center items-center min-h-[360px] sm:min-h-[460px] lg:min-h-[560px] bg-confetti">
             <Sparkles always />
             {/* dotted backdrop layer */}
             <div className="absolute inset-0 bg-polka opacity-50 pointer-events-none" aria-hidden="true" />
 
-            {/* Card center */}
-            <div className="relative z-10">
+            {/* Card center — 모바일 viewport(<sm) 에선 카드 너비(xl=380px)가 화면보다 커서 잘림.
+                CSS scale로 viewport에 맞춤. data-card-fit이 stage 안에 카드를 안전하게 압축 */}
+            <div className="relative z-10 card-fit-stage">
               {view === 'front'  && <PokeCard card={card} size="xl" />}
               {view === 'back'   && <CardBack size="xl" />}
               {view === 'slab'   && <PSASlab card={card} size="xl" />}
@@ -565,6 +566,29 @@ export default function ProductDetailPage() {
         </div>
       )}
 
+      {/* sticky CTA spacer — 모바일 하단 가림 방지 */}
+      <div aria-hidden className="lg:hidden h-[72px]" />
+
+      {/* === Mobile sticky CTA === */}
+      {cardType === 'auction' ? (
+        <ProductStickyCTA
+          mode="auction"
+          priceLabel={formatKRW(card.currentBid || card.startPrice || 0)}
+          priceCaption="현재가"
+          primaryLabel="입찰하기"
+          onPrimary={() => bidPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+        />
+      ) : (
+        <ProductStickyCTA
+          mode="buynow"
+          priceLabel={formatKRW(card.price)}
+          priceCaption="판매가"
+          primaryLabel="바로 구매"
+          onSecondary={handleBuyNow}
+          onPrimary={() => { add(card); navigate('/order') }}
+        />
+      )}
+
       {/* 우측 하단 미니 방송 플레이어 — LIVE 경매 상세에서 항상 표시. */}
       {cardType === 'auction' && card.status === 'active' && !miniDismissed && (() => {
         const t = card.endsAt ? timeUntil(card.endsAt) : null
@@ -613,6 +637,44 @@ function TrustChip({ icon, text, tone }) {
       <span className={`led ${t.dot}`} style={{ width: 7, height: 7 }} aria-hidden="true" />
       <Icon name={icon} size={14} strokeWidth={2} className={t.ic} />
       <span className="text-ink font-bold text-xs">{text}</span>
+    </div>
+  )
+}
+
+// ─── 모바일 디테일 sticky CTA ─────────────────────────────────
+// 경매: 현재가 + "입찰하기" (단일 버튼 → bid panel로 스크롤)
+// 즉시구매: 판매가 + 장바구니 + 바로 구매
+function ProductStickyCTA({ mode, priceLabel, priceCaption, primaryLabel, onPrimary, onSecondary }) {
+  return (
+    <div
+      className="lg:hidden fixed left-0 right-0 z-30 bg-paper border-t-2 border-ink shadow-[0_-4px_12px_rgba(13,23,48,0.08)]"
+      style={{ bottom: `calc(64px + env(safe-area-inset-bottom))` }}
+    >
+      <div className="flex items-center gap-2 px-3 py-2.5">
+        <div className="flex-1 min-w-0">
+          <div className={`text-[10px] font-bold tracking-wider uppercase ${mode === 'auction' ? 'text-dex' : 'text-water'}`}>
+            {priceCaption}
+          </div>
+          <div className="font-display text-xl font-bold text-ink leading-none tabular-nums truncate">{priceLabel}</div>
+        </div>
+        {onSecondary && (
+          <button
+            onClick={onSecondary}
+            className="shrink-0 inline-flex items-center justify-center gap-1.5 bg-paper border-2 border-ink text-ink font-bold py-3 px-3 rounded-xl shadow-[0_2px_0_#1a1a1a] active:translate-y-0.5 active:shadow-[0_1px_0_#1a1a1a] transition-all"
+            aria-label="장바구니 담기"
+          >
+            <Icon name="cart" size={18} strokeWidth={2.2} />
+          </button>
+        )}
+        <button
+          onClick={onPrimary}
+          className={`shrink-0 text-white border-2 border-ink font-bold py-3 px-5 rounded-xl shadow-[0_2px_0_#1a1a1a] active:translate-y-0.5 active:shadow-[0_1px_0_#1a1a1a] transition-all min-w-[120px] ${
+            mode === 'auction' ? 'bg-dex' : 'bg-dex'
+          }`}
+        >
+          {primaryLabel}
+        </button>
+      </div>
     </div>
   )
 }

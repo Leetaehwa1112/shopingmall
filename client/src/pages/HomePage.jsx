@@ -101,8 +101,10 @@ export default function HomePage() {
 
       {/* ════════════════════════════════════════════════
           HERO — 두근거림과 욕망
+          모바일: 텍스트 + CTA 먼저, 카드 패널 작게 뒤따라옴
+          데스크탑(lg+): 좌 텍스트 / 우 카드 grid
           ════════════════════════════════════════════════ */}
-      <section aria-label="히어로" className="relative px-6 pt-12 pb-16 lg:pt-16 lg:pb-20 overflow-hidden">
+      <section aria-label="히어로" className="relative px-4 sm:px-6 pt-6 pb-10 lg:pt-16 lg:pb-20 overflow-hidden">
         {/* ambient confetti + polka dot wash */}
         <div className="absolute inset-0 bg-polka opacity-40 pointer-events-none" aria-hidden="true" />
         <div className="absolute inset-0 bg-confetti pointer-events-none" aria-hidden="true" />
@@ -111,54 +113,56 @@ export default function HomePage() {
           <Pokeball size={180} />
         </div>
 
-        <div className="relative max-w-7xl mx-auto grid lg:grid-cols-[1.15fr_1fr] gap-10 lg:gap-14 items-start">
-          {/* LEFT — 모바일에선 카드 뒤로 (order-2), 데스크탑은 그대로 */}
-          <div className="sparkle-host relative order-2 lg:order-1">
+        <div className="relative max-w-7xl mx-auto grid lg:grid-cols-[1.15fr_1fr] gap-6 lg:gap-14 items-start">
+          {/* LEFT — 모바일/데스크탑 모두 첫 번째.
+              모바일 above-the-fold: Eyebrow + 헤드라인 + 핵심 CTA 즉시 노출 */}
+          <div className="sparkle-host relative">
             <Sparkles always className="hidden lg:block" />
 
-            <Eyebrow tone="ink" dot dotColor="red" className="mb-5">
+            <Eyebrow tone="ink" dot dotColor="red" className="mb-3 lg:mb-5">
               {t('hero.eyebrow')}
             </Eyebrow>
 
-            <h1 className="font-display text-[42px] sm:text-5xl lg:text-[68px] font-bold text-ink leading-[1.02] tracking-tight mb-5">
-              {t('hero.headline.line1')}<br className="hidden sm:inline" />
+            <h1 className="font-display text-[32px] sm:text-5xl lg:text-[68px] font-bold text-ink leading-[1.05] tracking-tight mb-3 lg:mb-5">
+              {t('hero.headline.line1')}<br />
               <span className="relative inline-block">
                 <span className="relative z-10">{t('hero.headline.line2.before')}</span>
-                <span className="absolute -bottom-1 left-0 right-0 h-4 bg-electric -z-0 rounded-full" aria-hidden="true" />
+                <span className="absolute -bottom-1 left-0 right-0 h-3 lg:h-4 bg-electric -z-0 rounded-full" aria-hidden="true" />
               </span>{' '}
               {t('hero.headline.line2.after')}
               <br />
               <span className="text-dex">{t('hero.headline.line3.before')}</span> {t('hero.headline.line3.after')}
             </h1>
 
-            <p className="text-base lg:text-[18px] text-mute leading-relaxed max-w-xl mb-8 font-medium">
-              {t('hero.paragraph.line1')}<br />
+            <p className="text-[15px] lg:text-[18px] text-mute leading-relaxed max-w-xl mb-5 lg:mb-8 font-medium">
+              {t('hero.paragraph.line1')}<br className="hidden sm:inline" />
               <span className="text-ink font-bold">{t('hero.paragraph.line2')}</span>
             </p>
 
-            <div className="flex flex-wrap gap-3 mb-8">
-              <Link to={heroPrimaryTo} aria-label={heroPrimaryCta}>
-                <Button variant="spark" size="lg">
+            {/* CTA — 모바일에서 풀폭, 우선순위 명확. 엄지로 누르기 쉬운 위치 */}
+            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2.5 sm:gap-3 mb-5 lg:mb-8">
+              <Link to={heroPrimaryTo} aria-label={heroPrimaryCta} className="sm:inline-block">
+                <Button variant="spark" size="lg" className="w-full sm:w-auto">
                   {heroPrimaryCta} <Icon name="arrow" size={14} strokeWidth={2.5} />
                 </Button>
               </Link>
-              <Link to={heroSecondaryTo} aria-label={heroSecondaryCta}>
-                <Button variant="secondary" size="lg">
+              <Link to={heroSecondaryTo} aria-label={heroSecondaryCta} className="sm:inline-block">
+                <Button variant="secondary" size="lg" className="w-full sm:w-auto">
                   {heroSecondaryCta}
                 </Button>
               </Link>
             </div>
 
-            {/* fun trust chips */}
-            <ul className="flex flex-wrap items-center gap-2" aria-label="trust chips">
+            {/* fun trust chips — 모바일에선 숨김 (인지부하 감소, 핵심 액션에 집중) */}
+            <ul className="hidden sm:flex flex-wrap items-center gap-2" aria-label="trust chips">
               <li className="chip-type chip-type-grass">{t('hero.chip.authentic')}</li>
               <li className="chip-type chip-type-electric">{t('hero.chip.certs')}</li>
               <li className="chip-type chip-type-water">{t('hero.chip.delivery')}</li>
             </ul>
           </div>
 
-          {/* RIGHT — 회전 카드 (모바일 최상단, 데스크탑 우측) */}
-          <div className="order-1 lg:order-2">
+          {/* RIGHT — 회전 카드 (모바일에선 텍스트 다음, 콤팩트하게 둠) */}
+          <div>
             {loading ? (
               <HeroPanelSkeleton />
             ) : FEATURED_LIVE ? (
@@ -177,7 +181,7 @@ export default function HomePage() {
       {/* ════════════════════════════════════════════════
           QUICK CATEGORIES
           ════════════════════════════════════════════════ */}
-      <section aria-label="카테고리 바로가기" className="px-6 pb-14">
+      <section aria-label="카테고리 바로가기" className="px-4 sm:px-6 pb-8 lg:pb-14">
         <div className="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
           <CategoryTile
             to="/auctions"
@@ -228,7 +232,7 @@ export default function HomePage() {
           SEALED PACKS — 카테고리 바로 아래 위치 (TOP LOT 자리 대체).
           PackTile에 hover 시 팩 상단 뜯어지며 카드 peek 효과(카드깡 심리).
           ════════════════════════════════════════════════ */}
-      <section aria-label="미개봉 카드팩" className="max-w-7xl mx-auto px-6 py-14">
+      <section aria-label="미개봉 카드팩" className="max-w-7xl mx-auto px-4 sm:px-6 py-8 lg:py-14">
         <SectionHead
           eyebrow="미개봉 팩"
           eyebrowTone="electric"
@@ -263,7 +267,7 @@ export default function HomePage() {
       {/* ════════════════════════════════════════════════
           TRUST — playful pop block
           ════════════════════════════════════════════════ */}
-      <section aria-label="신뢰 시스템" className="bg-paper border-y-2 border-ink py-16 my-8 relative overflow-hidden">
+      <section aria-label="신뢰 시스템" className="bg-paper border-y-2 border-ink py-10 lg:py-16 my-4 lg:my-8 relative overflow-hidden">
         <div className="absolute inset-0 bg-polka opacity-30 pointer-events-none" aria-hidden="true" />
         <div className="max-w-7xl mx-auto px-6 relative">
           <div className="text-center mb-10 max-w-2xl mx-auto">
@@ -287,7 +291,7 @@ export default function HomePage() {
       {/* ════════════════════════════════════════════════
           BUY NOW
           ════════════════════════════════════════════════ */}
-      <section aria-label="즉시구매 카드" className="max-w-7xl mx-auto px-6 py-14">
+      <section aria-label="즉시구매 카드" className="max-w-7xl mx-auto px-4 sm:px-6 py-8 lg:py-14">
         <SectionHead
           eyebrow="즉시구매"
           eyebrowTone="water"
@@ -327,7 +331,7 @@ export default function HomePage() {
       {/* ════════════════════════════════════════════════
           SELL / JOIN CTA
           ════════════════════════════════════════════════ */}
-      <section aria-label="판매 · 회원가입" className="max-w-7xl mx-auto px-6 py-16">
+      <section aria-label="판매 · 회원가입" className="max-w-7xl mx-auto px-4 sm:px-6 py-10 lg:py-16">
         <div className="grid lg:grid-cols-2 gap-5">
           {/* Sell — 위탁(노란 electric 톤) */}
           <div className="dex-casing p-8 relative overflow-hidden text-white holo-shine sparkle-host">

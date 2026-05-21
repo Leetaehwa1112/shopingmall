@@ -47,8 +47,11 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 bg-paper border-b-2 border-ink">
-      {/* ── Top fun ribbon ─────────────────────────────────── */}
-      <div className="bg-ink text-white">
+      {/* ── Top fun ribbon — 모바일에선 숨김 (시각 노이즈 + 세로 공간 절약).
+          어차피 ribbon 우측 콘텐츠 (전화번호/EN-KR 토글)가 hidden md:flex라
+          모바일에선 좌측 LIVE 표시 한 줄만 남아서 ribbon 자체가 의미 약함.
+          LIVE 상태는 메인 콘텐츠/카드/탭바에서 더 명확하게 노출됨. */}
+      <div className="hidden md:block bg-ink text-white">
         <div className="max-w-7xl mx-auto px-6 h-8 flex items-center justify-between text-[11px] font-medium">
           <div className="flex gap-4">
             <span className="inline-flex items-center gap-1.5">
@@ -94,7 +97,7 @@ export default function Header() {
       </div>
 
       {/* ── Main bar ───────────────────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-6 h-[76px] flex items-center justify-between gap-4 lg:gap-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-[60px] lg:h-[76px] flex items-center justify-between gap-2 sm:gap-4 lg:gap-6">
         <Link
           to="/"
           onClick={(e) => {
@@ -104,14 +107,14 @@ export default function Header() {
               window.scrollTo({ top: 0, behavior: 'smooth' })
             }
           }}
-          className="flex items-center gap-3 group shrink-0"
+          className="flex items-center gap-2 sm:gap-3 group shrink-0 min-w-0"
         >
-          <Pokeball size={38} className="group-hover:rotate-[20deg] group-hover:scale-110 transition-transform duration-300" />
-          <div className="leading-none">
-            <div className="font-display font-bold text-[26px] tracking-tight text-ink">
+          <Pokeball size={32} className="sm:!w-[38px] sm:!h-[38px] group-hover:rotate-[20deg] group-hover:scale-110 transition-transform duration-300 shrink-0" />
+          <div className="leading-none min-w-0">
+            <div className="font-display font-bold text-[20px] sm:text-[26px] tracking-tight text-ink truncate">
               Poké<span className="text-dex">vault</span>
             </div>
-            <div className="pixel-label text-mute mt-1.5">{t('header.logo.sub')}</div>
+            <div className="pixel-label text-mute mt-1 sm:mt-1.5 hidden sm:block">{t('header.logo.sub')}</div>
           </div>
         </Link>
 
@@ -145,11 +148,11 @@ export default function Header() {
           {isAdmin && <NavLink to="/admin" className={linkCls}>{t('nav.admin')}</NavLink>}
         </nav>
 
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           <button
             type="button"
             onClick={() => setSearchOpen(true)}
-            className="md:hidden w-10 h-10 rounded-full bg-bone-2 hover:bg-line flex items-center justify-center text-ink transition-colors"
+            className="md:hidden w-11 h-11 rounded-full bg-bone-2 hover:bg-line flex items-center justify-center text-ink transition-colors"
             aria-label={t('nav.search.placeholder')}
           >
             <Icon name="search" size={18} strokeWidth={1.8} />
@@ -161,7 +164,7 @@ export default function Header() {
             <Icon name="plus" size={12} strokeWidth={2.8} /> {t('nav.sell').replace(/^\+\s*/, '')}
           </Link>
           <Link to="/cart"
-            className="relative w-10 h-10 rounded-full bg-bone-2 hover:bg-electric hover:rotate-6 transition-all flex items-center justify-center text-ink"
+            className="relative w-11 h-11 rounded-full bg-bone-2 hover:bg-electric hover:rotate-6 transition-all flex items-center justify-center text-ink"
             aria-label={t('nav.cart')}>
             <Icon name="cart" size={18} strokeWidth={2} />
             {cartCount > 0 && (
@@ -173,22 +176,22 @@ export default function Header() {
           {isAuthenticated ? (
             <UserDropdown user={user} logout={logout} navigate={navigate} />
           ) : (
-            <div className="flex items-center gap-2">
-              <Link to="/login" className="hidden sm:inline text-sm font-bold text-mute hover:text-ink">{t('nav.login')}</Link>
+            <div className="hidden sm:flex items-center gap-2">
+              <Link to="/login" className="text-sm font-bold text-mute hover:text-ink">{t('nav.login')}</Link>
               <Link to="/register" className="btn btn-pop btn-sm">
                 {t('nav.signup')}
               </Link>
             </div>
           )}
 
-          {/* 햄버거 — lg 미만에서만 노출 (lg에선 nav가 인라인) */}
+          {/* 햄버거 — lg 미만에서만 노출 (lg에선 nav가 인라인). 모바일에선 하단 탭바와 분담 */}
           <button
             type="button"
             onClick={() => setMenuOpen((v) => !v)}
             aria-label={menuOpen ? '메뉴 닫기' : '메뉴 열기'}
             aria-expanded={menuOpen}
             aria-controls="mobile-nav-panel"
-            className="lg:hidden w-10 h-10 rounded-full bg-bone-2 hover:bg-electric flex items-center justify-center text-ink transition-colors border-2 border-transparent hover:border-ink"
+            className="lg:hidden hidden md:flex w-11 h-11 rounded-full bg-bone-2 hover:bg-electric items-center justify-center text-ink transition-colors border-2 border-transparent hover:border-ink"
           >
             <Icon name={menuOpen ? 'close' : 'menu'} size={18} strokeWidth={2.2} />
           </button>

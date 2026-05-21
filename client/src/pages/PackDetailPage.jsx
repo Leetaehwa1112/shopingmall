@@ -66,18 +66,18 @@ export default function PackDetailPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-10">
-      <div className="text-xs font-bold text-mute mb-8 flex items-center gap-2">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 lg:py-10">
+      <div className="text-xs font-bold text-mute mb-4 lg:mb-8 flex items-center gap-2 overflow-x-auto whitespace-nowrap">
         <Link to="/" className="hover:text-ink">홈</Link>
         <Icon name="arrow" size={10} strokeWidth={2} className="opacity-50" />
         <Link to="/packs" className="hover:text-ink">카드팩</Link>
         <Icon name="arrow" size={10} strokeWidth={2} className="opacity-50" />
-        <span className="text-ink">{pack.nameKo || pack.name}</span>
+        <span className="text-ink truncate">{pack.nameKo || pack.name}</span>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-12">
+      <div className="grid lg:grid-cols-2 gap-6 lg:gap-12">
         {/* LEFT: Pack visual — chunky + holo + sparkles + polka */}
-        <div className="surface-pop sparkle-host holo-shine bg-confetti p-10 flex justify-center items-center min-h-[500px] relative overflow-hidden">
+        <div className="surface-pop sparkle-host holo-shine bg-confetti p-6 lg:p-10 flex justify-center items-center min-h-[280px] lg:min-h-[500px] relative overflow-hidden">
           <Sparkles always />
           <div className="absolute inset-0 bg-polka opacity-40 pointer-events-none" aria-hidden />
           <div className="relative float-bob">
@@ -94,10 +94,10 @@ export default function PackDetailPage() {
             <div className="text-xs font-mono text-mute mt-3 mb-2 font-bold">
               {pack.setShort} · {pack.year} · {pack.cardsPerPack ? `${pack.cardsPerPack}장 / ` : ''}{pack.type === 'box' ? '박스' : '팩'}
             </div>
-            <h1 className="font-display text-4xl lg:text-5xl font-bold text-ink tracking-tight leading-[1.05]">
+            <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold text-ink tracking-tight leading-[1.05]">
               {pack.nameKo || pack.name}
             </h1>
-            <div className="text-lg italic text-mute mt-2 font-medium">{pack.name}</div>
+            <div className="text-base lg:text-lg italic text-mute mt-2 font-medium">{pack.name}</div>
           </div>
 
           {pack.description && (
@@ -196,6 +196,50 @@ export default function PackDetailPage() {
       )}
 
       {opening && <PackOpener pack={pack} onClose={() => setOpening(false)} />}
+
+      {/* sticky CTA가 마지막 콘텐츠를 가리지 않게 — 모바일에서만 spacer */}
+      <div aria-hidden className="lg:hidden h-[72px]" />
+
+      {/* === Mobile sticky CTA — 스크롤해도 항상 액션 가능 (lg 이하) === */}
+      <MobileStickyCTA
+        price={pack.price}
+        priceLabel={formatKRW(pack.price)}
+        onAddToCart={handleAdd}
+        onBuyNow={() => { add({ ...pack, qty }); navigate('/order') }}
+      />
+    </div>
+  )
+}
+
+// ─── 모바일 하단 sticky CTA — 디테일 페이지 전환 최적화 ───
+// 하단 탭바(64px) 위에 떠 있음. 스크롤해도 항상 노출 → 친화적 전환
+function MobileStickyCTA({ priceLabel, onAddToCart, onBuyNow }) {
+  return (
+    <div
+      className="lg:hidden fixed left-0 right-0 z-30 bg-paper border-t-2 border-ink shadow-[0_-4px_12px_rgba(13,23,48,0.08)]"
+      style={{
+        bottom: `calc(64px + env(safe-area-inset-bottom))`,
+      }}
+    >
+      <div className="flex items-center gap-2 px-3 py-2.5">
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] font-bold text-dex tracking-wider uppercase">판매가</div>
+          <div className="font-display text-xl font-bold text-ink leading-none tabular-nums truncate">{priceLabel}</div>
+        </div>
+        <button
+          onClick={onAddToCart}
+          className="shrink-0 inline-flex items-center justify-center gap-1.5 bg-paper border-2 border-ink text-ink font-bold py-3 px-3 rounded-xl shadow-[0_2px_0_#1a1a1a] active:translate-y-0.5 active:shadow-[0_1px_0_#1a1a1a] transition-all"
+          aria-label="장바구니 담기"
+        >
+          <Icon name="cart" size={18} strokeWidth={2.2} />
+        </button>
+        <button
+          onClick={onBuyNow}
+          className="shrink-0 bg-dex text-white border-2 border-ink font-bold py-3 px-5 rounded-xl shadow-[0_2px_0_#1a1a1a] active:translate-y-0.5 active:shadow-[0_1px_0_#1a1a1a] transition-all min-w-[120px]"
+        >
+          바로 구매
+        </button>
+      </div>
     </div>
   )
 }
