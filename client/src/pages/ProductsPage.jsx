@@ -135,18 +135,30 @@ function MarketPage({
   const list = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 lg:py-12">
-      {/* === HEADER === */}
-      <div className="relative sparkle-host mb-8 lg:mb-10">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 lg:py-14">
+      {/* === HEADER — 8pt 그리드 정합. 헤드라인 → 본문 24, 본문 → 칩 32. === */}
+      <div className="relative sparkle-host mb-8">
         <Sparkles always />
         <Eyebrow tone="water" led="blue" className="whitespace-nowrap">
           MARKETPLACE · 정품 인증
         </Eyebrow>
-        <h1 className="mt-5 font-display text-[28px] sm:text-4xl lg:text-5xl font-bold text-ink tracking-tight leading-[1.15] [word-break:keep-all]">
+        {/* H1 — 타입 스케일 28/36/46, line-height 1.15, letter-spacing tight */}
+        <h1
+          className="font-display font-bold text-ink mt-4 [word-break:keep-all]"
+          style={{
+            fontSize: 'clamp(28px, 5vw, 46px)',
+            lineHeight: 1.15,
+            letterSpacing: '-0.025em',
+          }}
+        >
           오늘의 카드 카탈로그
         </h1>
-        <p className="text-[14px] sm:text-sm text-mute mt-5 font-medium [word-break:keep-all]">
-          옥션 <span className="text-ink font-bold tabular-nums">{auctionCount}</span>건 · 즉시구매 <span className="text-ink font-bold tabular-nums">{buynowCount}</span>건
+        {/* 본문 — text-[15px], 색 text-ink/60 (안정 contrast), line-height 1.6 */}
+        <p
+          className="text-[15px] text-ink/60 mt-3 font-medium tabular-nums [word-break:keep-all]"
+          style={{ lineHeight: 1.6 }}
+        >
+          옥션 <span className="text-ink font-bold">{auctionCount}</span>건 · 즉시구매 <span className="text-ink font-bold">{buynowCount}</span>건
         </p>
 
         {query && (
@@ -183,22 +195,25 @@ function MarketPage({
                   key={c.id}
                   onClick={() => setCat(c.id)}
                   aria-pressed={active}
-                  className={`group relative shrink-0 w-[88px] sm:w-[96px] flex flex-col items-center gap-2 px-2 py-3 rounded-2xl border-2 transition-all ${bgCls} ${active ? 'shadow-[0_3px_0_#1a1a1a] -translate-y-0.5' : 'hover:-translate-y-0.5 hover:shadow-[0_3px_0_#1a1a1a]'}`}
+                  className={`group relative shrink-0 w-[96px] flex flex-col items-center gap-2 px-2 py-3 rounded-2xl border-2 transition-all ${bgCls} ${active ? 'shadow-[0_3px_0_#1a1a1a] -translate-y-0.5' : 'hover:-translate-y-0.5 hover:shadow-[0_3px_0_#1a1a1a]'}`}
                 >
-                  {/* 셋 심볼 배지 — TCG 카드 셋 심볼 스타일 (채워진 실루엣) */}
+                  {/* 셋 심볼 배지 — 40×40 (8pt 그리드), 칩 너비의 40% 비율로 안정감 */}
                   <span
-                    className={`inline-flex items-center justify-center w-11 h-11 rounded-full border-2 border-ink ${badgeCls}`}
+                    className={`inline-flex items-center justify-center w-10 h-10 rounded-full border-2 border-ink ${badgeCls}`}
                     aria-hidden="true"
                   >
-                    <SetSymbol era={c.id} size={22} />
+                    <SetSymbol era={c.id} size={20} />
                   </span>
-                  {/* 라벨 — 짧게 한 줄 (ERA_META.short 우선) */}
-                  <span className="text-[11px] font-extrabold leading-tight text-center [word-break:keep-all] whitespace-nowrap">
+                  {/* 라벨 — text-[12px], leading-snug, letter-spacing wide 살짝 */}
+                  <span
+                    className="text-[12px] font-extrabold text-center [word-break:keep-all] whitespace-nowrap"
+                    style={{ letterSpacing: '-0.01em', lineHeight: 1.2 }}
+                  >
                     {meta.short || c.label}
                   </span>
-                  {/* 카운트 칩 */}
+                  {/* 카운트 칩 — 폰트 10, 패딩 균일 */}
                   <span
-                    className={`text-[10px] font-mono font-bold tabular-nums px-1.5 rounded ${
+                    className={`text-[10px] font-mono font-bold tabular-nums px-1.5 py-0.5 rounded ${
                       active ? 'bg-paper/20' : 'bg-bone-2 text-mute'
                     }`}
                   >
@@ -210,12 +225,13 @@ function MarketPage({
           </div>
         </div>
 
-        {/* 정렬 셀렉트 — 카테고리 아래 별도 줄 */}
-        <div className="mt-5 flex justify-end">
+        {/* 정렬 셀렉트 — 카테고리 아래 별도 줄. height 40 (8pt) */}
+        <div className="mt-6 flex justify-end">
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value)}
-            className="bg-paper border-2 border-ink rounded-full px-4 py-2 text-sm font-bold text-ink shadow-[0_3px_0_#1a1a1a] cursor-pointer hover:bg-electric/20 transition-colors"
+            className="bg-paper border-2 border-ink rounded-full text-[13px] font-bold text-ink shadow-[0_2px_0_#1a1a1a] cursor-pointer hover:bg-electric/20 transition-colors"
+            style={{ height: 40, padding: '0 16px' }}
           >
             <option value="default">추천순</option>
             <option value="price-asc">가격 낮은순</option>
@@ -1125,10 +1141,18 @@ function CompactHeroStrip({ liveLot, upcomingCount, onOpenAll, disabled }) {
 
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
         <div>
-          <Eyebrow tone="ink" dot dotColor="red" className="mb-5 whitespace-nowrap">
+          <Eyebrow tone="ink" dot dotColor="red" className="mb-4 whitespace-nowrap">
             {hasLive ? 'LIVE AUCTION' : 'AUCTION · 곧 시작'}
           </Eyebrow>
-          <h1 className="font-display text-3xl sm:text-4xl lg:text-[44px] font-bold text-ink tracking-tight leading-[1.05]">
+          {/* H1 — 모듈러 28/36/46, line-height 1.15, letter-spacing tight */}
+          <h1
+            className="font-display font-bold text-ink [word-break:keep-all]"
+            style={{
+              fontSize: 'clamp(28px, 5vw, 46px)',
+              lineHeight: 1.15,
+              letterSpacing: '-0.025em',
+            }}
+          >
             {hasLive ? (
               <>
                 지금{' '}
@@ -1145,10 +1169,14 @@ function CompactHeroStrip({ liveLot, upcomingCount, onOpenAll, disabled }) {
               </>
             )}
           </h1>
-          <p className="mt-5 text-[15px] text-mute font-medium whitespace-nowrap">
+          {/* 본문 — text-[15px], text-ink/60, line-height 1.6 */}
+          <p
+            className="mt-3 text-[15px] text-ink/60 font-medium whitespace-nowrap"
+            style={{ lineHeight: 1.6 }}
+          >
             한 LOT씩 · 정품 인증 완료
           </p>
-          <div className="mt-6 inline-flex items-center gap-2 text-[12px] font-bold text-ink/70">
+          <div className="mt-5 inline-flex items-center gap-2 text-[12px] font-bold text-ink/70">
             <CounterPokeballs liveCount={hasLive ? 1 : 0} />
             <span className="whitespace-nowrap">
               {hasLive ? (
@@ -1163,12 +1191,13 @@ function CompactHeroStrip({ liveLot, upcomingCount, onOpenAll, disabled }) {
           type="button"
           onClick={onOpenAll}
           disabled={disabled}
-          className="focus-ring relative inline-flex items-center gap-2 px-5 py-3 rounded-full bg-paper text-ink border-2 border-ink shadow-[0_3px_0_#1a1a1a] hover:-translate-y-0.5 hover:shadow-[0_4px_0_#1a1a1a] hover:bg-electric/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-extrabold text-sm shrink-0 self-start md:self-auto"
+          className="focus-ring relative inline-flex items-center gap-2 rounded-full bg-paper text-ink border-2 border-ink shadow-[0_2px_0_#1a1a1a] hover:-translate-y-0.5 hover:shadow-[0_4px_0_#1a1a1a] hover:bg-electric/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-extrabold text-[13px] shrink-0 self-start md:self-auto"
+          style={{ height: 40, padding: '0 20px' }}
           aria-label={`전체 LOT 보기, 총 ${totalCount}건`}
         >
           <Icon name="layers" size={14} strokeWidth={2.4} />
           오늘의 LOT 전체보기
-          <span className="ml-0.5 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 rounded-full bg-dex text-paper font-mono text-[10.5px] font-bold tabular-nums border-2 border-ink">
+          <span className="ml-0.5 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-dex text-paper font-mono text-[10.5px] font-bold tabular-nums border-2 border-ink">
             {totalCount}
           </span>
         </button>

@@ -105,7 +105,7 @@ export default function HomePage() {
           모바일: 텍스트 + CTA 먼저, 카드 패널 작게 뒤따라옴
           데스크탑(lg+): 좌 텍스트 / 우 카드 grid
           ════════════════════════════════════════════════ */}
-      <section aria-label="히어로" className="relative px-4 sm:px-6 pt-6 pb-10 lg:pt-16 lg:pb-20 overflow-hidden">
+      <section aria-label="히어로" className="relative px-4 sm:px-6 pt-4 pb-8 lg:pt-16 lg:pb-20 overflow-hidden">
         {/* ambient confetti + polka dot wash */}
         <div className="absolute inset-0 bg-polka opacity-40 pointer-events-none" aria-hidden="true" />
         <div className="absolute inset-0 bg-confetti pointer-events-none" aria-hidden="true" />
@@ -120,11 +120,20 @@ export default function HomePage() {
           <div className="sparkle-host relative order-2 lg:order-1">
             <Sparkles always className="hidden lg:block" />
 
-            <Eyebrow tone="ink" dot dotColor="red" className="mb-3 lg:mb-5">
+            <Eyebrow tone="ink" dot dotColor="red" className="mb-4 lg:mb-6">
               {t('hero.eyebrow')}
             </Eyebrow>
 
-            <h1 className="font-display text-[32px] sm:text-5xl lg:text-[68px] font-bold text-ink leading-[1.05] tracking-tight mb-3 lg:mb-5">
+            {/* 헤드라인 — 모듈러 타입 스케일 28 / 46 / 58.
+                letter-spacing tight, line-height 1.1 (큰 헤드라인 안정 비율) */}
+            <h1
+              className="font-display font-bold text-ink mb-4 lg:mb-6 [word-break:keep-all]"
+              style={{
+                fontSize: 'clamp(28px, 6vw, 58px)',
+                lineHeight: 1.1,
+                letterSpacing: '-0.025em',
+              }}
+            >
               {t('hero.headline.line1')}<br />
               <span className="relative inline-block">
                 <span className="relative z-10">{t('hero.headline.line2.before')}</span>
@@ -135,13 +144,18 @@ export default function HomePage() {
               <span className="text-dex">{t('hero.headline.line3.before')}</span> {t('hero.headline.line3.after')}
             </h1>
 
-            <p className="text-[15px] lg:text-[18px] text-mute leading-relaxed max-w-xl mb-5 lg:mb-8 font-medium">
+            {/* 본문 — 타입 스케일 15/18, line-height 1.65 (한국어 가독 추천),
+                색상 text-ink/70 (mute보다 살짝 짙음, 무게감 안정) */}
+            <p
+              className="text-[15px] lg:text-[17px] text-ink/70 max-w-xl mb-6 lg:mb-8 font-medium [word-break:keep-all]"
+              style={{ lineHeight: 1.65 }}
+            >
               {t('hero.paragraph.line1')}<br className="hidden sm:inline" />
               <span className="text-ink font-bold">{t('hero.paragraph.line2')}</span>
             </p>
 
-            {/* CTA — 모바일에서 풀폭, 우선순위 명확. 엄지로 누르기 쉬운 위치 */}
-            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2.5 sm:gap-3 mb-5 lg:mb-8">
+            {/* CTA — 8pt 그리드 gap, 48px height 통일 */}
+            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 mb-6 lg:mb-8">
               <Link to={heroPrimaryTo} aria-label={heroPrimaryCta} className="sm:inline-block">
                 <Button variant="spark" size="lg" className="w-full sm:w-auto">
                   {heroPrimaryCta} <Icon name="arrow" size={14} strokeWidth={2.5} />

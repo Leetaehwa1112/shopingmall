@@ -39,21 +39,24 @@ export default function MobileTabBar() {
               <NavLink
                 to={to}
                 aria-current={active ? 'page' : undefined}
-                className={`relative flex flex-col items-center justify-center gap-0.5 h-[56px] text-[11px] font-bold transition-colors ${
+                className={`relative flex flex-col items-center justify-center gap-1 text-[11px] font-bold transition-colors ${
                   active ? 'text-dex' : 'text-mute hover:text-ink active:text-ink'
                 }`}
+                style={{ height: 56, letterSpacing: '-0.01em' }}
               >
                 <span className="relative">
-                  <Icon name={tab.icon} size={22} strokeWidth={active ? 2.4 : 1.8} />
+                  {/* 아이콘 24px (8pt 정합), 활성 시 stroke 2.4 */}
+                  <Icon name={tab.icon} size={24} strokeWidth={active ? 2.4 : 1.8} />
                   {showBadge && (
                     <span className="absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] bg-dex text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-paper px-1">
                       {cartCount > 99 ? '99+' : cartCount}
                     </span>
                   )}
                 </span>
-                <span className="tracking-tight">{tab.label}</span>
+                <span>{tab.label}</span>
+                {/* 활성 인디케이터 — 24px 너비 (아이콘 폭과 일치) */}
                 {active && (
-                  <span aria-hidden className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[3px] bg-dex rounded-b-full" />
+                  <span aria-hidden className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[3px] bg-dex rounded-b-full" />
                 )}
               </NavLink>
             </li>

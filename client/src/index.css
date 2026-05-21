@@ -61,6 +61,57 @@
   --font-display: "Bungee", "Pretendard", system-ui, sans-serif;
   --font-body:   "Pretendard", "Inter", system-ui, sans-serif;
   --font-mono:   "JetBrains Mono", ui-monospace, monospace;
+
+  /* === Type Scale (1.25 modular — major third) ============
+     인간이 안정감을 느끼는 비율. 11→58 까지 모듈러 점프. */
+  --t-2xs:   11px;  /* 캡션/카운트칩 */
+  --t-xs:    12px;  /* 보조 라벨 */
+  --t-sm:    14px;  /* 보조 본문 */
+  --t-base:  15px;  /* 본문 (한국어 가독성 최적) */
+  --t-md:    16px;  /* 폼 (iOS 줌 방지) */
+  --t-lg:    18px;  /* 리드 본문 */
+  --t-xl:    22px;  /* 카드 헤더 */
+  --t-2xl:   28px;  /* H4 / 모바일 hero */
+  --t-3xl:   36px;  /* H3 / 태블릿 hero */
+  --t-4xl:   46px;  /* H2 / 데스크탑 hero */
+  --t-5xl:   58px;  /* H1 / 대화면 hero */
+
+  /* Line-height — 헤드라인은 타이트, 본문은 여유 */
+  --lh-tight:   1.1;   /* 큰 헤드라인 */
+  --lh-snug:    1.25;  /* 중간 헤드라인 */
+  --lh-normal:  1.5;   /* 본문 */
+  --lh-relaxed: 1.65;  /* 본문 (한국어 추천) */
+  --lh-loose:   1.85;  /* 캡션/long-form */
+
+  /* Letter-spacing */
+  --ls-tight:  -0.025em;  /* 큰 헤드라인 */
+  --ls-normal: 0;
+  --ls-wide:   0.06em;    /* 캡션/UPPERCASE */
+  --ls-wider:  0.18em;    /* 픽셀 라벨 */
+
+  /* === Spacing scale (8pt grid) =========================== */
+  --s-1:  4px;
+  --s-2:  8px;
+  --s-3:  12px;
+  --s-4:  16px;
+  --s-5:  24px;
+  --s-6:  32px;
+  --s-7:  48px;
+  --s-8:  64px;
+  --s-9:  96px;
+
+  /* === Radius scale ====================================== */
+  --r-sm:  4px;
+  --r-md:  8px;
+  --r-lg:  12px;
+  --r-xl:  16px;
+  --r-2xl: 24px;
+  --r-full: 9999px;
+
+  /* === Button heights (8pt) ============================== */
+  --btn-h-sm: 32px;
+  --btn-h-md: 40px;
+  --btn-h-lg: 48px;
 }
 
 html, body, #root {
@@ -668,9 +719,11 @@ body {
 }
 .btn-ghost:hover { background: rgba(13, 23, 48, 0.05); }
 
-.btn-sm { padding: 0.5rem 1rem; font-size: 12px; }
-.btn-md { padding: 0.7rem 1.4rem; font-size: 13px; }
-.btn-lg { padding: 0.95rem 2rem; font-size: 14px; }
+/* 버튼 사이즈 — 8pt 그리드 정합 (높이 32/40/48), 폰트 12/14/15.
+   수평 패딩 = 폰트의 1.75~2x (시각적으로 여유 있는 비율). */
+.btn-sm { height: 32px; padding: 0 14px; font-size: 12px; line-height: 1; }
+.btn-md { height: 40px; padding: 0 20px; font-size: 14px; line-height: 1; }
+.btn-lg { height: 48px; padding: 0 28px; font-size: 15px; line-height: 1; }
 
 /* === Pixel mini-label === */
 .pixel-label {
