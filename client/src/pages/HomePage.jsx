@@ -695,18 +695,19 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
   }
 
   // 데스크탑 — 카드가 배너 위로 솟아오른 입체 레이아웃
-  // 위치 추론: top:-80 — 카드 308 중 80px(약 26%)만 배너 위로 솟고, 나머지 228px가 패널 안쪽에 박힘.
-  // 가독성 확보 + "솟아오름" 인상 유지의 균형점.
+  // 위치 추론: top:-50 — 카드 308 중 50px(약 16%)만 살짝 솟고, 84%는 패널 안에 단단히 박힘.
+  // "완벽한 균형 + 살짝 불균형": 위로 끌어올리는 느낌은 최소화하고, 한 끗 어긋난 디테일만 남김.
+  // items-center 그리드에서 right 칼럼이 위로 솟지 않도록 marginTop도 55까지 축소.
   return (
-    <div className="relative" style={{ marginTop: 90 }}>
-      {/* 배너 위로 솟아오른 카드 — md 사이즈, 80px만 살짝 솟음 (안정감) */}
+    <div className="relative" style={{ marginTop: 55 }}>
+      {/* 배너 위로 살짝(50px) 솟은 카드 — 의도된 한 끗 불균형 */}
       <Link
         to={`/products/${card.id}`}
         className="z-20 group/card"
         style={{
           position: 'absolute',
           left: '50%',
-          top: -80,
+          top: -50,
           transform: 'translateX(-50%)',
           display: 'inline-block',
           borderRadius: 12,
@@ -757,29 +758,29 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
           </div>
         </div>
 
-        {/* 정보 영역 — 카드 하단부 y=228, 배너 54 → 텍스트는 pt-[210px]로 카드 아래 ~36px 여백 확보 */}
+        {/* 정보 영역 — 카드 하단부 y=258, 배너 54 → pt-[240px]로 카드 아래 ~30px 여백 */}
         <Link to={`/products/${card.id}`} className="block group bg-paper" aria-label={`${card.nameKo} 경매 상세`}>
-          <div className="px-5 pt-[210px] pb-3 text-center">
+          <div className="px-5 pt-[240px] pb-3 text-center">
             {/* 1행: 이름 + PSA 배지 한 줄 정렬 (시선 한 번에 흡수) */}
-            <div className="flex items-center justify-center gap-2.5 flex-wrap mb-1.5">
+            <div className="flex items-center justify-center gap-2.5 flex-wrap mb-1">
               <h2 className="font-display text-2xl sm:text-3xl font-bold text-ink leading-tight group-hover:text-dex transition-colors">
                 {card.nameKo}
               </h2>
               <GradeBadge grade={card.grade} size="sm" />
             </div>
             {/* 2행: 영문명 · 세트 · 연도 (메타) */}
-            <div className="text-[11px] text-mute font-medium mb-4 px-2">
+            <div className="text-[11px] text-mute font-medium mb-3.5 px-2">
               {card.name} · {card.setShort || card.set} · {card.year}
             </div>
             {/* 구분선 — 메타와 가격 섹션 분리 */}
-            <div className="border-t border-ink/10 pt-3.5">
+            <div className="border-t border-ink/10 pt-3">
               <div className="text-[10px] font-bold tracking-[0.18em] uppercase text-dex mb-1">
                 {lotEnded ? '최종 입찰가' : '현재 입찰가'}
               </div>
               <div className="font-display text-3xl sm:text-[36px] font-bold text-ink leading-none tabular-nums">
                 {formatKRW(card.currentBid || card.startPrice)}
               </div>
-              <div className="text-[11px] font-mono text-mute mt-2">
+              <div className="text-[11px] font-mono text-mute mt-1.5">
                 {card.bidCount || 0}회 입찰
               </div>
             </div>
