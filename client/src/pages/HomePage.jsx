@@ -694,8 +694,12 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
     )
   }
 
-  // 데스크탑 — 카드만 노출. 오스카 트로피처럼 Y축 360° 자동 회전, 뒷면은 1세대 카드 백.
-  // 클릭 시 상품 상세로 이동.
+  // 데스크탑 — 사선으로 살짝 기운 트로피처럼 회전.
+  // 추론:
+  //   - 외곽 oscar-tilt에 rotateX(10deg) + rotateZ(-5deg) — "기운 턴테이블 위 트로피" 축
+  //   - 내부 oscar-inner는 그대로 rotateY 360° 무한 회전 — 기운 축을 따라 도는 듯한 입체감
+  //   - 사이즈 lg(300) → md(220) 살짝 축소로 비례감 ↑, 시각 무게 ↓
+  //   - 카드 백은 Cloudinary CDN 호스팅 (캐싱 + 안정성)
   return (
     <div className="text-center px-2">
       <Link
@@ -707,19 +711,21 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
           filter: 'drop-shadow(0 22px 36px rgba(0,0,0,0.34)) drop-shadow(0 8px 14px rgba(220,38,38,0.22))',
         }}
       >
-        <div className="oscar-inner">
-          {/* Front — 실제 카드 */}
-          <div className="oscar-face oscar-front">
-            <PokeCard card={card} size="lg" interactive={false} />
-          </div>
-          {/* Back — 1세대 포켓몬 카드 백 원본 (Bulbapedia) */}
-          <div className="oscar-face oscar-back" aria-hidden="true">
-            <img
-              src="/card-back.jpg"
-              alt=""
-              draggable={false}
-              style={{ width: 300, height: 420, borderRadius: 12, display: 'block', objectFit: 'cover' }}
-            />
+        <div className="oscar-tilt">
+          <div className="oscar-inner">
+            {/* Front — 실제 카드 */}
+            <div className="oscar-face oscar-front">
+              <PokeCard card={card} size="md" interactive={false} />
+            </div>
+            {/* Back — 1세대 Pokémon TCG 카드 백 (Cloudinary) */}
+            <div className="oscar-face oscar-back" aria-hidden="true">
+              <img
+                src="https://res.cloudinary.com/dhk87y1nb/image/upload/v1779339181/pokevault/card-back-1st-gen.jpg"
+                alt=""
+                draggable={false}
+                style={{ width: 220, height: 308, borderRadius: 12, display: 'block', objectFit: 'cover' }}
+              />
+            </div>
           </div>
         </div>
       </Link>
@@ -728,13 +734,18 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
           0%   { transform: rotateY(0deg); }
           100% { transform: rotateY(360deg); }
         }
-        .oscar-stage { position: relative; }
+        .oscar-stage { position: relative; display: inline-block; }
+        .oscar-tilt {
+          transform: rotateX(10deg) rotateZ(-5deg);
+          transform-style: preserve-3d;
+          display: inline-block;
+        }
         .oscar-inner {
           position: relative;
-          width: 300px;
-          height: 420px;
+          width: 220px;
+          height: 308px;
           transform-style: preserve-3d;
-          animation: oscar-spin 7s linear infinite;
+          animation: oscar-spin 8s linear infinite;
         }
         .oscar-face {
           position: absolute;
