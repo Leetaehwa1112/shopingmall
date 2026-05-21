@@ -718,15 +718,15 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
         </span>
       </div>
 
-      {/* 카드 — lg 사이즈, 주인공 */}
+      {/* 카드 — md 사이즈 (왼쪽 헤드라인 칼럼과 무게 균형) */}
       <Link
         to={`/products/${card.id}`}
         className="inline-block mb-5 group/card"
         aria-label={`${card.nameKo} 경매 상세`}
-        style={{ filter: 'drop-shadow(0 18px 32px rgba(0,0,0,0.32)) drop-shadow(0 6px 12px rgba(220,38,38,0.20))' }}
+        style={{ filter: 'drop-shadow(0 14px 26px rgba(0,0,0,0.28)) drop-shadow(0 5px 10px rgba(220,38,38,0.18))' }}
       >
         <div className="card-sway-wrap">
-          <PokeCard card={card} size="lg" />
+          <PokeCard card={card} size="md" />
         </div>
       </Link>
 
