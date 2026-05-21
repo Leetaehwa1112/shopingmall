@@ -70,7 +70,7 @@ export default function HomePage() {
   // CTA — 회전 카드가 이미 LIVE 카드명/입찰 상태를 보여주므로 hero CTA는 단순 진입점만.
   // (이전 "🔴 지금 ○○○ 입찰 중!" 라이브 입찰 배너 제거 — 카드와 정보 중복)
   const heroPrimaryCta = t('hero.cta.primary.buynow')
-  const heroPrimaryTo = '/products?type=buynow'
+  const heroPrimaryTo = '/auctions'
   // 보조 CTA — LIVE 유무와 상관없이 카드팩 바로 구매 진입점.
   const heroSecondaryCta = t('hero.cta.secondary.packs')
   const heroSecondaryTo = '/packs'
@@ -201,19 +201,12 @@ export default function HomePage() {
             disabled={!loading && !FEATURED_LIVE && upcomingAuctions.length === 0}
           />
           <CategoryTile
-            to="/auctions"
-            icon="flame"
-            label="두근두근 Live 경매"
-            desc={
-              FEATURED_LIVE
-                ? t('cat.auctions.desc.live', { n: liveAuctions.length + upcomingAuctions.length })
-                : upcomingAuctions.length > 0
-                  ? t('cat.auctions.desc.live', { n: upcomingAuctions.length })
-                  : t('cat.auctions.desc.soon')
-            }
-            tone="fire"
-            ledPulse={!!FEATURED_LIVE}
-            disabled={!loading && !FEATURED_LIVE && upcomingAuctions.length === 0}
+            to="/products?type=buynow"
+            icon="bolt"
+            label="카드 즉시 구매"
+            desc={buyNowTotal > 0 ? `⚡ ${t('cat.buynow.desc.live', { n: buyNowTotal })}` : t('cat.buynow.desc.soon')}
+            tone="electric"
+            disabled={!loading && buyNowTotal === 0}
           />
           <CategoryTile
             to="/packs"

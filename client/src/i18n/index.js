@@ -32,7 +32,7 @@ const DICT = {
     'hero.paragraph.line1': 'PSA·BGS·CGC 인증 카드만 모았어요. 100% 정품 보증, 가품이면 전액 환불.',
     'hero.paragraph.line2': '트레이너의 마당에 오신 걸 환영해요.',
     'hero.cta.primary.live': '지금 {name} 입찰 중!',
-    'hero.cta.primary.buynow': '즉시구매 카드 보기',
+    'hero.cta.primary.buynow': '두근두근 경매장',
     'hero.cta.secondary.buynow': '즉시구매 카탈로그',
     'hero.cta.secondary.packs': '카드팩 바로구매',
     'hero.chip.authentic': '정품 100%',
