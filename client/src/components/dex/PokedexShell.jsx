@@ -34,7 +34,7 @@ export default function PokedexShell({ title = 'POKÉDEX', subtitle, children, c
             'inset 0 2px 0 rgba(255,255,255,0.4)',       // 상단 광택
             'inset 0 -3px 0 rgba(0,0,0,0.25)',           // 하단 그늘
             'inset 0 0 0 2px var(--pdx-rim)',            // 내부 짙은 빨강 라인
-            '0 10px 30px rgba(124,7,13,0.35)',           // 책상에 놓인 그림자
+            '0 10px 30px rgba(69,10,10,0.45)',           // 책상에 놓인 그림자
             '0 2px 0 #1a1a1a',                            // 검정 베이스
           ].join(', '),
         }}

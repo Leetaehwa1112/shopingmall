@@ -12,9 +12,9 @@
   --color-blue:   #2a4480;
 
   /* === Pokédex device chrome (지우의 빨간 도감) === */
-  --pdx-shell:    #dc2626;   /* 광택 빨간 본체 — color-dex(진한 빨강) 톤 통일 */
-  --pdx-shell-d:  #991b1b;   /* 본체 하단 그늘 */
-  --pdx-shell-hl: #ef4444;   /* 본체 상단 하이라이트 */
+  --pdx-shell:    #b91c1c;   /* 광택 빨간 본체 — 깊은 크림슨 (red-700) */
+  --pdx-shell-d:  #7f1d1d;   /* 본체 하단 그늘 (red-900) */
+  --pdx-shell-hl: #dc2626;   /* 본체 상단 하이라이트 (red-600) */
   --pdx-bezel:    #1a1a1a;   /* 검정 베젤 */
   --pdx-bezel-2:  #2a2a2a;
   --pdx-screen:   #0c1f0c;   /* LCD 어두운 그린 */
@@ -22,7 +22,7 @@
   --pdx-screen-g: #4f8a3a;   /* LCD 중간 그린 */
   --pdx-led-blue: #62caf0;   /* 좌상단 큰 파란 LED */
   --pdx-led-blue-hl: #c6f0ff;
-  --pdx-rim:      #7a070d;   /* 본체 가장자리 다크 라인 */
+  --pdx-rim:      #450a0a;   /* 본체 가장자리 다크 라인 (더 깊게) */
 
   /* === Pokémon type palette (playful accents) === */
   --color-fire:     #ff7a45;
