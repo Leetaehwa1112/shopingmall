@@ -559,7 +559,7 @@ export default function ProductDetailPage() {
             이것도 <span className="text-dex">마음에 드실</span> 거예요
           </h2>
           <p className="text-sm text-mute mb-8 font-medium">같은 카테고리에서 골랐어요.</p>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
             {related.map((c) => <CardTile key={c.id || c._id} card={c} />)}
           </div>
         </div>

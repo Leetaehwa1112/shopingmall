@@ -189,7 +189,7 @@ export default function PackDetailPage() {
           <h2 className="font-display text-3xl font-bold text-ink mt-3 mb-8 tracking-tight">
             이런 팩은 어때요?
           </h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
             {related.map((p) => <PackTile key={p.id || p._id} pack={p} />)}
           </div>
         </div>

@@ -166,9 +166,9 @@ function MarketPage({
           </div>
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
           {list.map((c, i) => (
-            <div key={c.id} className="reveal-up" style={{ animationDelay: `${i * 0.04}s` }}>
+            <div key={c.id} className="reveal-up min-w-0" style={{ animationDelay: `${i * 0.04}s` }}>
               <CardTile card={c} stage />
             </div>
           ))}

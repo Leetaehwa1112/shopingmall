@@ -100,9 +100,9 @@ export default function PacksPage() {
           </div>
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
           {list.map((p, i) => (
-            <div key={p.id} className="reveal-up" style={{ animationDelay: `${i * 0.04}s` }}>
+            <div key={p.id} className="reveal-up min-w-0" style={{ animationDelay: `${i * 0.04}s` }}>
               <PackTile pack={p} />
             </div>
           ))}
