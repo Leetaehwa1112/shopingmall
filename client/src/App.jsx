@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import ScrollToTop from '@/components/common/ScrollToTop'
+import ErrorBoundary from '@/components/common/ErrorBoundary'
 import Layout from '@/components/layout/Layout'
 
 // ─── 메인(공개) 페이지: 초기 진입 가능성 높음 → eager import ───
@@ -68,6 +69,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <ScrollToTop />
+        <ErrorBoundary>
         <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route path="/" element={<Layout />}>
@@ -114,6 +116,7 @@ export default function App() {
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
+        </ErrorBoundary>
       </BrowserRouter>
     </QueryClientProvider>
   )
