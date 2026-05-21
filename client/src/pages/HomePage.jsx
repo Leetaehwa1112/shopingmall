@@ -694,58 +694,72 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
     )
   }
 
-  // 데스크탑 — 사선으로 살짝 기운 트로피처럼 회전.
-  // 추론:
-  //   - 외곽 oscar-tilt에 rotateX(10deg) + rotateZ(-5deg) — "기운 턴테이블 위 트로피" 축
-  //   - 내부 oscar-inner는 그대로 rotateY 360° 무한 회전 — 기운 축을 따라 도는 듯한 입체감
-  //   - 사이즈 lg(300) → md(220) 살짝 축소로 비례감 ↑, 시각 무게 ↓
-  //   - 카드 백은 Cloudinary CDN 호스팅 (캐싱 + 안정성)
+  // 데스크탑 — "옥션 카탈로그" 무드. 시네마틱 회전 + 미세 부유 + 사선 축 유지.
+  // 움직임 설계:
+  //   1) 외곽 .oscar-tilt: rotateX(10deg) + rotateZ(-4deg) — 기운 턴테이블 축
+  //   2) 중간 .oscar-bob: translateY ±10px 4s ease-in-out — 진열대 위 부유감
+  //   3) 내부 .oscar-inner: rotateY 0→180→360 with hold @ 0/180/360 — 정면/뒷면에서 잠깐 멈춰
+  //      옥션 카탈로그 책장 넘김처럼 보여줌
+  //   - 카드 사이즈 lg(300×420) 복구
+  //   - marginTop 28px로 카드 살짝 아래 배치
   return (
-    <div className="text-center px-2">
+    <div className="text-center px-2" style={{ marginTop: 28 }}>
       <Link
         to={`/products/${card.id}`}
         className="inline-block group/card oscar-stage"
         aria-label={`${card.nameKo} 경매 상세`}
         style={{
-          perspective: '1600px',
-          filter: 'drop-shadow(0 22px 36px rgba(0,0,0,0.34)) drop-shadow(0 8px 14px rgba(220,38,38,0.22))',
+          perspective: '1800px',
+          filter: 'drop-shadow(0 24px 40px rgba(0,0,0,0.38)) drop-shadow(0 10px 16px rgba(220,38,38,0.22))',
         }}
       >
         <div className="oscar-tilt">
-          <div className="oscar-inner">
-            {/* Front — 실제 카드 */}
-            <div className="oscar-face oscar-front">
-              <PokeCard card={card} size="md" interactive={false} />
-            </div>
-            {/* Back — 1세대 Pokémon TCG 카드 백 (Cloudinary) */}
-            <div className="oscar-face oscar-back" aria-hidden="true">
-              <img
-                src="https://res.cloudinary.com/dhk87y1nb/image/upload/v1779339181/pokevault/card-back-1st-gen.jpg"
-                alt=""
-                draggable={false}
-                style={{ width: 220, height: 308, borderRadius: 12, display: 'block', objectFit: 'cover' }}
-              />
+          <div className="oscar-bob">
+            <div className="oscar-inner">
+              {/* Front — 실제 카드 */}
+              <div className="oscar-face oscar-front">
+                <PokeCard card={card} size="lg" interactive={false} />
+              </div>
+              {/* Back — 1세대 Pokémon TCG 카드 백 (Cloudinary) */}
+              <div className="oscar-face oscar-back" aria-hidden="true">
+                <img
+                  src="https://res.cloudinary.com/dhk87y1nb/image/upload/v1779339181/pokevault/card-back-1st-gen.jpg"
+                  alt=""
+                  draggable={false}
+                  style={{ width: 300, height: 420, borderRadius: 12, display: 'block', objectFit: 'cover' }}
+                />
+              </div>
             </div>
           </div>
         </div>
       </Link>
       <style>{`
-        @keyframes oscar-spin {
-          0%   { transform: rotateY(0deg); }
-          100% { transform: rotateY(360deg); }
+        @keyframes oscar-spin-cinema {
+          0%, 6%    { transform: rotateY(0deg); }       /* hold front */
+          44%, 56%  { transform: rotateY(180deg); }     /* hold back */
+          94%, 100% { transform: rotateY(360deg); }     /* hold front (loop) */
+        }
+        @keyframes oscar-bob {
+          0%, 100% { transform: translateY(0); }
+          50%      { transform: translateY(-10px); }
         }
         .oscar-stage { position: relative; display: inline-block; }
         .oscar-tilt {
-          transform: rotateX(10deg) rotateZ(-5deg);
+          transform: rotateX(10deg) rotateZ(-4deg);
           transform-style: preserve-3d;
           display: inline-block;
         }
+        .oscar-bob {
+          display: inline-block;
+          transform-style: preserve-3d;
+          animation: oscar-bob 5s ease-in-out infinite;
+        }
         .oscar-inner {
           position: relative;
-          width: 220px;
-          height: 308px;
+          width: 300px;
+          height: 420px;
           transform-style: preserve-3d;
-          animation: oscar-spin 8s linear infinite;
+          animation: oscar-spin-cinema 10s cubic-bezier(0.65, 0, 0.35, 1) infinite;
         }
         .oscar-face {
           position: absolute;
