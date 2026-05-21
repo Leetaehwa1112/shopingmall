@@ -395,10 +395,9 @@ function AuctionLivePage({ lots, loading, error }) {
         <NextLotCountdown lot={upcomingQueue[0]} queueCount={upcomingQueue.length} onOpenAll={() => setShowAll(true)} />
       )}
 
-      {/* === 4. 다음 경매 큐 (LIVE가 있을 때도 별도 섹션으로) === */}
-      {!loading && !error && upcomingQueue.length > 0 && liveLot && (
-        <UpcomingQueueSection lots={upcomingQueue} />
-      )}
+      {/* === 4. 다음 경매 큐 — 제거됨. UpcomingQueueSection는 LIVE 카드/방송 정보와
+              상당 부분 중복(다음 차례 카드, 큐 카운트 등). 본 LIVE 패널과 MiniBroadcast
+              에서 이미 노출되고 있어 페이지 끝의 추가 패널은 인지 부하만 유발. */}
 
       {/* === 5. 모바일 sticky CTA — 항상 시야 === */}
       {liveLot && !loading && !error && (

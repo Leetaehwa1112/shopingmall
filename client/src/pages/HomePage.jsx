@@ -114,9 +114,9 @@ export default function HomePage() {
         </div>
 
         <div className="relative max-w-7xl mx-auto grid lg:grid-cols-[1.15fr_1fr] gap-6 lg:gap-14 items-start">
-          {/* LEFT — 모바일/데스크탑 모두 첫 번째.
-              모바일 above-the-fold: Eyebrow + 헤드라인 + 핵심 CTA 즉시 노출 */}
-          <div className="sparkle-host relative">
+          {/* LEFT — 데스크탑은 좌측 텍스트, 모바일에선 카드 다음으로 (order-2 lg:order-1).
+              모바일 first viewport에선 리자몽 카드가 시각 후크 역할, 텍스트는 그 아래. */}
+          <div className="sparkle-host relative order-2 lg:order-1">
             <Sparkles always className="hidden lg:block" />
 
             <Eyebrow tone="ink" dot dotColor="red" className="mb-3 lg:mb-5">
@@ -161,8 +161,8 @@ export default function HomePage() {
             </ul>
           </div>
 
-          {/* RIGHT — 회전 카드 (모바일에선 텍스트 다음, 콤팩트하게 둠) */}
-          <div>
+          {/* RIGHT — 회전 카드. 모바일에선 첫 번째 (order-1), 데스크탑은 우측 두 번째 (order-2) */}
+          <div className="order-1 lg:order-2">
             {loading ? (
               <HeroPanelSkeleton />
             ) : FEATURED_LIVE ? (
@@ -940,7 +940,8 @@ function CategoryTile({ to, icon, label, desc, tone = 'fire', ledPulse = false, 
           {label}
           {ledPulse && <span className="led led-red led-pulse" style={{ width: 6, height: 6 }} aria-hidden="true" />}
         </div>
-        <div className="text-[11px] lg:text-xs text-mute font-bold mt-0.5 truncate">{desc}</div>
+        {/* 카운트/이모지 desc 모바일에선 숨김 — 인지부하 감소, 라벨만 깔끔 노출 */}
+        <div className="hidden lg:block text-xs text-mute font-bold mt-0.5 truncate">{desc}</div>
       </div>
       <Icon name="arrow" size={14} strokeWidth={2.5} className="hidden sm:block shrink-0 text-mute group-hover:text-ink group-hover:translate-x-1 transition-all" aria-hidden="true" />
     </Link>

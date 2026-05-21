@@ -1010,3 +1010,16 @@ button { background: none; border: none; cursor: pointer; font-family: inherit; 
 /* 안드로이드: 100vh 사용 잔존 요소가 있을 때 풀백 (이미 100dvh로 옮겼지만 안전망) */
 .h-screen-safe { height: 100vh; height: 100dvh; }
 .min-h-screen-safe { min-height: 100vh; min-height: 100dvh; }
+
+/* ─── MiniBroadcastPlayer 위치 ──────────────────────────────────
+   PC: 우측 하단 16px 위 PIP.
+   모바일: 하단 탭바(64) + sticky CTA(64) + safe-area 위로 띄워서
+   콘텐츠/CTA를 가리지 않게. */
+.mini-broadcast {
+  bottom: calc(140px + env(safe-area-inset-bottom));
+}
+@media (min-width: 1024px) {
+  .mini-broadcast {
+    bottom: 16px;
+  }
+}
