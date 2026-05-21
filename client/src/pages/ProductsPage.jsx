@@ -15,6 +15,41 @@ import { formatKRW, formatKRWFull, timeUntil } from '@/utils/format'
 
 const PAGE_SIZE = 8
 
+// ─── Pokémon TCG 에라 비주얼 메타 ─────────────────────────────
+// 각 시대를 대표하는 아이콘 + 톤 컬러. TCG 카드 셋 심볼처럼 동그란
+// 컬러 배지로 보여줌. (실제 셋 심볼은 IP 이슈 → 추상화)
+const ERA_META = {
+  all:      { icon: 'grid',     tone: 'ink',      short: '전체' },
+  base:     { icon: 'trophy',   tone: 'fire',     short: 'WotC' },     // 1999
+  neo:      { icon: 'bolt',     tone: 'electric', short: 'Neo' },      // 2000
+  ex:       { icon: 'flame',    tone: 'fire',     short: 'EX·DP·BW' }, // 2003-2010
+  xy:       { icon: 'star',     tone: 'electric', short: 'XY·SM' },    // 2013-2018
+  swsh:     { icon: 'shield',   tone: 'water',    short: 'SwSh' },     // 2019
+  sv:       { icon: 'star',     tone: 'psychic',  short: 'S·V' },      // 2022+
+  japanese: { icon: 'bell',     tone: 'fire',     short: '일본판' },
+  promo:    { icon: 'star',     tone: 'electric', short: '프로모' },
+  pack:     { icon: 'package',  tone: 'water',    short: '부스터팩' },
+  box:      { icon: 'layers',   tone: 'psychic',  short: '박스' },
+}
+
+// 톤별 배경/텍스트 — HomePage.toneBg 와 동일 톤
+const ERA_TONE_BG = {
+  ink:      'bg-ink/10 text-ink',
+  fire:     'bg-fire/15 text-fire',
+  electric: 'bg-electric/30 text-ink',
+  water:    'bg-water/15 text-water',
+  psychic:  'bg-psychic/15 text-psychic',
+  grass:    'bg-grass/15 text-grass',
+}
+const ERA_TONE_ACTIVE = {
+  ink:      'bg-ink text-electric border-ink',
+  fire:     'bg-fire text-paper border-ink',
+  electric: 'bg-electric text-ink border-ink',
+  water:    'bg-water text-paper border-ink',
+  psychic:  'bg-psychic text-paper border-ink',
+  grass:    'bg-grass text-paper border-ink',
+}
+
 export default function ProductsPage() {
   const loc = useLocation()
   const navigate = useNavigate()
@@ -98,15 +133,18 @@ function MarketPage({
   const list = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-12">
-      <div className="relative sparkle-host mb-10">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 lg:py-12">
+      {/* === HEADER === */}
+      <div className="relative sparkle-host mb-8 lg:mb-10">
         <Sparkles always />
-        <Eyebrow tone="water" led="blue">MARKETPLACE · 정품 인증</Eyebrow>
-        <h1 className="mt-4 font-display text-4xl lg:text-5xl font-bold text-ink tracking-tight leading-[1.1]">
+        <Eyebrow tone="water" led="blue" className="whitespace-nowrap">
+          MARKETPLACE · 정품 인증
+        </Eyebrow>
+        <h1 className="mt-5 font-display text-[28px] sm:text-4xl lg:text-5xl font-bold text-ink tracking-tight leading-[1.15] [word-break:keep-all]">
           오늘의 카드 카탈로그
         </h1>
-        <p className="text-sm text-mute mt-4 max-w-2xl leading-relaxed font-medium">
-          옥션 {auctionCount}건 + 즉시구매 {buynowCount}건. 모두 정품 인증 완료, 클릭 한 번이면 데려갈 수 있어요.
+        <p className="text-[14px] sm:text-sm text-mute mt-5 font-medium [word-break:keep-all]">
+          옥션 <span className="text-ink font-bold tabular-nums">{auctionCount}</span>건 · 즉시구매 <span className="text-ink font-bold tabular-nums">{buynowCount}</span>건
         </p>
 
         {query && (
@@ -114,7 +152,7 @@ function MarketPage({
             <Icon name="search" size={14} strokeWidth={2.4} className="text-ink" />
             <span className="text-mute font-bold">검색어</span>
             <span className="font-bold text-ink">"{query}"</span>
-            <span className="text-dex font-mono text-xs font-bold">· {filtered.length}건 발견!</span>
+            <span className="text-dex font-mono text-xs font-bold">· {filtered.length}건 발견</span>
             <button
               type="button"
               onClick={() => { setQuery(''); navigate(loc.pathname, { replace: true }) }}
@@ -127,35 +165,61 @@ function MarketPage({
         )}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-6 mb-10 border-b-2 border-ink/15">
-        <div className="flex flex-wrap gap-2">
-          {CATEGORIES.map((c) => {
-            const count = c.id === 'all' ? products.length : products.filter((s) => s.category === c.id).length
-            const active = cat === c.id
-            return (
-              <button key={c.id} onClick={() => setCat(c.id)}
-                aria-pressed={active}
-                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-full border-2 transition-all ${
-                  active
-                    ? 'bg-ink text-electric border-ink shadow-[0_3px_0_#1a1a1a] -translate-y-0.5'
-                    : 'bg-paper border-ink/20 text-ink hover:border-ink hover:-translate-y-0.5 hover:shadow-[0_3px_0_#1a1a1a]'
-                }`}>
-                <span>{c.label}</span>
-                <span className={`text-[11px] font-mono px-1.5 py-0.5 rounded-full font-bold ${
-                  active ? 'bg-electric/20 text-electric' : 'bg-bone-2 text-mute'
-                }`}>
-                  {count}
-                </span>
-              </button>
-            )
-          })}
+      {/* === ERA SET SYMBOLS — TCG 셋 심볼 스타일 카테고리 === */}
+      <div className="mb-8 lg:mb-10">
+        {/* 모바일: 가로 스크롤 / 데스크탑: wrap */}
+        <div className="-mx-4 sm:mx-0 px-4 sm:px-0 overflow-x-auto sm:overflow-visible scrollbar-hide">
+          <div className="flex sm:flex-wrap gap-3 sm:gap-4 pb-1">
+            {CATEGORIES.map((c) => {
+              const count = c.id === 'all' ? products.length : products.filter((s) => s.category === c.id).length
+              const active = cat === c.id
+              const meta = ERA_META[c.id] || ERA_META.all
+              const bgCls = active ? ERA_TONE_ACTIVE[meta.tone] : 'bg-paper border-ink/15 text-ink hover:border-ink'
+              const badgeCls = active ? 'bg-paper/25 text-paper' : ERA_TONE_BG[meta.tone]
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => setCat(c.id)}
+                  aria-pressed={active}
+                  className={`group relative shrink-0 w-[88px] sm:w-[96px] flex flex-col items-center gap-2 px-2 py-3 rounded-2xl border-2 transition-all ${bgCls} ${active ? 'shadow-[0_3px_0_#1a1a1a] -translate-y-0.5' : 'hover:-translate-y-0.5 hover:shadow-[0_3px_0_#1a1a1a]'}`}
+                >
+                  {/* 셋 심볼 배지 — 동그란 컬러 원 안에 아이콘 */}
+                  <span
+                    className={`inline-flex items-center justify-center w-11 h-11 rounded-full border-2 border-ink ${badgeCls}`}
+                    aria-hidden="true"
+                  >
+                    <Icon name={meta.icon} size={20} strokeWidth={2.2} />
+                  </span>
+                  {/* 라벨 — 짧게 한 줄 (ERA_META.short 우선) */}
+                  <span className="text-[11px] font-extrabold leading-tight text-center [word-break:keep-all] whitespace-nowrap">
+                    {meta.short || c.label}
+                  </span>
+                  {/* 카운트 칩 */}
+                  <span
+                    className={`text-[10px] font-mono font-bold tabular-nums px-1.5 rounded ${
+                      active ? 'bg-paper/20' : 'bg-bone-2 text-mute'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
         </div>
-        <select value={sort} onChange={(e) => setSort(e.target.value)}
-          className="bg-paper border-2 border-ink rounded-full px-4 py-2 text-sm font-bold text-ink shadow-[0_3px_0_#1a1a1a] cursor-pointer hover:bg-electric/20 transition-colors">
-          <option value="default">추천순</option>
-          <option value="price-asc">가격 낮은순</option>
-          <option value="price-desc">가격 높은순</option>
-        </select>
+
+        {/* 정렬 셀렉트 — 카테고리 아래 별도 줄 */}
+        <div className="mt-5 flex justify-end">
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
+            className="bg-paper border-2 border-ink rounded-full px-4 py-2 text-sm font-bold text-ink shadow-[0_3px_0_#1a1a1a] cursor-pointer hover:bg-electric/20 transition-colors"
+          >
+            <option value="default">추천순</option>
+            <option value="price-asc">가격 낮은순</option>
+            <option value="price-desc">가격 높은순</option>
+          </select>
+        </div>
       </div>
 
       {loading ? (

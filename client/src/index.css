@@ -1093,3 +1093,12 @@ button { background: none; border: none; cursor: pointer; font-family: inherit; 
   text-align: left;
   animation: hero-loader-ellipsis 1.4s steps(4, end) infinite;
 }
+
+/* 가로 스크롤 영역 — 스크롤바 숨김 (모바일 카테고리 셀렉터용) */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
