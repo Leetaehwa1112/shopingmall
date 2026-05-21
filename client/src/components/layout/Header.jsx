@@ -285,21 +285,22 @@ function UserDropdown({ user, logout, navigate }) {
           </div>
           <div className="py-1">
             <Link to="/mypage" onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-bold text-ink hover:bg-electric/20 transition-colors">
-              <Icon name="user" size={14} strokeWidth={2} />
-              마이페이지
+              className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-ink hover:bg-electric/20 transition-colors">
+              <Icon name="user" size={14} strokeWidth={2} className="shrink-0" />
+              <span>마이페이지</span>
             </Link>
             <Link to="/my-orders" onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-bold text-ink hover:bg-electric/20 transition-colors">
-              <Icon name="package" size={14} strokeWidth={2} />
-              내 주문 목록
+              className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-ink hover:bg-electric/20 transition-colors">
+              <Icon name="package" size={14} strokeWidth={2} className="shrink-0" />
+              <span>내 주문 목록</span>
             </Link>
             <div className="border-t-2 border-ink my-1" />
             <button
+              type="button"
               onClick={() => { setOpen(false); logout(); navigate('/') }}
-              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-bold text-rose-600 hover:bg-rose-50 transition-colors">
-              <Icon name="logout" size={14} strokeWidth={2} />
-              로그아웃
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-rose-600 hover:bg-rose-50 transition-colors text-left">
+              <Icon name="logout" size={14} strokeWidth={2} className="shrink-0" />
+              <span>로그아웃</span>
             </button>
           </div>
         </div>

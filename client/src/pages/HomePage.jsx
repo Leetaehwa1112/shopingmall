@@ -251,7 +251,7 @@ export default function HomePage() {
             cta={{ label: '회원가입', to: '/register' }}
           />
         ) : (
-          <div className="grid grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
             {featuredPacks.map((p, i) => (
               <div key={p.id || p._id} className="reveal-up min-w-0" style={{ animationDelay: `${i * 0.06}s` }}>
                 <PackTile pack={p} />
@@ -310,7 +310,7 @@ export default function HomePage() {
             cta={{ label: '전체 카탈로그', to: '/products' }}
           />
         ) : (
-          <div className="grid grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
             {buyNow.map((c, i) => (
               // card-pop-wrap이 idle breathe + hover lift 담당 (reveal-up은 첫 진입 fade,
               // 둘이 충돌하지 않게 wrapper 분리)
