@@ -694,20 +694,20 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
     )
   }
 
-  // 데스크탑 — 카드가 배너 위로 솟아오른 입체 레이아웃
-  // 위치 추론: top:-50 — 카드 308 중 50px(약 16%)만 살짝 솟고, 84%는 패널 안에 단단히 박힘.
-  // "완벽한 균형 + 살짝 불균형": 위로 끌어올리는 느낌은 최소화하고, 한 끗 어긋난 디테일만 남김.
-  // items-center 그리드에서 right 칼럼이 위로 솟지 않도록 marginTop도 55까지 축소.
+  // 데스크탑 — 카드가 배너 위로 솟아오른 입체 레이아웃 (황금비율 설계)
+  // 위치 추론: top:-30 — 카드 308 중 30px(약 10%)만 살짝 노출, 90%가 패널 안에 박힘.
+  // 황금비율 φ=1.618: 패널 세로를 38.2% 카드 쇼케이스 / 61.8% 거래정보 구역으로 분할.
+  // items-center 그리드 영향 최소화 위해 marginTop 35까지 축소.
   return (
-    <div className="relative" style={{ marginTop: 55 }}>
-      {/* 배너 위로 살짝(50px) 솟은 카드 — 의도된 한 끗 불균형 */}
+    <div className="relative" style={{ marginTop: 35 }}>
+      {/* 배너 위로 살짝(30px) 솟은 카드 — 황금비 정점 신호 */}
       <Link
         to={`/products/${card.id}`}
         className="z-20 group/card"
         style={{
           position: 'absolute',
           left: '50%',
-          top: -50,
+          top: -30,
           transform: 'translateX(-50%)',
           display: 'inline-block',
           borderRadius: 12,
@@ -758,37 +758,37 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
           </div>
         </div>
 
-        {/* 정보 영역 — 카드 하단부 y=258, 배너 54 → pt-[240px]로 카드 아래 ~30px 여백 */}
+        {/* 정보 영역 — 카드 하단 y=278, 배너 54 → pt-[300px]로 카드 아래 30px 여백 (황금비 분할점) */}
         <Link to={`/products/${card.id}`} className="block group bg-paper" aria-label={`${card.nameKo} 경매 상세`}>
-          <div className="px-5 pt-[240px] pb-3 text-center">
-            {/* 1행: 이름 + PSA 배지 한 줄 정렬 (시선 한 번에 흡수) */}
-            <div className="flex items-center justify-center gap-2.5 flex-wrap mb-1">
+          <div className="px-5 pt-[300px] pb-4 text-center">
+            {/* 1행: 이름 + PSA 배지 한 줄 정렬 */}
+            <div className="flex items-center justify-center gap-2.5 flex-wrap mb-1.5">
               <h2 className="font-display text-2xl sm:text-3xl font-bold text-ink leading-tight group-hover:text-dex transition-colors">
                 {card.nameKo}
               </h2>
               <GradeBadge grade={card.grade} size="sm" />
             </div>
-            {/* 2행: 영문명 · 세트 · 연도 (메타) */}
-            <div className="text-[11px] text-mute font-medium mb-3.5 px-2">
+            {/* 2행: 영문명 · 세트 · 연도 — 카드 메타 */}
+            <div className="text-[11px] text-mute font-medium mb-5 px-2">
               {card.name} · {card.setShort || card.set} · {card.year}
             </div>
-            {/* 구분선 — 메타와 가격 섹션 분리 */}
-            <div className="border-t border-ink/10 pt-3">
-              <div className="text-[10px] font-bold tracking-[0.18em] uppercase text-dex mb-1">
+            {/* 구분선 + 가격 섹션 — 황금비 시각 중심 (38.2% 지점) */}
+            <div className="border-t border-ink/10 pt-5">
+              <div className="text-[10px] font-bold tracking-[0.18em] uppercase text-dex mb-1.5">
                 {lotEnded ? '최종 입찰가' : '현재 입찰가'}
               </div>
-              <div className="font-display text-3xl sm:text-[36px] font-bold text-ink leading-none tabular-nums">
+              <div className="font-display text-3xl sm:text-[40px] font-bold text-ink leading-none tabular-nums">
                 {formatKRW(card.currentBid || card.startPrice)}
               </div>
-              <div className="text-[11px] font-mono text-mute mt-1.5">
+              <div className="text-[11px] font-mono text-mute mt-2">
                 {card.bidCount || 0}회 입찰
               </div>
             </div>
           </div>
 
           {!lotEnded && card.endsAt && (
-            <div className="px-5 pb-2">
-              <div className="rounded-lg bg-ink text-white px-3 py-2 flex items-center justify-between gap-2">
+            <div className="px-5 pb-3">
+              <div className="rounded-lg bg-ink text-white px-3 py-2.5 flex items-center justify-between gap-2">
                 <span className="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-electric">
                   <Icon name="clock" size={11} strokeWidth={2.6} aria-hidden="true" />
                   마감까지
