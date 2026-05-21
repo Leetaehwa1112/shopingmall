@@ -37,7 +37,7 @@ const validators = {
   name:  (v) => !v?.trim() ? '수령인 이름을 입력해주세요' : (v.length > 50 ? '50자 이하로 입력' : null),
   email: (v) => !v ? null : (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) ? '이메일 형식이 맞지 않아요' : null),
   phone: (v) => !v?.trim() ? '연락처를 입력해주세요' : (!/^[0-9+\-\s()]{8,20}$/.test(v.trim()) ? '숫자/하이픈 8-20자 (예: 010-1234-5678)' : null),
-  zip:   (v) => !v ? '우편번호를 입력해주세요' : (!/^[0-9\-]{3,10}$/.test(String(v)) ? '3-10자리 숫자 (예: 06236)' : null),
+  zip:   (v) => !v ? '우편번호를 입력해주세요' : (!/^[0-9-]{3,10}$/.test(String(v)) ? '3-10자리 숫자 (예: 06236)' : null),
   addr1: (v) => !v?.trim() ? '기본 주소를 입력해주세요' : null,
 }
 
@@ -153,7 +153,7 @@ export default function OrderPage() {
       validationErrors.push('연락처를 올바르게 입력해주세요. (숫자/하이픈 8-20자)')
     }
     if (form.shipping !== 'pickup') {
-      if (!form.zip || !/^[0-9\-]{3,10}$/.test(String(form.zip))) {
+      if (!form.zip || !/^[0-9-]{3,10}$/.test(String(form.zip))) {
         validationErrors.push('우편번호를 올바르게 입력해주세요. (3-10자리 숫자)')
       }
       if (!form.addr1?.trim()) validationErrors.push('기본 주소를 입력해주세요.')

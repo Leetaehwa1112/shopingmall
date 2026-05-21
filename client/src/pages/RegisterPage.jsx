@@ -10,7 +10,7 @@ import Icon from '@/components/common/Icon'
 const PW_RULES = [
   { id: 'len',     label: '8자 이상',     test: (v) => v.length >= 8 },
   { id: 'num',     label: '숫자 포함',     test: (v) => /\d/.test(v) },
-  { id: 'special', label: '특수문자 포함', test: (v) => /[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\\/~`]/.test(v) },
+  { id: 'special', label: '특수문자 포함', test: (v) => /[!@#$%^&*(),.?":{}|<>_\-+=[\]\\/~`]/.test(v) },
   { id: 'upper',   label: '영문 포함',     test: (v) => /[a-zA-Z]/.test(v) },
 ]
 
