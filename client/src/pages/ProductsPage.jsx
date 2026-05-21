@@ -1015,7 +1015,7 @@ function BroadcastStream({ lot, onBid }) {
                 <span className="text-paper/30">●</span>
                 <span>정품인증 · 안전결제 · 입찰보호</span>
                 <span className="text-paper/30">●</span>
-                <span className="text-electric">두근두근 라이브 진행 중!</span>
+                <span className="text-electric">POKÉVAULT LIVE</span>
               </span>
             ))}
           </div>
@@ -1052,15 +1052,15 @@ function CompactHeroStrip({ liveLot, upcomingCount, onOpenAll, disabled }) {
   const hasLive = !!liveLot
   return (
     <header
-      className="relative sparkle-host mb-6"
+      className="relative sparkle-host mb-10"
       aria-label="라이브 경매장 헤더"
     >
       <Sparkles always className="hidden lg:block" />
 
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
         <div>
-          <Eyebrow tone="ink" dot dotColor="red" className="mb-4">
-            {hasLive ? 'LIVE AUCTION · 두근두근 진행 중' : 'AUCTION · 곧 시작'}
+          <Eyebrow tone="ink" dot dotColor="red" className="mb-5 whitespace-nowrap">
+            {hasLive ? 'LIVE AUCTION' : 'AUCTION · 곧 시작'}
           </Eyebrow>
           <h1 className="font-display text-3xl sm:text-4xl lg:text-[44px] font-bold text-ink tracking-tight leading-[1.05]">
             {hasLive ? (
@@ -1079,17 +1079,16 @@ function CompactHeroStrip({ liveLot, upcomingCount, onOpenAll, disabled }) {
               </>
             )}
           </h1>
-          <p className="mt-3 text-[14px] sm:text-[15px] text-mute leading-relaxed font-medium max-w-xl">
-            한 번에 한 LOT만 차분히 진행해요. 모든 카드는 정품 인증 완료 · 안심 결제 보호.{' '}
-            <span className="text-ink font-bold">한 번 두근거려보실래요?</span>
+          <p className="mt-5 text-[15px] text-mute font-medium whitespace-nowrap">
+            한 LOT씩 · 정품 인증 완료
           </p>
-          <div className="mt-4 inline-flex items-center gap-2 text-[12px] font-bold text-ink/70">
+          <div className="mt-6 inline-flex items-center gap-2 text-[12px] font-bold text-ink/70">
             <CounterPokeballs liveCount={hasLive ? 1 : 0} />
-            <span>
+            <span className="whitespace-nowrap">
               {hasLive ? (
-                <>지금 <span className="text-dex font-extrabold tabular-nums">1</span>건 LIVE · </>
+                <><span className="text-dex font-extrabold tabular-nums">1</span>건 LIVE · </>
               ) : null}
-              예정 <span className="text-ink font-extrabold tabular-nums">{upcomingCount}</span>건 대기
+              예정 <span className="text-ink font-extrabold tabular-nums">{upcomingCount}</span>건
             </span>
           </div>
         </div>
@@ -1217,7 +1216,7 @@ function CounterReceipt({ lot, current, nextMin, viewers, onBid }) {
         aria-label="입찰 참여하기"
       >
         <Icon name="gavel" size={18} strokeWidth={2.6} />
-        지금 두근두근 입찰!
+        지금 입찰
         <Icon
           name="arrow"
           size={16}
@@ -1234,11 +1233,8 @@ function CounterReceipt({ lot, current, nextMin, viewers, onBid }) {
           }}
         />
       </button>
-      <div className="text-center text-[11px] font-bold text-mute leading-relaxed">
-        지금 <span className="text-dex font-extrabold">{viewers.toLocaleString()}명</span>이 함께 지켜보는 중
-        <span className="hidden sm:inline"> · </span>
-        <br className="sm:hidden" />
-        클릭하면 페이지 위에서 바로 입찰할 수 있어요
+      <div className="text-center text-[11px] font-bold text-mute">
+        <span className="text-dex font-extrabold">{viewers.toLocaleString()}명</span> 시청 중
       </div>
 
       {/* 신뢰 배지 */}
