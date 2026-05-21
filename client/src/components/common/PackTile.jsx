@@ -27,7 +27,8 @@ function PackTile({ pack }) {
 
   return (
     <Link to={`/packs/${packId}`} className="group block surface-card holo-shine sparkle-host overflow-hidden relative">
-      <div className="px-4 pt-4 flex justify-between items-center">
+      {/* 상단 상태 바 — 모바일에선 좁아 숨김 */}
+      <div className="hidden sm:flex px-4 pt-4 justify-between items-center">
         <span className="inline-flex items-center gap-2">
           <span className="led led-yellow" style={{ width: 7, height: 7 }} />
           <span className="pixel-label text-amber-700">
@@ -41,9 +42,11 @@ function PackTile({ pack }) {
         </button>
       </div>
 
-      <div className="px-6 py-6 flex justify-center holo-sheen"
+      <div className="px-2 py-3 sm:px-6 sm:py-6 flex justify-center holo-sheen"
         style={{ background: `radial-gradient(ellipse at center, ${pack.accent}12 0%, transparent 70%)` }}>
-        <PackVisual pack={pack} size="md" />
+        {/* 모바일은 sm 사이즈, 데스크탑은 md */}
+        <span className="sm:hidden"><PackVisual pack={pack} size="sm" /></span>
+        <span className="hidden sm:inline"><PackVisual pack={pack} size="md" /></span>
       </div>
       <span aria-hidden="true">
         <span className="sparkle s1" />
@@ -52,24 +55,28 @@ function PackTile({ pack }) {
         <span className="sparkle s4" />
       </span>
 
-      <div className="px-5 pb-5 border-t border-line pt-4">
-        <h3 className="font-display text-xl font-bold text-ink leading-tight">{pack.nameKo}</h3>
-        <div className="text-xs text-mute mt-1 truncate font-medium">
+      <div className="px-2 pb-2 sm:px-5 sm:pb-5 sm:border-t sm:border-line sm:pt-4">
+        <h3 className="font-display text-[12px] sm:text-xl font-bold text-ink leading-tight line-clamp-2 sm:line-clamp-none">{pack.nameKo}</h3>
+
+        {/* 서브 메타 — 모바일 숨김 */}
+        <div className="hidden sm:block text-xs text-mute mt-1 truncate font-medium">
           {pack.setShort} <span className="text-mute/60">·</span> {pack.year} <span className="text-mute/60">·</span> {pack.cardsPerPack}장
         </div>
 
-        {/* Quick delivery badge */}
-        <div className="flex items-center gap-1.5 mt-2 text-[10px] text-amber-700 font-bold">
+        {/* Quick delivery badge — 모바일 숨김 */}
+        <div className="hidden sm:flex items-center gap-1.5 mt-2 text-[10px] text-amber-700 font-bold">
           <Icon name="bolt" size={11} strokeWidth={2.5} />
           <span>퀵 배송 가능 · 당일 도착</span>
         </div>
 
-        <div className="pt-3 mt-3 border-t border-line flex justify-between items-baseline">
-          <div>
-            <div className="text-[9px] text-mute font-bold tracking-[0.15em] uppercase mb-0.5">판매가</div>
-            <div className="font-display text-2xl font-bold text-ink leading-none tabular-nums">{formatKRW(pack.price)}</div>
+        {/* 가격 — 모바일 단순 한 줄 */}
+        <div className="pt-1.5 sm:pt-3 sm:mt-3 sm:border-t sm:border-line flex justify-between items-baseline">
+          <div className="min-w-0">
+            <div className="hidden sm:block text-[9px] text-mute font-bold tracking-[0.15em] uppercase mb-0.5">판매가</div>
+            <div className="font-display text-[13px] sm:text-2xl font-bold text-ink leading-none tabular-nums">{formatKRW(pack.price)}</div>
           </div>
-          <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-1 rounded-md font-bold">
+          {/* 재고 배지 — 모바일 숨김 */}
+          <span className="hidden sm:inline-block text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-1 rounded-md font-bold">
             재고 {pack.stock}
           </span>
         </div>

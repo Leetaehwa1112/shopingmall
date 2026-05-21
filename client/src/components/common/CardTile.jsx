@@ -59,8 +59,8 @@ function CardTile({ card, stage = false }) {
         <span className="sparkle s4" />
         <span className="sparkle s5" />
       </span>
-      {/* Status strip — micro pixel label */}
-      <div className="px-4 pt-4 flex justify-between items-center">
+      {/* Status strip — micro pixel label (모바일에선 좁아 숨김) */}
+      <div className="hidden sm:flex px-4 pt-4 justify-between items-center">
         {cardType === 'auction' ? (
           auctionUpcoming ? (
             <span className="inline-flex items-center gap-2">
@@ -96,32 +96,32 @@ function CardTile({ card, stage = false }) {
         </button>
       </div>
 
-      {/* Big card image — holo sheen sweeps across on hover.
-          stage=true 일 때 .card-stage 적용 → spotlight + turntable + sparkles 무대 효과 (리자몽 톤) */}
-      <div className={`px-6 py-5 flex justify-center holo-sheen ${stage ? 'card-stage' : ''}`}
+      {/* Big card image — holo sheen sweeps across on hover. 모바일은 sm 사이즈 */}
+      <div className={`px-2 py-2 sm:px-6 sm:py-5 flex justify-center holo-sheen ${stage ? 'card-stage' : ''}`}
         style={{ background: `radial-gradient(ellipse at center, ${card.accent || '#fbf7ec'}12 0%, transparent 70%)` }}>
-        <PokeCard card={card} size="md" />
+        <span className="sm:hidden"><PokeCard card={card} size="sm" /></span>
+        <span className="hidden sm:inline"><PokeCard card={card} size="md" /></span>
       </div>
 
       {/* Info */}
-      <div className="px-5 pb-5 border-t border-line pt-4">
+      <div className="px-2 pb-2 sm:px-5 sm:pb-5 sm:border-t sm:border-line sm:pt-4">
         <div className="flex items-baseline justify-between gap-2 mb-1">
-          <h3 className="font-display text-xl font-bold text-ink leading-tight">{card.nameKo}</h3>
-          <span className="text-[10px] text-mute font-mono">#{card.number}</span>
+          <h3 className="font-display text-[12px] sm:text-xl font-bold text-ink leading-tight truncate sm:whitespace-normal">{card.nameKo}</h3>
+          <span className="hidden sm:inline text-[10px] text-mute font-mono">#{card.number}</span>
         </div>
-        <div className="text-xs text-mute mb-3 truncate font-medium">
+        <div className="hidden sm:block text-xs text-mute mb-3 truncate font-medium">
           {card.name} <span className="text-mute/60">·</span> {card.setShort} <span className="text-mute/60">·</span> {card.year}
         </div>
 
-        <div className="flex items-center justify-between mb-3">
+        <div className="hidden sm:flex items-center justify-between mb-3">
           <GradeBadge grade={card.grade} size="sm" />
           {card.population && (
             <span className="text-[10px] text-mute font-mono">Pop. {Object.values(card.population)[0]}</span>
           )}
         </div>
 
-        {/* Price block */}
-        <div className="pt-3 border-t border-line">
+        {/* Price block — 모바일은 간이 표시 */}
+        <div className="sm:pt-3 sm:border-t sm:border-line">
           {cardType === 'auction'
             ? auctionUpcoming
               ? <UpcomingFooter card={card} />
@@ -228,11 +228,11 @@ function UpcomingFooter({ card }) {
 function BuyNowFooter({ card }) {
   return (
     <div className="flex justify-between items-baseline">
-      <div>
-        <div className="text-[9px] text-mute font-bold tracking-[0.15em] uppercase mb-0.5">판매가</div>
-        <div className="font-display text-2xl font-bold text-ink leading-none tabular-nums">{formatKRW(card.price)}</div>
+      <div className="min-w-0">
+        <div className="hidden sm:block text-[9px] text-mute font-bold tracking-[0.15em] uppercase mb-0.5">판매가</div>
+        <div className="font-display text-[13px] sm:text-2xl font-bold text-ink leading-none tabular-nums">{formatKRW(card.price)}</div>
       </div>
-      <span className="inline-flex items-center gap-1 px-2 py-1 bg-led-g/10 text-emerald-700 rounded-md text-[10px] font-bold">
+      <span className="hidden sm:inline-flex items-center gap-1 px-2 py-1 bg-led-g/10 text-emerald-700 rounded-md text-[10px] font-bold">
         <Icon name="check" size={10} strokeWidth={3} /> 즉시구매
       </span>
     </div>
