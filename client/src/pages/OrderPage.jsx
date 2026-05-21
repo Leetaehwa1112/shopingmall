@@ -249,12 +249,12 @@ export default function OrderPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-12">
-      <div className="mb-10">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 lg:py-12">
+      <div className="mb-5 lg:mb-10">
         <Eyebrow tone="water" led="blue" pulse>ORDER · 거의 다 왔어요</Eyebrow>
-        <h1 className="mt-4 font-display text-4xl lg:text-5xl font-bold text-ink tracking-tight leading-[1.1]">
+        <h1 className="mt-3 lg:mt-4 font-display text-2xl sm:text-4xl lg:text-5xl font-bold text-ink tracking-tight leading-[1.1]">
           배송 정보
-          <span className="relative inline-block ml-3">
+          <span className="relative inline-block ml-2 lg:ml-3">
             <span className="relative z-10 text-water">어디로 보낼까요?</span>
             <span className="absolute left-0 right-0 bottom-1 h-3 bg-electric/60 -z-0 rounded-sm" aria-hidden />
           </span>
@@ -280,8 +280,8 @@ export default function OrderPage() {
         </div>
       )}
 
-      <form onSubmit={submit} className="grid lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
+      <form onSubmit={submit} className="grid lg:grid-cols-3 gap-4 lg:gap-8">
+        <div className="lg:col-span-2 space-y-4 lg:space-y-6">
           <Section title="🚚 배송지">
             {hasSavedAddr && (
               <div className="mb-3 p-3 rounded-lg bg-electric/15 border-2 border-ink/15 flex items-center justify-between gap-3 text-xs">
@@ -302,25 +302,27 @@ export default function OrderPage() {
                 </button>
               </div>
             )}
-            <div className="grid grid-cols-2 gap-4">
+            {/* 모바일 1열 → sm부터 2열. 입력 폰트 16px+는 글로벌 CSS에서 강제 (iOS 줌 방지) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <Field label="수령인" value={form.name} onChange={(v) => setForm({...form, name: v})} validate={validators.name} required />
               <Field label="이메일" value={form.email} onChange={(v) => setForm({...form, email: v})} validate={validators.email} required placeholder="example@email.com" type="email" />
-              <Field label="연락처" value={form.phone} onChange={(v) => setForm({...form, phone: v})} validate={validators.phone} required placeholder="010-0000-0000" />
+              <Field label="연락처" value={form.phone} onChange={(v) => setForm({...form, phone: v})} validate={validators.phone} required placeholder="010-0000-0000" type="tel" />
               <div className="grid grid-cols-[1fr_auto] gap-2 items-start">
                 <Field label="우편번호" value={form.zip} onChange={(v) => setForm({...form, zip: v})} validate={validators.zip} required placeholder="06236" readOnly />
-                {/* 라벨 높이(22px ≈ text-[11px] + mb-1.5)만큼 buton에 mt 줘서 input과 baseline 정렬 */}
+                {/* 라벨 높이(22px ≈ text-[11px] + mb-1.5)만큼 button에 mt 줘서 input과 baseline 정렬 */}
                 <button
                   type="button"
                   onClick={() => setPostcodeOpen(true)}
                   style={{ backgroundColor: '#facc15', color: '#1a1a1a' }}
-                  className="mt-[22px] h-[46px] px-5 rounded-lg text-sm font-bold border-2 border-ink shadow-[0_2px_0_#1a1a1a] hover:-translate-y-0.5 hover:shadow-[0_3px_0_#1a1a1a] transition-all whitespace-nowrap inline-flex items-center justify-center gap-1.5"
+                  className="mt-[22px] h-[46px] px-4 sm:px-5 rounded-lg text-sm font-bold border-2 border-ink shadow-[0_2px_0_#1a1a1a] active:translate-y-0.5 active:shadow-[0_1px_0_#1a1a1a] transition-all whitespace-nowrap inline-flex items-center justify-center gap-1.5"
                 >
                   <Icon name="search" size={14} strokeWidth={2.4} />
-                  주소 검색
+                  <span className="hidden sm:inline">주소 검색</span>
+                  <span className="sm:hidden">검색</span>
                 </button>
               </div>
-              <div className="col-span-2"><Field label="기본 주소" value={form.addr1} onChange={(v) => setForm({...form, addr1: v})} validate={validators.addr1} required placeholder="우편번호 검색으로 자동 입력돼요" readOnly /></div>
-              <div className="col-span-2"><Field label="상세 주소" value={form.addr2} onChange={(v) => setForm({...form, addr2: v})} placeholder="동/호수 등" data-addr2 /></div>
+              <div className="sm:col-span-2"><Field label="기본 주소" value={form.addr1} onChange={(v) => setForm({...form, addr1: v})} validate={validators.addr1} required placeholder="우편번호 검색으로 자동 입력돼요" readOnly /></div>
+              <div className="sm:col-span-2"><Field label="상세 주소" value={form.addr2} onChange={(v) => setForm({...form, addr2: v})} placeholder="동/호수 등" data-addr2 /></div>
             </div>
           </Section>
 
@@ -380,15 +382,15 @@ export default function OrderPage() {
         </div>
 
         <aside>
-          <div className="surface-pop p-6 sticky top-32">
+          <div className="surface-pop p-5 lg:p-6 lg:sticky lg:top-32">
             <Eyebrow tone="electric" led="yellow">FINAL · 결제 요약</Eyebrow>
-            <div className="space-y-3 pb-4 mt-4 border-b-2 border-ink/15">
+            <div className="space-y-3 pb-4 mt-3 lg:mt-4 border-b-2 border-ink/15">
               {items.map((c) => {
                 const img = Array.isArray(c.images) ? c.images[0] : c.images
                 return (
                   <div key={c.id || c._id} className="flex items-center gap-3">
                     {img ? (
-                      <img src={img} alt={c.name} loading="lazy" decoding="async" className="w-12 h-16 object-contain rounded-md bg-bone-2 border border-ink/15 flex-shrink-0" />
+                      <img src={img} alt={c.name} loading="lazy" decoding="async" width="48" height="64" className="w-12 h-16 object-contain rounded-md bg-bone-2 border border-ink/15 flex-shrink-0" />
                     ) : (
                       <div className="w-12 h-16 rounded-md bg-bone-2 border border-ink/15 flex-shrink-0" />
                     )}
@@ -403,22 +405,41 @@ export default function OrderPage() {
                 )
               })}
             </div>
-            <div className="pt-4 space-y-1.5 text-sm">
+            <div className="pt-3 lg:pt-4 space-y-1.5 text-sm">
               <Row label="상품" value={formatKRWFull(total())} />
               <Row label={shipOpt?.label || '배송'} value={shipping > 0 ? formatKRWFull(shipping) : '무료'} highlight={shipOpt?.premium} />
               {insurance > 0 && <Row label="보험" value={formatKRWFull(insurance)} />}
             </div>
-            <div className="my-4 border-t-2 border-ink/15" />
-            <div className="flex justify-between items-baseline mb-6">
+            <div className="my-3 lg:my-4 border-t-2 border-ink/15" />
+            <div className="flex justify-between items-baseline mb-3 lg:mb-6">
               <span className="text-ink font-bold text-sm">총 결제</span>
-              <span className="font-display text-3xl font-bold text-dex tabular-nums">{formatKRWFull(grand)}</span>
+              <span className="font-display text-2xl lg:text-3xl font-bold text-dex tabular-nums">{formatKRWFull(grand)}</span>
             </div>
+            {/* 데스크탑 결제 버튼 (모바일은 sticky CTA로 분리) */}
             <button type="submit" disabled={paying}
-              className="btn-pop w-full py-3 rounded-xl font-bold inline-flex items-center justify-center gap-2 disabled:opacity-60">
+              className="hidden lg:inline-flex btn-pop w-full py-3 rounded-xl font-bold items-center justify-center gap-2 disabled:opacity-60">
               {paying ? '결제 처리중...' : <>결제하기! <Icon name="arrow" size={14} strokeWidth={2.4} /></>}
             </button>
           </div>
         </aside>
+
+        {/* spacer + 모바일 sticky 결제 CTA — form 안이라야 type="submit" 동작 */}
+        <div aria-hidden className="lg:hidden h-[72px]" />
+        <div
+          className="lg:hidden fixed left-0 right-0 z-30 bg-paper border-t-2 border-ink shadow-[0_-4px_12px_rgba(13,23,48,0.08)]"
+          style={{ bottom: `calc(64px + env(safe-area-inset-bottom))` }}
+        >
+          <div className="flex items-center gap-2 px-3 py-2.5">
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] font-bold text-dex tracking-wider uppercase">총 결제</div>
+              <div className="font-display text-xl font-bold text-ink leading-none tabular-nums truncate">{formatKRWFull(grand)}</div>
+            </div>
+            <button type="submit" disabled={paying}
+              className="shrink-0 bg-dex text-white border-2 border-ink font-bold py-3 px-6 rounded-xl shadow-[0_2px_0_#1a1a1a] active:translate-y-0.5 active:shadow-[0_1px_0_#1a1a1a] transition-all inline-flex items-center gap-1.5 disabled:opacity-60">
+              {paying ? '처리중...' : <>결제하기 <Icon name="arrow" size={14} strokeWidth={2.5} /></>}
+            </button>
+          </div>
+        </div>
       </form>
 
       {/* 우편번호 검색 모달 — Daum/카카오 postcode embed */}

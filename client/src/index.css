@@ -817,3 +817,111 @@ button { background: none; border: none; cursor: pointer; font-family: inherit; 
     scroll-behavior: auto !important;
   }
 }
+
+/* ──────────────────────────────────────────────────────────────
+   MOBILE-FIRST FOUNDATION
+   - lg 이하에서만 적용되는 모바일 토큰 / 가독성 / 터치타깃 / 안전영역
+   ────────────────────────────────────────────────────────────── */
+
+/* main 컨테이너 — 하단 탭바 공간 확보 (lg 미만에서만) */
+.main-with-tabbar {
+  padding-bottom: calc(64px + env(safe-area-inset-bottom));
+}
+@media (min-width: 1024px) {
+  .main-with-tabbar { padding-bottom: 0; }
+}
+
+/* iOS Safari 자동 줌 방지 — 폼 입력 폰트 16px 미만이면 포커스 시 줌인됨 */
+@media (max-width: 1023px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="search"],
+  input[type="url"],
+  input[type="date"],
+  input[type="datetime-local"],
+  input:not([type]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* 터치 타깃 최소 44x44 — 너무 빽빽한 버튼/링크 보정 */
+@media (hover: none) and (pointer: coarse) {
+  button, a, [role="button"], input[type="button"], input[type="submit"], input[type="checkbox"], input[type="radio"] {
+    touch-action: manipulation;
+  }
+  /* 텍스트 링크는 padding 강제 안 함 (인라인 텍스트 깨짐) */
+  /* 작은 아이콘 버튼 — 명시적으로 .touch-target 붙은 곳만 보강 */
+  .touch-target { min-width: 44px; min-height: 44px; }
+}
+
+/* sticky CTA 바 — 디테일/체크아웃에서 화면 하단 고정 */
+.sticky-cta {
+  position: sticky;
+  bottom: calc(64px + env(safe-area-inset-bottom));
+  left: 0;
+  right: 0;
+  z-index: 30;
+  background: var(--color-paper);
+  border-top: 2px solid var(--color-ink);
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+}
+@media (min-width: 1024px) {
+  .sticky-cta {
+    position: static;
+    border-top: none;
+    padding: 0;
+    background: transparent;
+  }
+}
+
+/* 모바일 가독성 — 본문 최소 16px 보장 */
+@media (max-width: 1023px) {
+  body { font-size: 16px; line-height: 1.55; }
+  /* tailwind의 text-xs/text-[10px] 같은 작은 텍스트는 의도된 라벨 용도므로 건드리지 않음.
+     본문 단락에 한해서만 적용 */
+  p.body-copy { font-size: 16px; line-height: 1.6; }
+}
+
+/* 모바일 스크롤 모멘텀 부드럽게 */
+@media (max-width: 1023px) {
+  body { -webkit-overflow-scrolling: touch; }
+}
+
+/* 모바일에서 hover 전용 트랜스폼은 비활성 (터치 디바이스에선 어차피 안 보이고 first-tap 지연만 유발) */
+@media (hover: none) and (pointer: coarse) {
+  .hover\:rotate-6:hover { transform: none !important; }
+  .hover\:scale-110:hover { transform: none !important; }
+  .group:hover .group-hover\:rotate-\[20deg\] { transform: none !important; }
+  .group:hover .group-hover\:scale-110 { transform: none !important; }
+}
+
+/* 안전영역 sticky 헤더용 */
+.safe-top { padding-top: env(safe-area-inset-top); }
+
+/* 카드 디테일 stage — xl 카드(380px)가 모바일 viewport(375px)보다 커서 잘리는 문제 보정.
+   transform: scale로 width 도달감 유지하면서 시각적으로 fit. layout 공간은 별도로
+   max-width로 제한. */
+.card-fit-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+@media (max-width: 419px) {
+  .card-fit-stage {
+    transform: scale(0.78);
+    transform-origin: center;
+    margin: -56px -42px; /* scale로 줄어든 만큼 음수 마진으로 layout 보정 */
+  }
+}
+@media (min-width: 420px) and (max-width: 639px) {
+  .card-fit-stage {
+    transform: scale(0.92);
+    transform-origin: center;
+    margin: -22px -16px;
+  }
+}
