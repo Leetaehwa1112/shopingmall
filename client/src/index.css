@@ -1023,3 +1023,73 @@ button { background: none; border: none; cursor: pointer; font-family: inherit; 
     bottom: 16px;
   }
 }
+
+/* ─── HeroLoader (재미있는 로더, 의존성 없음) ─────────────────────
+   - 포켓볼이 위에서 떨어진 듯 통통 튀고 가볍게 흔들림 (bounce + tilt)
+   - 그림자가 튀는 리듬에 맞춰 늘었다 줄음 → 실제 부피감
+   - 아래 LED dot 3개는 wave 형태로 깜빡임
+   - 카피 끝의 "..." 점이 차례대로 떠올랐다 사라짐
+   prefers-reduced-motion 자동 존중됨 (글로벌 미디어 쿼리). */
+@keyframes hero-loader-bounce {
+  0%   { transform: translateY(0) rotate(-12deg); animation-timing-function: ease-in; }
+  45%  { transform: translateY(80px) rotate(-8deg); animation-timing-function: ease-out; }
+  60%  { transform: translateY(60px) rotate(0deg); }
+  78%  { transform: translateY(80px) rotate(8deg); animation-timing-function: ease-out; }
+  100% { transform: translateY(0) rotate(12deg); animation-timing-function: ease-in; }
+}
+@keyframes hero-loader-shadow {
+  0%, 100% { transform: scaleX(0.6); opacity: 0.18; }
+  45%,
+  78%      { transform: scaleX(1.1); opacity: 0.32; }
+}
+@keyframes hero-loader-dot {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.35; }
+  30%           { transform: translateY(-9px); opacity: 1; }
+}
+@keyframes hero-loader-ellipsis {
+  0%   { content: ''; }
+  25%  { content: '.'; }
+  50%  { content: '..'; }
+  75%, 100% { content: '...'; }
+}
+
+.hero-loader-ball {
+  display: inline-block;
+  transform-origin: 50% 50%;
+  animation: hero-loader-bounce 1.6s ease-in-out infinite;
+  will-change: transform;
+  filter: drop-shadow(0 2px 0 rgba(13, 23, 48, 0.18));
+}
+.hero-loader-shadow {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  width: 72px;
+  height: 6px;
+  margin-left: -36px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(13, 23, 48, 0.25), rgba(13, 23, 48, 0) 70%);
+  transform-origin: 50% 50%;
+  animation: hero-loader-shadow 1.6s ease-in-out infinite;
+  will-change: transform, opacity;
+  pointer-events: none;
+}
+.hero-loader-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-dex);
+  border: 2px solid #1a1a1a;
+  box-shadow: 0 2px 0 #1a1a1a;
+  animation: hero-loader-dot 1.2s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+.hero-loader-dot-2 { background: var(--color-electric); animation-delay: 0.15s; }
+.hero-loader-dot-3 { background: var(--color-water);    animation-delay: 0.30s; }
+.hero-loader-ellipsis::before {
+  content: '...';
+  display: inline-block;
+  width: 1.6em;
+  text-align: left;
+  animation: hero-loader-ellipsis 1.4s steps(4, end) infinite;
+}

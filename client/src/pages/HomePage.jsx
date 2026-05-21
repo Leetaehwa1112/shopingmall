@@ -5,7 +5,7 @@ import { formatKRW, timeUntil } from '@/api/cards'
 import { normalizeProduct, normalizePack } from '@/api/normalize'
 import api from '@/api/axios'
 import PokeCard from '@/components/common/PokeCard'
-import CardBack from '@/components/common/CardBack'
+import HeroLoader from '@/components/common/HeroLoader'
 import CardTile from '@/components/common/CardTile'
 import PackTile from '@/components/common/PackTile'
 import Countdown from '@/components/common/Countdown'
@@ -162,16 +162,11 @@ export default function HomePage() {
             </ul>
           </div>
 
-          {/* RIGHT — 회전 카드. 모바일 order-1 / 데스크탑 order-2.
-              로딩 중엔 CardBack 한 장만 노출 → 카드가 항상 제일 먼저 보임 (UX).
-              데이터 도착 후 실제 hero panel로 교체. */}
+          {/* RIGHT — hero 패널. 모바일 order-1 / 데스크탑 order-2.
+              로딩 중 HeroLoader (튀는 포켓볼 + LED dot) → 데이터 도착 후 실제 panel. */}
           <div className="order-1 lg:order-2">
             {loading ? (
-              <div className="flex justify-center items-center py-6">
-                <div className="card-fit-stage">
-                  <CardBack size="lg" />
-                </div>
-              </div>
+              <HeroLoader />
             ) : FEATURED_LIVE ? (
               <FeaturedLivePanel card={FEATURED_LIVE} nextLot={upcomingAuctions[0]} />
             ) : upcomingAuctions[0] ? (
@@ -179,11 +174,7 @@ export default function HomePage() {
             ) : buyNow[0] ? (
               <FeaturedBuyNowPanel card={buyNow[0]} />
             ) : (
-              <div className="flex justify-center items-center py-6">
-                <div className="card-fit-stage">
-                  <CardBack size="lg" />
-                </div>
-              </div>
+              <ComingSoonPanel />
             )}
           </div>
         </div>
