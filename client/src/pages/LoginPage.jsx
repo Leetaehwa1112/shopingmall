@@ -65,8 +65,8 @@ export default function LoginPage() {
             </div>
           )}
 
-          <Input label="이메일" type="email" value={form.email} onChange={(v) => setForm({...form, email: v})} placeholder="trainer@pokevault.kr" />
-          <Input label="비밀번호" type="password" value={form.password} onChange={(v) => setForm({...form, password: v})} />
+          <Input label="이메일" type="email" value={form.email} onChange={(v) => setForm({...form, email: v})} placeholder="trainer@pokevault.kr" autoComplete="email" required inputMode="email" />
+          <Input label="비밀번호" type="password" value={form.password} onChange={(v) => setForm({...form, password: v})} autoComplete="current-password" required />
 
           <div className="flex items-center justify-between text-xs">
             <label className="flex items-center gap-2 text-ink font-bold cursor-pointer">
