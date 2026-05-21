@@ -436,10 +436,28 @@ function PendingDepositBanner() {
 
 // 5초 컷 임팩트 패널 — 빨간 LIVE 헤더 + 카드 + 현재가 + 거대 CTA.
 // 정책: 동시 LIVE 1건 → 이 패널은 "지금 무대 위" 그 자체.
+// 모바일 판단 — viewport < sm(640) 일 때 true. 회전 카드 크기 분기에 사용.
+function useIsNarrow() {
+  const [narrow, setNarrow] = useState(() =>
+    typeof window !== 'undefined' && window.innerWidth < 640
+  )
+  useEffect(() => {
+    const onResize = () => setNarrow(window.innerWidth < 640)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+  return narrow
+}
+
 function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
   const lotEnded = card.endsAt && timeUntil(card.endsAt).ended
   // 카드 호버 시 우하단 미니방송 토글
   const [broadcastVisible, setBroadcastVisible] = useState(false)
+  const isNarrow = useIsNarrow()
+  // 모바일 viewport(<640)에선 카드 lg(300x420) 너무 커서 3D 회전 시 좌우 삐져나옴 → md(220x308)
+  const cardSize = isNarrow ? 'md' : 'lg'
+  const cardW = isNarrow ? 220 : 300
+  const cardH = isNarrow ? 308 : 420
   // 가짜 시청자 수 — LOT _id 기반 결정적 의사난수 (리렌더 마다 흔들리지 않게)
   const viewers = useMemo(() => {
     const id = String(card.id || card._id || '')
@@ -482,9 +500,9 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
         <div className="oscar-tilt">
           <div className="oscar-bob">
             <div className="oscar-inner">
-              {/* Front — 실제 LIVE 경매 카드 */}
+              {/* Front — 실제 LIVE 경매 카드 (모바일 md / 데스크탑 lg) */}
               <div className="oscar-face oscar-front">
-                <PokeCard card={card} size="lg" interactive={false} />
+                <PokeCard card={card} size={cardSize} interactive={false} />
               </div>
               {/* Back — 1세대 Pokémon TCG 카드 백 (Cloudinary) */}
               <div className="oscar-face oscar-back" aria-hidden="true">
@@ -492,7 +510,7 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
                   src="https://res.cloudinary.com/dhk87y1nb/image/upload/v1779339181/pokevault/card-back-1st-gen.jpg"
                   alt=""
                   draggable={false}
-                  style={{ width: 300, height: 420, borderRadius: 12, display: 'block', objectFit: 'cover' }}
+                  style={{ width: cardW, height: cardH, borderRadius: 12, display: 'block', objectFit: 'cover' }}
                 />
               </div>
             </div>
@@ -533,8 +551,8 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
         }
         .oscar-inner {
           position: relative;
-          width: 300px;
-          height: 420px;
+          width: ${cardW}px;
+          height: ${cardH}px;
           transform-style: preserve-3d;
           animation: oscar-spin-cinema 10s cubic-bezier(0.65, 0, 0.35, 1) infinite;
         }
