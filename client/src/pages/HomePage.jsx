@@ -12,6 +12,7 @@ import GradeBadge from '@/components/common/GradeBadge'
 import Button from '@/components/common/Button'
 import Pokeball from '@/components/common/Pokeball'
 import Icon from '@/components/common/Icon'
+import MiniBroadcastPlayer from '@/components/common/MiniBroadcastPlayer'
 import Eyebrow from '@/components/common/Eyebrow'
 import Sparkles from '@/components/common/Sparkles'
 import SectionHead from '@/components/common/SectionHead'
@@ -614,6 +615,8 @@ function PendingDepositBanner() {
 // 정책: 동시 LIVE 1건 → 이 패널은 "지금 무대 위" 그 자체.
 function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
   const lotEnded = card.endsAt && timeUntil(card.endsAt).ended
+  // 카드 호버 시 우하단 미니방송 토글
+  const [broadcastVisible, setBroadcastVisible] = useState(false)
   // 가짜 시청자 수 — LOT _id 기반 결정적 의사난수 (리렌더 마다 흔들리지 않게)
   const viewers = useMemo(() => {
     const id = String(card.id || card._id || '')
@@ -694,20 +697,31 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
     )
   }
 
-  // 데스크탑 — "옥션 카탈로그" 무드. 시네마틱 회전 + 미세 부유 + 사선 축 유지.
-  // 움직임 설계:
-  //   1) 외곽 .oscar-tilt: rotateX(10deg) + rotateZ(-4deg) — 기운 턴테이블 축
-  //   2) 중간 .oscar-bob: translateY ±10px 4s ease-in-out — 진열대 위 부유감
-  //   3) 내부 .oscar-inner: rotateY 0→180→360 with hold @ 0/180/360 — 정면/뒷면에서 잠깐 멈춰
-  //      옥션 카탈로그 책장 넘김처럼 보여줌
-  //   - 카드 사이즈 lg(300×420) 복구
-  //   - marginTop 28px로 카드 살짝 아래 배치
+  // 데스크탑 — "옥션 카탈로그" 무드. 시네마틱 회전 + 미세 부유 + 사선 축.
+  // 인터랙션:
+  //   - 카드 클릭 → /auctions 경매장으로 바로 진입
+  //   - 카드 호버 → 우하단 MiniBroadcastPlayer (라이브 미니방송) 등장
+  //   - 호버 해제 → 미니방송 사라짐 (visible 토글)
+  // 카드 데이터는 FEATURED_LIVE — 서버의 status=active 첫 경매 (현재 실제 LIVE 진행 중인 카드)
+  const t = card.endsAt ? timeUntil(card.endsAt) : null
+  const isCritical = t && !t.ended && t.totalMs < 1000 * 60 * 10
+  const isUrgent = t && !t.ended && t.totalMs < 1000 * 60 * 60
+  const clockText = !t
+    ? '상시 진행'
+    : t.ended
+    ? '방송 종료'
+    : `${t.d > 0 ? `${t.d}D ` : ''}${String(t.h).padStart(2, '0')}:${String(t.m).padStart(2, '0')}:${String(t.s).padStart(2, '0')}`
+
   return (
     <div className="text-center px-2" style={{ marginTop: 28 }}>
       <Link
-        to={`/products/${card.id}`}
+        to="/auctions"
         className="inline-block group/card oscar-stage"
-        aria-label={`${card.nameKo} 경매 상세`}
+        aria-label={`경매장으로 이동 — 현재 LIVE: ${card.nameKo}`}
+        onMouseEnter={() => setBroadcastVisible(true)}
+        onMouseLeave={() => setBroadcastVisible(false)}
+        onFocus={() => setBroadcastVisible(true)}
+        onBlur={() => setBroadcastVisible(false)}
         style={{
           perspective: '1800px',
           filter: 'drop-shadow(0 24px 40px rgba(0,0,0,0.38)) drop-shadow(0 10px 16px rgba(220,38,38,0.22))',
@@ -716,7 +730,7 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
         <div className="oscar-tilt">
           <div className="oscar-bob">
             <div className="oscar-inner">
-              {/* Front — 실제 카드 */}
+              {/* Front — 실제 LIVE 경매 카드 */}
               <div className="oscar-face oscar-front">
                 <PokeCard card={card} size="lg" interactive={false} />
               </div>
@@ -733,6 +747,17 @@ function FeaturedLivePanel({ card, compact = false, nextLot = null }) {
           </div>
         </div>
       </Link>
+
+      {/* 카드 호버 시 우하단에 라이브 미니방송 */}
+      <MiniBroadcastPlayer
+        visible={broadcastVisible}
+        lot={card}
+        viewers={viewers}
+        current={card.currentBid || card.startPrice}
+        clockText={clockText}
+        isCritical={isCritical}
+        isUrgent={isUrgent}
+      />
       <style>{`
         @keyframes oscar-spin-cinema {
           0%, 6%    { transform: rotateY(0deg); }       /* hold front */
