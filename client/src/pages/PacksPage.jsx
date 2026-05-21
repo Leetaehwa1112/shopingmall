@@ -27,23 +27,6 @@ const FORMAT_GROUPS = [
   { id: 'special', title: '특별판', period: '한정·컬렉션', eras: ['bundle', 'tin', 'theme'] },
 ]
 
-// 시대 메타 — ProductsPage와 시각 일관성. SetSymbol 그대로.
-const ERA_META = {
-  all:     { tone: 'ink',      short: '모든 시대', years: null         },
-  base:    { tone: 'fire',     short: 'WotC',     years: '1999—2003'  },
-  neo:     { tone: 'electric', short: 'Neo',      years: '2000—2001'  },
-  ex:      { tone: 'psychic',  short: 'EX·DP·BW', years: '2003—2010'  },
-  xy:      { tone: 'electric', short: 'XY·SM',    years: '2013—2018'  },
-  swsh:    { tone: 'water',    short: 'SwSh',     years: '2019—2022'  },
-  sv:      { tone: 'fire',     short: 'S·V',      years: '2022—'      },
-}
-
-const ERA_GROUPS = [
-  { id: 'vintage', title: '빈티지', period: '1999—2003', eras: ['base', 'neo'] },
-  { id: 'modern',  title: '모던',   period: '2003—2018', eras: ['ex', 'xy']    },
-  { id: 'current', title: '현행',   period: '2019—',     eras: ['swsh', 'sv']  },
-]
-
 // ─── 팩 → 포맷 분류 (이름/SKU 기반) ────────────────────────
 function getPackFormat(p) {
   const name = (p.name || '').toLowerCase()
@@ -56,19 +39,8 @@ function getPackFormat(p) {
   return 'pack'
 }
 
-// ─── 팩 → 시대 분류 (year 기반) ────────────────────────────
-function getPackEra(p) {
-  const year = Number(p.year) || 0
-  if (year <= 2003) return 'base'
-  if (year <= 2010) return 'ex'
-  if (year <= 2018) return 'xy'
-  if (year <= 2022) return 'swsh'
-  return 'sv'
-}
-
 export default function PacksPage() {
   const [format, setFormat] = useState('all')
-  const [era, setEra] = useState('all')
   const [sort, setSort] = useState('default')
   const [packs, setPacks] = useState([])
   const [loading, setLoading] = useState(true)
@@ -79,47 +51,28 @@ export default function PacksPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  // 각 팩에 derived format/era 부착 (메모이즈)
+  // 각 팩에 derived format 부착 (메모이즈)
   const enriched = useMemo(
-    () => packs.map((p) => ({ ...p, _format: getPackFormat(p), _era: getPackEra(p) })),
+    () => packs.map((p) => ({ ...p, _format: getPackFormat(p) })),
     [packs]
   )
 
   const list = useMemo(() => {
     let arr = enriched
     if (format !== 'all') arr = arr.filter((p) => p._format === format)
-    if (era !== 'all')    arr = arr.filter((p) => p._era === era)
     if (sort === 'price-asc')  arr = [...arr].sort((a, b) => a.price - b.price)
     if (sort === 'price-desc') arr = [...arr].sort((a, b) => b.price - a.price)
     if (sort === 'year-old')   arr = [...arr].sort((a, b) => (a.year || 0) - (b.year || 0))
     if (sort === 'year-new')   arr = [...arr].sort((a, b) => (b.year || 0) - (a.year || 0))
     return arr
-  }, [enriched, format, era, sort])
+  }, [enriched, format, sort])
 
-  // 포맷 카운트 — era 필터 반영
-  const eraFiltered = era === 'all' ? enriched : enriched.filter((p) => p._era === era)
+  // 포맷 카운트
   const formatItems = Object.keys(FORMAT_META).map((id) => {
     const meta = FORMAT_META[id]
     const count = id === 'all'
-      ? eraFiltered.length
-      : eraFiltered.filter((p) => p._format === id).length
-    return {
-      id,
-      label: meta.short,
-      tone: meta.tone,
-      years: meta.years,
-      symbolKey: meta.symbol,
-      count,
-    }
-  })
-
-  // 시대 카운트 — format 필터 반영
-  const fmtFiltered = format === 'all' ? enriched : enriched.filter((p) => p._format === format)
-  const eraItems = Object.keys(ERA_META).map((id) => {
-    const meta = ERA_META[id]
-    const count = id === 'all'
-      ? fmtFiltered.length
-      : fmtFiltered.filter((p) => p._era === id).length
+      ? enriched.length
+      : enriched.filter((p) => p._format === id).length
     return {
       id,
       label: meta.short,
@@ -129,19 +82,14 @@ export default function PacksPage() {
     }
   })
 
-  const activeFilterLabel = format !== 'all'
-    ? FORMAT_META[format]?.short
-    : era !== 'all'
-      ? ERA_META[era]?.short
-      : '전체'
-  const isAllOrEmpty = format === 'all' && era === 'all'
-
-  const clearAllFilters = () => { setFormat('all'); setEra('all') }
+  const activeFilterLabel = format !== 'all' ? FORMAT_META[format]?.short : '전체'
+  const isAllOrEmpty = format === 'all'
+  const clearAllFilters = () => setFormat('all')
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 lg:py-14">
-      {/* ── Hero ────────────────────────────────────────────── */}
-      <div className="relative sparkle-host mb-10">
+      {/* ── Hero — mb-6 (was 10): 헤더-셀렉터 간격 축소 ─── */}
+      <div className="relative sparkle-host mb-6 lg:mb-7">
         <Sparkles always />
         <Eyebrow tone="electric" dot dotColor="yellow" className="mb-4">
           SEALED PACKS · 두근두근 개봉
@@ -165,8 +113,8 @@ export default function PacksPage() {
         </p>
       </div>
 
-      {/* ── 1차: 포맷 셀렉터 (가장 큰 의사결정 축) ─────── */}
-      <section aria-label="포맷별 필터" className="mb-5 lg:mb-6">
+      {/* ── 포맷 셀렉터 — 단일 가로 스트립 (바인더 모티프) ── */}
+      <section aria-label="포맷별 필터" className="mb-3 lg:mb-4">
         <EraSelector
           ariaLabel="팩 포맷 선택"
           groups={FORMAT_GROUPS}
@@ -176,42 +124,8 @@ export default function PacksPage() {
         />
       </section>
 
-      {/* ── 2차: 시대 핀스트라이프 (선택적, 세컨더리 톤) ── */}
-      <section aria-label="시대별 필터" className="mb-5 lg:mb-6">
-        <details className="group bg-bone-2 border-2 border-ink/12 rounded-2xl overflow-hidden">
-          <summary
-            className="list-none cursor-pointer px-4 py-2.5 flex items-center justify-between gap-3 hover:bg-electric/15 transition-colors select-none"
-          >
-            <span className="inline-flex items-center gap-2 text-[13px] font-extrabold text-ink">
-              <Icon name="clock" size={14} strokeWidth={2.4} />
-              시대로 좁히기
-              {era !== 'all' && (
-                <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-ink text-electric tabular-nums">
-                  {ERA_META[era]?.short}
-                </span>
-              )}
-            </span>
-            <Icon
-              name="arrow"
-              size={12}
-              strokeWidth={2.6}
-              className="text-mute group-open:rotate-90 transition-transform rotate-90"
-            />
-          </summary>
-          <div className="px-4 pt-3 pb-4 border-t-2 border-ink/10">
-            <EraSelector
-              ariaLabel="시대 선택"
-              groups={ERA_GROUPS}
-              items={eraItems}
-              value={era}
-              onChange={setEra}
-            />
-          </div>
-        </details>
-      </section>
-
       {/* ── 활성 필터 + 정렬 통합 바 ──────────────────────── */}
-      <div className="mb-6 lg:mb-8">
+      <div className="mb-5 lg:mb-6">
         <FilterBar
           activeLabel={activeFilterLabel}
           isAllOrEmpty={isAllOrEmpty}

@@ -130,7 +130,7 @@ function MarketPage({
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 lg:py-14">
       {/* === HEADER — 8pt 그리드 정합. 헤드라인 → 본문 24, 본문 → 칩 32. === */}
-      <div className="relative sparkle-host mb-10">
+      <div className="relative sparkle-host mb-6 lg:mb-7">
         <Sparkles always />
         <Eyebrow tone="water" dot dotColor="blue" className="mb-4 whitespace-nowrap">
           MARKETPLACE · 정품 인증
@@ -172,8 +172,8 @@ function MarketPage({
         )}
       </div>
 
-      {/* === 시대별 카테고리 — EraSelector (Vintage/Modern/Current/Special 그룹화) === */}
-      <div className="mb-6 lg:mb-8">
+      {/* === 시대별 카테고리 — 단일 행 + 바인더 구분선 === */}
+      <div className="mb-3 lg:mb-4">
         <EraSelector
           ariaLabel="포켓몬 TCG 시대 카테고리"
           groups={ERA_GROUPS}
@@ -195,7 +195,7 @@ function MarketPage({
         />
       </div>
 
-      {/* === 활성 필터 + 정렬 통합 바 — sticky로 스크롤 시 따라옴 === */}
+      {/* === 활성 필터 + 정렬 통합 바 === */}
       <div className="mb-5 lg:mb-6">
         <FilterBar
           activeLabel={ERA_META[cat]?.short || '전체'}
