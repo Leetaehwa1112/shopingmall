@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import {
   formatKRWFull, formatDateShort, formatTime,
   formatAddress, formatDateTime,
@@ -19,17 +18,6 @@ import {
   FilterChips, Spacer, DataTable, StatusPill, Pagination, BulkBar, BulkButton,
   Cell, RowActions, IconBtn, InlineSelect, Drawer, DSection, KV, EmptyState, logAudit,
 } from '@/components/admin/ui'
-import SavedViewBar from '@/components/admin/SavedViewBar'
-import SLABadge, { isOrderSLAExpiring, isOrderSLAViolated } from '@/components/admin/SLABadge'
-import QuickRefundModal from '@/components/admin/QuickRefundModal'
-import Can, { useCanDo, missingRolesTooltip } from '@/components/admin/Can'
-import OrderFulfillmentTimeline from '@/components/admin/OrderFulfillmentTimeline'
-import FulfillmentGuide from '@/components/admin/FulfillmentGuide'
-import CarrierTrackingCard from '@/components/admin/CarrierTrackingCard'
-import NotificationHistory, { recordNotification } from '@/components/admin/NotificationHistory'
-import { STAGES, inferStage, loadChecklist, saveChecklist, renderCustomerMessage } from '@/lib/fulfillment'
-import { CARRIER_NAMES } from '@/lib/carriers'
-import { useAuditLog } from '@/hooks/useAuditLog'
 
 const STATUS = ORDER_STATUS
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
@@ -43,7 +31,6 @@ const statusTone = (s) => ({
 export default function AdminOrders() {
   const { user } = useAuthStore()
   const toast = useToastStore((s) => s.push)
-  const [searchParams, setSearchParams] = useSearchParams()
 
   // server-side state
   const [orders, setOrders] = useState([])
@@ -65,15 +52,6 @@ export default function AdminOrders() {
   const [selected, setSelected] = useState([])
   const [drawerOrder, setDrawerOrder] = useState(null)
   const [bulkTrackOpen, setBulkTrackOpen] = useState(false)
-  const [refundTarget, setRefundTarget] = useState(null)
-
-  // SLA 뷰 토글 — server filter와 별개로 클라이언트 필터링
-  const [slaView, setSlaView] = useState(null)  // null | 'expiring' | 'violated'
-
-  // 권한
-  const canRefund = useCanDo('order.refund')
-  const canCancel = useCanDo('order.cancel')
-  const audit = useAuditLog()
 
   const fetchOrders = useCallback(() => {
     setLoading(true)
@@ -90,30 +68,12 @@ export default function AdminOrders() {
   useEffect(() => { fetchOrders() }, [fetchOrders])
   useEffect(() => { setPage(1); setSelected([]) }, [filter, search, range, payment])
 
-  // ?view= URL 파라미터로 진입 시 (대시보드/⌘K에서 점프) 해당 saved view 자동 적용
-  useEffect(() => {
-    const view = searchParams.get('view')
-    if (!view) return
-    if (view === 'sla-violated')  { setSlaView('violated'); setFilter('all') }
-    if (view === 'sla-expiring')  { setSlaView('expiring'); setFilter('all') }
-    if (view === 'shipping-due')  { setSlaView(null); setFilter('paid') }
-    if (view === 'pending')       { setSlaView(null); setFilter('pending_payment') }
-    if (view === 'cancelled')     { setSlaView(null); setFilter('cancelled') }
-    // URL 정리
-    const next = new URLSearchParams(searchParams)
-    next.delete('view')
-    setSearchParams(next, { replace: true })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // apply local date-range + payment + SLA + sort on top of server result
+  // apply local date-range + payment + sort on top of server result
   const filtered = useMemo(() => {
     let rows = orders.slice()
     if (payment !== 'all') rows = rows.filter((o) => o.payment?.method === payment)
     if (range.from) rows = rows.filter((o) => new Date(o.createdAt) >= new Date(range.from))
     if (range.to)   rows = rows.filter((o) => new Date(o.createdAt) <= new Date(`${range.to}T23:59:59`))
-    if (slaView === 'expiring') rows = rows.filter(isOrderSLAExpiring)
-    if (slaView === 'violated') rows = rows.filter(isOrderSLAViolated)
     rows.sort((a, b) => {
       const dir = sort.dir === 'asc' ? 1 : -1
       const get = (o) => ({
@@ -128,7 +88,7 @@ export default function AdminOrders() {
       return 0
     })
     return rows
-  }, [orders, range, payment, slaView, sort])
+  }, [orders, range, payment, sort])
 
   // KPIs based on currently loaded page (cheap, indicative)
   const kpis = useMemo(() => {
@@ -140,48 +100,8 @@ export default function AdminOrders() {
       todayRevenue: todays.reduce((s, o) => s + (o.totalAmount || 0), 0),
       shippingDue: orders.filter((o) => o.status === 'paid' && !o.shipping?.trackingNumber).length,
       cancelled: orders.filter((o) => o.status === 'cancelled' || o.status === 'refunded').length,
-      slaExpiring: orders.filter(isOrderSLAExpiring).length,
-      slaViolated: orders.filter(isOrderSLAViolated).length,
     }
   }, [orders, total])
-
-  // 시스템 saved views — 포케볼트 도메인 + SLA 기반 (가장 ROI 높은 운영 큐)
-  const systemViews = useMemo(() => [
-    {
-      id: 'sla-violated', label: 'SLA 위반', tone: 'red',
-      count: kpis.slaViolated,
-      apply: () => { setSlaView('violated'); setFilter('all') },
-    },
-    {
-      id: 'sla-expiring', label: 'SLA 임박 (18h+)', tone: 'amber',
-      count: kpis.slaExpiring,
-      apply: () => { setSlaView('expiring'); setFilter('all') },
-    },
-    {
-      id: 'shipping-due', label: '송장 미등록', tone: 'amber',
-      count: kpis.shippingDue,
-      apply: () => { setSlaView(null); setFilter('paid') },
-    },
-    {
-      id: 'pending', label: '결제 대기', tone: 'blue',
-      apply: () => { setSlaView(null); setFilter('pending_payment') },
-    },
-    {
-      id: 'cancelled', label: '취소·환불', tone: 'red',
-      apply: () => { setSlaView(null); setFilter('cancelled') },
-    },
-  ], [kpis])
-
-  const activeViewId = useMemo(() => {
-    if (slaView === 'violated') return 'sla-violated'
-    if (slaView === 'expiring') return 'sla-expiring'
-    if (filter === 'paid') return 'shipping-due'
-    if (filter === 'pending_payment') return 'pending'
-    if (filter === 'cancelled') return 'cancelled'
-    return null
-  }, [slaView, filter])
-
-  const clearView = () => { setSlaView(null); setFilter('all'); setSearch(''); setPayment('all'); setRange({ from: '', to: '' }) }
 
   const handleSort = (key) => {
     setSort((s) => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'desc' })
@@ -217,33 +137,6 @@ export default function AdminOrders() {
     toast({ type: 'success', title: '일괄 변경 완료', message: `${selected.length}건 → ${STATUS[newStatus]?.label}` })
     setSelected([])
     fetchOrders()
-  }
-
-  // 빠른 환불 — QuickRefundModal에서 호출
-  const handleRefund = async ({ amount, reasonCode, reasonText, reasonLabel, mode, items }) => {
-    const orderId = refundTarget._id
-    const before = { status: refundTarget.status, totalAmount: refundTarget.totalAmount }
-    try {
-      // 백엔드 환불 엔드포인트가 별도면 변경 — 현재는 status 전이로 대체 가능
-      await apiUpdateStatus(orderId, 'refunded')
-      // audit (앞서 만든 useAuditLog hook으로 영속 + 기존 logAudit으로 UI용 로그)
-      audit.record({
-        entity: 'order', entityId: orderId, action: 'refund',
-        before, after: { status: 'refunded', refundAmount: amount },
-        reason: `[${reasonCode}] ${reasonLabel}`,
-        metadata: { mode, items },
-      })
-      logAudit({
-        actor: user?.name, action: 'order.refund', entity: 'order', entityId: orderId,
-        summary: `${formatKRWFull(amount)} 환불 · ${reasonLabel}`,
-      })
-      toast({ type: 'success', title: '환불 처리 완료', message: `${formatKRWFull(amount)} · ${reasonLabel}` })
-      setRefundTarget(null)
-      fetchOrders()
-      if (drawerOrder?._id === orderId) setDrawerOrder(null)
-    } catch (err) {
-      toast({ type: 'error', title: '환불 실패', message: err.response?.data?.message || '환불 처리 실패' })
-    }
   }
 
   const filterOptions = ORDER_FILTERS.map((f) => ({
@@ -319,9 +212,6 @@ export default function AdminOrders() {
         <FilterChips value={filter} onChange={setFilter} options={filterOptions} />
       </div>
 
-      {/* 시스템 saved views — SLA·예외 큐 1클릭 점프 */}
-      <SavedViewBar views={systemViews} activeId={activeViewId} onClearView={clearView} />
-
       {/* Bulk action bar */}
       <BulkBar
         count={selected.length}
@@ -331,18 +221,7 @@ export default function AdminOrders() {
             <BulkButton tone="success" onClick={() => handleBulkStatus('preparing')}>배송 준비로</BulkButton>
             <BulkButton tone="success" onClick={() => handleBulkStatus('shipped')}>운송중으로</BulkButton>
             <BulkButton tone="default" onClick={() => handleBulkStatus('delivered')}>도착 처리</BulkButton>
-            <Can action="order.cancel" disable>
-              {(allowed) => (
-                <BulkButton
-                  tone="danger"
-                  onClick={() => handleBulkStatus('cancelled')}
-                  disabled={!allowed}
-                  title={allowed ? '선택 주문 취소' : missingRolesTooltip('order.cancel')}
-                >
-                  취소
-                </BulkButton>
-              )}
-            </Can>
+            <BulkButton tone="danger"  onClick={() => handleBulkStatus('cancelled')}>취소</BulkButton>
           </>
         }
       />
@@ -368,9 +247,6 @@ export default function AdminOrders() {
               <div className="text-ink font-bold">{formatDateShort(o.createdAt)}</div>
               <div className="text-mute">{formatTime(o.createdAt)}</div>
             </div>
-          },
-          { key: 'sla', label: 'SLA', align: 'center', render: (o) =>
-            <SLABadge order={o} />
           },
           { key: 'buyer', label: '구매자', render: (o) =>
             <Cell primary={o.shipping?.recipient || '—'} secondary={o.user?.email} />
@@ -409,22 +285,11 @@ export default function AdminOrders() {
               />
             )
           }},
-          { key: 'actions', label: '', align: 'right', render: (o) => {
-            const canRefundRow = canRefund && !['cancelled', 'refunded'].includes(o.status)
-            return (
-              <RowActions>
-                {canRefundRow && (
-                  <IconBtn
-                    icon="close"
-                    label="빠른 환불"
-                    tone="danger"
-                    onClick={(e) => { e.stopPropagation?.(); setRefundTarget(o) }}
-                  />
-                )}
-                <IconBtn icon="arrow" label="상세" onClick={() => setDrawerOrder(o)} />
-              </RowActions>
-            )
-          }},
+          { key: 'actions', label: '', align: 'right', render: (o) =>
+            <RowActions>
+              <IconBtn icon="arrow" label="상세" onClick={() => setDrawerOrder(o)} />
+            </RowActions>
+          },
         ]}
       />
 
@@ -449,14 +314,6 @@ export default function AdminOrders() {
           onDone={() => { setBulkTrackOpen(false); fetchOrders() }}
           orders={orders}
           actor={user?.name}
-        />
-      )}
-
-      {refundTarget && (
-        <QuickRefundModal
-          order={refundTarget}
-          onClose={() => setRefundTarget(null)}
-          onConfirm={handleRefund}
         />
       )}
     </div>
@@ -676,9 +533,6 @@ function OrderDrawer({ order, onClose, onStatusChange, onTrackingUpdate, actor }
   const [saving, setSaving] = useState(false)
   const st = STATUS[order.status] || STATUS.unknown
 
-  // 풀필먼트 단계 추론 — 9 micro-step
-  const currentStage = inferStage(order)
-
   const handleTrackingSave = async () => {
     setSaving(true)
     try {
@@ -691,111 +545,20 @@ function OrderDrawer({ order, onClose, onStatusChange, onTrackingUpdate, actor }
     } finally { setSaving(false) }
   }
 
-  // 알림 자동 발송 헬퍼 — 단계 진입 시 고객 알림 + 이력 기록
-  const sendCustomerNotice = (stage) => {
-    if (!stage?.customerNotify) return
-    const msg = renderCustomerMessage(stage, order)
-    if (!msg) return
-    recordNotification(order._id, {
-      stage: stage.id,
-      channel: 'kakao',
-      status: 'sent',
-      message: msg,
-      recipient: order.shipping?.phone || order.user?.email,
-    })
-    logAudit({
-      actor, action: 'order.notify',
-      entity: 'order', entityId: order._id,
-      summary: `[${stage.label}] 알림 발송 → ${order.shipping?.recipient || '고객'}`,
-    })
-  }
-
-  // 풀필먼트 가이드의 CTA가 눌렸을 때 — 단계별 다음 액션 수행
-  const handleAdvance = async ({ stage }) => {
-    const orderId = order._id
-    switch (stage.id) {
-      case 'inspection':
-      case 'packing':
-        // 클라이언트 체크리스트만 — localStorage 진행 (이미 FulfillmentGuide 내부에서 저장됨)
-        // 다음 렌더 시 inferStage가 다음 단계로 자동 진행
-        logAudit({ actor, action: `order.${stage.id}.done`, entity: 'order', entityId: orderId, summary: stage.label })
-        onTrackingUpdate() // 리스트 새로고침 → 드로어 재계산
-        break
-      case 'tracking_input':
-        // 운송장이 저장된 상태인지 확인 — 별도 운송장 영역에서 저장하고 다시 CTA 클릭
-        if (!order.shipping?.trackingNumber) {
-          alert('아래 "송장 등록" 영역에서 운송장 번호를 먼저 저장해주세요.')
-          return
-        }
-        // 알림 발송 (운송장 번호 포함)
-        sendCustomerNotice(stage)
-        // 자동으로 preparing 상태로 (다음 단계 진입)
-        await onStatusChange(orderId, 'preparing')
-        break
-      case 'shipped':
-        sendCustomerNotice(stage)
-        await onStatusChange(orderId, 'shipped')
-        break
-      case 'delivered': {
-        // 고객 수령 확인 — checklist에 customer_confirmed 마크
-        const cl = loadChecklist(orderId)
-        saveChecklist(orderId, { ...cl, customer_confirmed: true })
-        logAudit({ actor, action: 'order.received', entity: 'order', entityId: orderId, summary: '고객 수령 확인' })
-        onTrackingUpdate()
-        break
-      }
-      default:
-        break
-    }
-  }
-
   return (
     <Drawer
       open
       onClose={onClose}
       title={order.orderNumber}
       subtitle={formatDateTime(order.createdAt)}
-      width={620}
+      width={580}
       footer={
         <>
-          <span className="text-[11px] text-mute mr-auto">ESC로 닫기 · J/K로 형제 이동</span>
+          <span className="text-[11px] text-mute mr-auto">ESC로 닫기</span>
           <button onClick={onClose} className="text-xs font-bold text-mute hover:text-ink px-3 py-1.5 rounded-md hover:bg-bone-2">닫기</button>
         </>
       }
     >
-      {/* 9-step Fulfillment Timeline — 상태를 한눈에 */}
-      {currentStage && (
-        <div className="mb-4 px-1">
-          <OrderFulfillmentTimeline
-            stages={STAGES}
-            currentStageId={currentStage.id}
-            compact
-          />
-        </div>
-      )}
-
-      {/* 현재 단계 친절 가이드 — 체크리스트/Alert/CTA/고객알림 미리보기 */}
-      {currentStage && (
-        <div className="mb-4">
-          <FulfillmentGuide
-            order={order}
-            stage={currentStage}
-            onAdvance={handleAdvance}
-          />
-        </div>
-      )}
-
-      {/* 캐리어 추적 카드 — 운송장 있으면 추적 링크 + URL 복사, 없으면 권장 캐리어 안내 */}
-      <div className="mb-4">
-        <CarrierTrackingCard order={order} showRecommendation />
-      </div>
-
-      {/* 알림 발송 이력 — 고객에게 어떤 알림이 언제 갔는지 한눈에 */}
-      <div className="mb-5">
-        <NotificationHistory order={order} refreshKey={currentStage?.id} />
-      </div>
-
-      {/* 헤더 status pill — 기존 호환 */}
       <div className="flex items-center gap-2 mb-4">
         <StatusPill tone={statusTone(order.status)} led={st.led}>{st.label}</StatusPill>
         {order.escrow?.status === 'held' && <StatusPill tone="emerald" dot>에스크로 보호중</StatusPill>}
@@ -839,7 +602,7 @@ function OrderDrawer({ order, onClose, onStatusChange, onTrackingUpdate, actor }
         <div className="flex gap-2 mb-2">
           <select value={carrier} onChange={(e) => setCarrier(e.target.value)}
             className="bg-paper border border-gray-900/15 rounded-md px-2 py-1.5 text-xs text-ink font-bold focus:border-gray-900 outline-none">
-            {CARRIER_NAMES.map((c) => <option key={c}>{c}</option>)}
+            <option>FedEx</option><option>Brink's</option><option>CJ대한통운</option><option>우체국</option>
           </select>
           <input value={trackingNo} onChange={(e) => setTrackingNo(e.target.value)}
             placeholder="송장번호"

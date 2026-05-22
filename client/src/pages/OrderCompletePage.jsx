@@ -174,24 +174,10 @@ export default function OrderCompletePage() {
       </div>
 
       <div className="flex gap-3 justify-center flex-wrap">
-        {order.serverOrder?.orderNumber && (
-          <Link
-            to={`/track/${order.serverOrder.orderNumber}`}
-            className="btn-pop px-6 py-3 rounded-xl inline-flex items-center gap-2 font-bold"
-          >
-            실시간 배송 추적 <Icon name="arrow" size={14} strokeWidth={2.4} />
-          </Link>
-        )}
-        <Link
-          to="/my-orders"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-paper border-2 border-ink text-ink font-bold shadow-[0_3px_0_#1a1a1a] hover:bg-electric/30 hover:-translate-y-0.5 transition-all"
-        >
+        <Link to="/my-orders" className="btn-pop px-6 py-3 rounded-xl inline-flex items-center gap-2 font-bold">
           주문 목록 보기 <Icon name="arrow" size={14} strokeWidth={2.4} />
         </Link>
-        <Link
-          to="/products"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-paper border-2 border-ink text-ink font-bold shadow-[0_3px_0_#1a1a1a] hover:bg-electric/30 hover:-translate-y-0.5 transition-all"
-        >
+        <Link to="/products" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-paper border-2 border-ink text-ink font-bold shadow-[0_3px_0_#1a1a1a] hover:bg-electric/30 hover:-translate-y-0.5 transition-all">
           계속 쇼핑하기
         </Link>
       </div>

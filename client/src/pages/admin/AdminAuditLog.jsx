@@ -4,7 +4,6 @@ import {
   PageHeader, StatGrid, StatCard, FilterBar, SearchInput, Select, Spacer,
   FilterChips, DataTable, Pagination, StatusPill, Cell, EmptyState, readAudit,
 } from '@/components/admin/ui'
-import AdminDrawer from '@/components/admin/AdminDrawer'
 
 /**
  * Audit Log — every admin action (state change, delete, bulk op, tracking)
@@ -23,8 +22,6 @@ export default function AdminAuditLog() {
   const [sort, setSort] = useState({ key: 'at', dir: 'desc' })
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
-  const [detail, setDetail] = useState(null) // 드로어에서 보여줄 row
-  const [detailIdx, setDetailIdx] = useState(-1)
 
   const load = () => setLog(readAudit())
   useEffect(() => { load() }, [])
@@ -151,10 +148,6 @@ export default function AdminAuditLog() {
         rowKey={(r) => r.id}
         sort={sort}
         onSort={handleSort}
-        onRowClick={(r) => {
-          setDetail(r)
-          setDetailIdx(paged.findIndex((x) => x.id === r.id))
-        }}
         empty={<EmptyState icon="lock" title="기록된 작업이 없습니다" desc="관리자가 상태 변경/삭제를 수행하면 여기에 자동으로 기록됩니다." />}
         columns={[
           { key: 'at', label: '시각', sortable: true, render: (r) => {
@@ -185,138 +178,8 @@ export default function AdminAuditLog() {
       />
 
       <Pagination page={page} totalPages={totalPages} total={filtered.length} pageSize={pageSize} onPage={setPage} />
-
-      <AdminDrawer
-        open={!!detail}
-        onClose={() => { setDetail(null); setDetailIdx(-1) }}
-        onPrev={detailIdx > 0 ? () => {
-          const next = detailIdx - 1
-          setDetailIdx(next)
-          setDetail(paged[next])
-        } : undefined}
-        onNext={detailIdx >= 0 && detailIdx < paged.length - 1 ? () => {
-          const next = detailIdx + 1
-          setDetailIdx(next)
-          setDetail(paged[next])
-        } : undefined}
-        title={detail ? `${detail.action}` : ''}
-        subtitle={detail ? `${detail.entity} · ${detail.entityId}` : ''}
-        size="md"
-      >
-        {detail && <AuditDetail row={detail} />}
-      </AdminDrawer>
     </div>
   )
-}
-
-/** 단일 audit 이벤트 상세 — before/after diff + reason + metadata */
-function AuditDetail({ row }) {
-  const meta = row.meta || {}
-  const diff = computeDiff(meta.before, meta.after)
-  const ts = new Date(row.at)
-
-  return (
-    <div className="space-y-5">
-      {/* 헤더 정보 */}
-      <div className="bg-bone-2/40 rounded-lg p-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-        <span className="text-mute font-bold">시각</span>
-        <span className="font-mono text-ink text-right">{ts.toLocaleString('ko-KR')}</span>
-        <span className="text-mute font-bold">관리자</span>
-        <span className="text-ink text-right font-bold">{row.actor}</span>
-        <span className="text-mute font-bold">엔티티</span>
-        <span className="font-mono text-ink text-right">{row.entity} · {row.entityId}</span>
-        <span className="text-mute font-bold">액션</span>
-        <span className="text-ink text-right">
-          <StatusPill tone={toneFor(row.action)}>{row.action}</StatusPill>
-        </span>
-      </div>
-
-      {/* 사유 */}
-      {meta.reason && (
-        <section>
-          <h3 className="text-[10px] font-bold tracking-[0.18em] uppercase text-mute mb-1.5">사유</h3>
-          <div className="text-sm text-ink bg-paper border border-ink/10 rounded-lg px-3 py-2">
-            {meta.reason}
-          </div>
-        </section>
-      )}
-
-      {/* before → after diff */}
-      {diff.length > 0 && (
-        <section>
-          <h3 className="text-[10px] font-bold tracking-[0.18em] uppercase text-mute mb-1.5">변경 내역</h3>
-          <div className="border-2 border-ink/10 rounded-lg overflow-hidden">
-            <table className="w-full text-xs">
-              <thead className="bg-bone-2/60 text-[9px] font-bold tracking-wider uppercase text-mute">
-                <tr>
-                  <th className="text-left px-2.5 py-1.5">필드</th>
-                  <th className="text-left px-2.5 py-1.5 w-2/5">이전</th>
-                  <th className="text-left px-2.5 py-1.5 w-2/5">이후</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-ink/5">
-                {diff.map((d) => (
-                  <tr key={d.field}>
-                    <td className="px-2.5 py-1.5 font-mono text-[10px] text-mute font-bold">{d.field}</td>
-                    <td className="px-2.5 py-1.5 font-mono">
-                      <span className="bg-rose-50 text-rose-800 px-1.5 py-0.5 rounded line-through">
-                        {fmt(d.from)}
-                      </span>
-                    </td>
-                    <td className="px-2.5 py-1.5 font-mono">
-                      <span className="bg-emerald-50 text-emerald-800 px-1.5 py-0.5 rounded">
-                        {fmt(d.to)}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
-
-      {/* summary (diff 없는 케이스 — 기존 logAudit format) */}
-      {diff.length === 0 && row.summary && row.summary !== '-' && (
-        <section>
-          <h3 className="text-[10px] font-bold tracking-[0.18em] uppercase text-mute mb-1.5">요약</h3>
-          <div className="text-sm text-ink bg-paper border border-ink/10 rounded-lg px-3 py-2">
-            {row.summary}
-          </div>
-        </section>
-      )}
-
-      {/* metadata */}
-      {meta.metadata && Object.keys(meta.metadata).length > 0 && (
-        <section>
-          <h3 className="text-[10px] font-bold tracking-[0.18em] uppercase text-mute mb-1.5">추가 메타데이터</h3>
-          <pre className="bg-ink text-paper text-[10px] font-mono p-3 rounded-lg overflow-x-auto leading-relaxed">
-{JSON.stringify(meta.metadata, null, 2)}
-          </pre>
-        </section>
-      )}
-    </div>
-  )
-}
-
-function computeDiff(before, after) {
-  const out = []
-  const keys = new Set([...Object.keys(before || {}), ...Object.keys(after || {})])
-  keys.forEach((k) => {
-    const from = before?.[k]
-    const to = after?.[k]
-    if (JSON.stringify(from) !== JSON.stringify(to)) {
-      out.push({ field: k, from, to })
-    }
-  })
-  return out
-}
-
-function fmt(v) {
-  if (v == null) return '—'
-  if (typeof v === 'object') return JSON.stringify(v)
-  if (typeof v === 'number') return v.toLocaleString()
-  return String(v)
 }
 
 function toneFor(action = '') {

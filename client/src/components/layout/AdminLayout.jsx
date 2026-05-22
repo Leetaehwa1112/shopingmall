@@ -5,7 +5,6 @@ import ToastContainer from '@/components/common/Toast'
 import Pokeball from '@/components/common/Pokeball'
 import Icon from '@/components/common/Icon'
 import api from '@/api/axios'
-import CommandPalette from '@/components/admin/CommandPalette'
 
 /**
  * Admin shell — desktop-first operations console.
@@ -17,34 +16,24 @@ import CommandPalette from '@/components/admin/CommandPalette'
 export default function AdminLayout() {
   const { isAdmin, user } = useAuthStore()
   const location = useLocation()
-  const [badges, setBadges] = useState({
-    pendingAuctions: 0, todayOrders: 0, lowStock: 0, slaViolated: 0, slaExpiring: 0,
-  })
+  const [badges, setBadges] = useState({ pendingAuctions: 0, todayOrders: 0, lowStock: 0 })
   const [drawerOpen, setDrawerOpen] = useState(false)
 
-  // 사이드바 badge — 라우트 이동마다 + 60초 폴링으로 SLA 실시간성
   useEffect(() => {
     if (!isAdmin) return
     let alive = true
-    const fetchBadges = () => {
-      api.get('/stats/dashboard')
-        .then(({ data }) => {
-          if (!alive) return
-          const d = data?.data || {}
-          setBadges({
-            pendingAuctions: d.pendingAuctions ?? d.auctionsPending ?? 0,
-            todayOrders: d.todayOrders ?? 0,
-            lowStock: d.lowStockCount ?? 0,
-            slaViolated: d.slaViolated ?? 0,
-            slaExpiring: d.slaExpiring ?? 0,
-          })
+    api.get('/stats/dashboard')
+      .then(({ data }) => {
+        if (!alive) return
+        const d = data?.data || {}
+        setBadges({
+          pendingAuctions: d.pendingAuctions ?? d.auctionsPending ?? 0,
+          todayOrders: d.todayOrders ?? 0,
+          lowStock: d.lowStockCount ?? 0,
         })
-        .catch(() => {})
-    }
-    fetchBadges()
-    // SLA는 시간 의존적이라 60초마다 갱신 (라우트 변경 + 폴링 동시)
-    const id = setInterval(fetchBadges, 60_000)
-    return () => { alive = false; clearInterval(id) }
+      })
+      .catch(() => {})
+    return () => { alive = false }
   }, [isAdmin, location.pathname])
 
   // 라우트 이동 시 모바일 드로어 자동 닫힘
@@ -78,8 +67,6 @@ export default function AdminLayout() {
   return (
     <div className="min-h-screen min-h-dvh flex bg-bone">
       <ToastContainer />
-      {/* ⌘K 글로벌 명령 팔레트 — 어느 admin 화면에서든 활성 */}
-      <CommandPalette />
 
       {/* ── Mobile backdrop (드로어 열렸을 때) ──────────────── */}
       {drawerOpen && (
@@ -131,35 +118,13 @@ export default function AdminLayout() {
           {badges.pendingAuctions === 0 && (
             <NavItem to="/admin/auctions/review" icon="bolt" label="검수 인박스" sub />
           )}
-          {/* 주문 관리 — SLA 위반(빨강) > 임박(주황) > 오늘 주문(파랑) 우선순위로 가장 시급한 1개만 노출
-              위반이 있으면 검수보다도 먼저 처리해야 하는 신호 — 사이드바 어디 페이지에서든 빨강 dot이 보이게 */}
-          <NavItem
-            to="/admin/orders"
-            icon="cart"
-            label="주문 관리"
-            badge={badges.slaViolated || badges.slaExpiring || badges.todayOrders}
-            badgeTone={badges.slaViolated > 0 ? 'red' : badges.slaExpiring > 0 ? 'amber' : 'blue'}
-            pulse={badges.slaViolated > 0}
-          />
-          {/* SLA 위반이 있으면 sub-nav로 바로 점프 가능한 deep link 노출 — 가장 시급한 작업의 가시성 ↑ */}
-          {badges.slaViolated > 0 && (
-            <NavItem
-              to="/admin/orders?view=sla-violated"
-              icon="flame"
-              label="SLA 위반 처리"
-              badge={badges.slaViolated}
-              badgeTone="red"
-              pulse
-              sub
-            />
-          )}
+          <NavItem to="/admin/orders"   icon="cart"    label="주문 관리" badge={badges.todayOrders} badgeTone="blue" />
 
           <NavGroup label="회원" />
           <NavItem to="/admin/users"    icon="shield"  label="고객 관리" />
 
           <NavGroup label="운영" />
-          <NavItem to="/admin/settlements" icon="package" label="위탁자 정산" />
-          <NavItem to="/admin/audit"       icon="lock"    label="감사 로그" />
+          <NavItem to="/admin/audit"    icon="lock"    label="감사 로그" />
         </nav>
 
         <div className="px-3 py-3 border-t border-ink/10 bg-bone-2/40">
@@ -195,7 +160,7 @@ function NavGroup({ label }) {
   )
 }
 
-function NavItem({ to, end, icon, label, badge, badgeTone = 'red', sub, pulse = false }) {
+function NavItem({ to, end, icon, label, badge, badgeTone = 'red', sub }) {
   const tone = {
     red:     'bg-red-100 text-red-700 border-red-200',
     amber:   'bg-amber-100 text-amber-700 border-amber-200',
@@ -218,31 +183,17 @@ function NavItem({ to, end, icon, label, badge, badgeTone = 'red', sub, pulse = 
       <Icon name={icon} size={sub ? 12 : 14} strokeWidth={2} className="flex-shrink-0" />
       <span className="flex-1 truncate">{label}</span>
       {badge ? (
-        <span className={`text-[9px] font-mono tabular-nums px-1.5 py-0.5 rounded-full border ${tone} ${pulse ? 'animate-nav-pulse' : ''}`}>
+        <span className={`text-[9px] font-mono tabular-nums px-1.5 py-0.5 rounded-full border ${tone}`}>
           {badge > 99 ? '99+' : badge}
         </span>
       ) : null}
-      {pulse && (
-        <style>{`
-          @keyframes nav-pulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.45); }
-            50%      { box-shadow: 0 0 0 4px rgba(244, 63, 94, 0); }
-          }
-          .animate-nav-pulse { animation: nav-pulse 2s ease-in-out infinite; }
-        `}</style>
-      )}
     </NavLink>
   )
 }
 
 function TopBar({ user, onMenuClick }) {
+  const [q, setQ] = useState('')
   const time = useMemo(() => new Date().toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }), [])
-  // ⌘K 명령 팔레트 트리거 — focus가 아니라 키이벤트 dispatch로 일관된 진입점 유지
-  const openPalette = () => {
-    const evt = new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true, bubbles: true })
-    window.dispatchEvent(evt)
-  }
-  const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
 
   return (
     <div className="bg-paper border-b border-ink/10 px-3 sm:px-6 py-2.5 flex items-center gap-2 sm:gap-4 sticky top-0 z-30">
@@ -255,19 +206,16 @@ function TopBar({ user, onMenuClick }) {
       >
         <Icon name="menu" size={18} strokeWidth={2.2} />
       </button>
-      {/* 통합 검색 — 진짜 input이 아니라 ⌘K 트리거 (글로벌 팔레트가 단일 진입점) */}
-      <button
-        type="button"
-        onClick={openPalette}
-        aria-label="검색 (⌘K)"
-        className="relative flex-1 max-w-md bg-bone-2/50 border border-ink/15 rounded-lg pl-8 pr-2 py-1.5 text-xs text-mute hover:bg-paper hover:border-ink/30 hover:text-ink transition-colors flex items-center group"
-      >
-        <Icon name="search" size={13} strokeWidth={2} className="absolute left-2.5 top-1/2 -translate-y-1/2" />
-        <span className="flex-1 text-left">주문 · 카드 · 고객 검색</span>
-        <kbd className="ml-2 hidden sm:inline-flex items-center text-[10px] font-mono text-mute bg-paper border border-ink/15 px-1.5 py-0.5 rounded">
-          {isMac ? '⌘' : 'Ctrl'} K
-        </kbd>
-      </button>
+      <div className="relative flex-1 max-w-md">
+        <Icon name="search" size={13} strokeWidth={2} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-mute pointer-events-none" />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="검색..."
+          aria-label="관리자 검색"
+          className="w-full bg-bone-2/50 border border-ink/15 rounded-lg pl-8 pr-3 py-1.5 text-xs text-ink placeholder:text-mute focus:border-ink focus:bg-paper outline-none transition-colors"
+        />
+      </div>
       <div className="flex items-center gap-2 sm:gap-3 text-[11px]">
         <span className="text-mute font-mono hidden lg:inline">{time}</span>
         <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md font-bold whitespace-nowrap">

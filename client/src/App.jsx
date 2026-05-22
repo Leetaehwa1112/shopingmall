@@ -27,7 +27,6 @@ const DexPage = lazy(() => import('@/pages/DexPage'))
 const InfoPage = lazy(() => import('@/pages/InfoPage'))
 const PasswordResetPage = lazy(() => import('@/pages/PasswordResetPage'))
 const VerifyEmailPage = lazy(() => import('@/pages/VerifyEmailPage'))
-const TrackOrderPage = lazy(() => import('@/pages/TrackOrderPage'))
 
 // ─── Admin 전체: 비-admin 사용자는 다운로드 안 함 ───────────
 const AdminLayout = lazy(() => import('@/components/layout/AdminLayout'))
@@ -44,7 +43,6 @@ const AdminUsers = lazy(() => import('@/pages/admin/AdminUsers'))
 const AdminAuctions = lazy(() => import('@/pages/admin/AdminAuctions'))
 const AdminAuditLog = lazy(() => import('@/pages/admin/AdminAuditLog'))
 const AdminAuctionReview = lazy(() => import('@/pages/admin/AdminAuctionReview'))
-const AdminSettlements = lazy(() => import('@/pages/admin/AdminSettlements'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -95,8 +93,6 @@ export default function App() {
               {/* 인증 / 비밀번호 재설정 — 토큰 링크 진입점 */}
               <Route path="reset-password" element={<PasswordResetPage />} />
               <Route path="verify-email" element={<VerifyEmailPage />} />
-              {/* 비회원 주문 추적 — 이메일 링크로 진입 */}
-              <Route path="track/:orderNumber" element={<TrackOrderPage />} />
             </Route>
 
             {/* admin 로그인은 Layout(일반 헤더/푸터) 밖에서 풀스크린 */}
@@ -114,7 +110,6 @@ export default function App() {
               <Route path="auctions/review" element={<AdminAuctionReview />} />
               <Route path="orders" element={<AdminOrders />} />
               <Route path="users" element={<AdminUsers />} />
-              <Route path="settlements" element={<AdminSettlements />} />
               <Route path="audit" element={<AdminAuditLog />} />
             </Route>
 

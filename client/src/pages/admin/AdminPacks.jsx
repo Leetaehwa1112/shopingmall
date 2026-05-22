@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { formatKRWFull } from '@/api/cards'
 import api from '@/api/axios'
 import useAuthStore from '@/store/authStore'
@@ -10,23 +10,14 @@ import {
   FilterChips, DataTable, Pagination, BulkBar, BulkButton, StatusPill,
   Cell, ImgThumb, RowActions, IconBtn, EmptyState, InlineNumberCell, logAudit,
 } from '@/components/admin/ui'
-import SavedViewBar from '@/components/admin/SavedViewBar'
-import BulkPriceModal from '@/components/admin/BulkPriceModal'
-import Can, { useCanDo, missingRolesTooltip } from '@/components/admin/Can'
-import { useAuditLog } from '@/hooks/useAuditLog'
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
 const LOW_STOCK = 3
 
 export default function AdminPacks() {
   const navigate = useNavigate()
-  const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useAuthStore()
   const toast = useToastStore((s) => s.push)
-  const audit = useAuditLog()
-  const canEditPrice = useCanDo('pack.edit')
-  const canBulkEdit = useCanDo('product.bulk_edit')
-  const canDelete = useCanDo('product.delete')
 
   const [list, setList] = useState([])
   const [total, setTotal] = useState(0)
@@ -39,7 +30,6 @@ export default function AdminPacks() {
   const [pageSize, setPageSize] = useState(25)
   const [selected, setSelected] = useState([])
   const [deleteTarget, setDeleteTarget] = useState(null)
-  const [bulkPriceOpen, setBulkPriceOpen] = useState(false)
 
   const fetchList = useCallback(() => {
     setLoading(true)
@@ -53,20 +43,6 @@ export default function AdminPacks() {
 
   useEffect(() => { fetchList() }, [fetchList])
   useEffect(() => { setPage(1); setSelected([]) }, [filter, search, stockFilter])
-
-  // ?view= URL 동기화 — Dashboard/⌘K에서 점프 시 자동 적용
-  useEffect(() => {
-    const view = searchParams.get('view')
-    if (!view) return
-    if (view === 'oos')  { setStockFilter('out'); setFilter('all') }
-    if (view === 'low')  { setStockFilter('low'); setFilter('all') }
-    if (view === 'pack') { setStockFilter('all'); setFilter('pack') }
-    if (view === 'box')  { setStockFilter('all'); setFilter('box') }
-    const next = new URLSearchParams(searchParams)
-    next.delete('view')
-    setSearchParams(next, { replace: true })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   const filtered = useMemo(() => {
     let rows = list.slice()
@@ -149,54 +125,6 @@ export default function AdminPacks() {
     fetchList()
   }
 
-  // 일괄 가격 변경 — BulkPriceModal에서 호출
-  const handleBulkPrice = async ({ changes, mode, value, reason }) => {
-    let ok = 0, fail = 0
-    const auditEntries = []
-    for (const ch of changes) {
-      try {
-        await api.put(`/packs/${ch.id}`, { price: ch.to })
-        ok++
-        auditEntries.push({
-          entity: 'pack', entityId: ch.id, action: 'price_change',
-          before: { price: ch.from }, after: { price: ch.to }, reason,
-        })
-      } catch { fail++ }
-    }
-    if (auditEntries.length) {
-      audit.recordBatch(auditEntries)
-      logAudit({ actor: user?.name, action: 'pack.bulk.price_change', entity: 'pack',
-        entityId: `${ok}개`, summary: `${mode} ${value} (${reason})`, meta: { ok, fail } })
-    }
-    if (fail === 0)    toast({ type: 'success', title: `${ok}개 가격 변경 완료` })
-    else if (ok === 0) toast({ type: 'error',   title: '가격 변경 실패', message: `${fail}건 모두 실패` })
-    else               toast({ type: 'warning', title: '부분 변경', message: `성공 ${ok}건 · 실패 ${fail}건` })
-    setSelected([])
-    fetchList()
-  }
-
-  // 시스템 saved views — Products와 동일 패턴, 도메인은 팩
-  const activeViewId = useMemo(() => {
-    if (filter === 'all'  && stockFilter === 'out') return 'oos'
-    if (filter === 'all'  && stockFilter === 'low') return 'low'
-    if (filter === 'pack' && stockFilter === 'all') return 'pack'
-    if (filter === 'box'  && stockFilter === 'all') return 'box'
-    return null
-  }, [filter, stockFilter])
-
-  const systemViews = useMemo(() => [
-    { id: 'oos',  label: '재고 0',    tone: 'red',    count: kpis.out,
-      apply: () => { setStockFilter('out'); setFilter('all') } },
-    { id: 'low',  label: '재고 부족', tone: 'amber',  count: kpis.low,
-      apply: () => { setStockFilter('low'); setFilter('all') } },
-    { id: 'pack', label: '부스터팩',  tone: 'emerald',
-      apply: () => { setFilter('pack'); setStockFilter('all') } },
-    { id: 'box',  label: '박스',      tone: 'amber',  count: kpis.box,
-      apply: () => { setFilter('box'); setStockFilter('all') } },
-  ], [kpis])
-
-  const clearView = () => { setStockFilter('all'); setFilter('all'); setSearch('') }
-
   return (
     <div className="space-y-4 max-w-[1400px]">
       <PageHeader
@@ -243,9 +171,6 @@ export default function AdminPacks() {
         { value: 'box', label: '박스' },
       ]} />
 
-      {/* 시스템 saved views — 1클릭 점프 */}
-      <SavedViewBar views={systemViews} activeId={activeViewId} onClearView={clearView} />
-
       <button
         onClick={() => navigate('/admin/packs/new')}
         style={{ backgroundColor: '#dc2626', color: '#ffffff', borderColor: '#7f1d1d' }}
@@ -266,34 +191,7 @@ export default function AdminPacks() {
       </button>
 
       <BulkBar count={selected.length} onClear={() => setSelected([])}
-        actions={
-          <>
-            <Can action="product.bulk_edit" disable>
-              {(allowed) => (
-                <BulkButton
-                  onClick={() => setBulkPriceOpen(true)}
-                  disabled={!allowed}
-                  title={allowed ? '선택 팩 가격 일괄 변경' : missingRolesTooltip('product.bulk_edit')}
-                >
-                  가격 일괄 변경
-                </BulkButton>
-              )}
-            </Can>
-            <Can action="product.delete" disable>
-              {(allowed) => (
-                <BulkButton
-                  tone="danger"
-                  onClick={handleBulkDelete}
-                  disabled={!allowed}
-                  title={allowed ? '선택 항목 영구 삭제' : missingRolesTooltip('product.delete')}
-                >
-                  일괄 삭제
-                </BulkButton>
-              )}
-            </Can>
-          </>
-        }
-      />
+        actions={<BulkButton tone="danger" onClick={handleBulkDelete}>일괄 삭제</BulkButton>} />
 
       <DataTable
         density="compact"
@@ -354,14 +252,6 @@ export default function AdminPacks() {
           name={deleteTarget.nameKo || deleteTarget.name}
           onConfirm={() => handleDelete(deleteTarget._id, deleteTarget.nameKo || deleteTarget.name)}
           onCancel={() => setDeleteTarget(null)}
-        />
-      )}
-
-      {bulkPriceOpen && (
-        <BulkPriceModal
-          rows={list.filter((r) => selected.includes(r._id))}
-          onClose={() => setBulkPriceOpen(false)}
-          onConfirm={handleBulkPrice}
         />
       )}
     </div>
