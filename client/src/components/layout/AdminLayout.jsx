@@ -17,24 +17,34 @@ import CommandPalette from '@/components/admin/CommandPalette'
 export default function AdminLayout() {
   const { isAdmin, user } = useAuthStore()
   const location = useLocation()
-  const [badges, setBadges] = useState({ pendingAuctions: 0, todayOrders: 0, lowStock: 0 })
+  const [badges, setBadges] = useState({
+    pendingAuctions: 0, todayOrders: 0, lowStock: 0, slaViolated: 0, slaExpiring: 0,
+  })
   const [drawerOpen, setDrawerOpen] = useState(false)
 
+  // 사이드바 badge — 라우트 이동마다 + 60초 폴링으로 SLA 실시간성
   useEffect(() => {
     if (!isAdmin) return
     let alive = true
-    api.get('/stats/dashboard')
-      .then(({ data }) => {
-        if (!alive) return
-        const d = data?.data || {}
-        setBadges({
-          pendingAuctions: d.pendingAuctions ?? d.auctionsPending ?? 0,
-          todayOrders: d.todayOrders ?? 0,
-          lowStock: d.lowStockCount ?? 0,
+    const fetchBadges = () => {
+      api.get('/stats/dashboard')
+        .then(({ data }) => {
+          if (!alive) return
+          const d = data?.data || {}
+          setBadges({
+            pendingAuctions: d.pendingAuctions ?? d.auctionsPending ?? 0,
+            todayOrders: d.todayOrders ?? 0,
+            lowStock: d.lowStockCount ?? 0,
+            slaViolated: d.slaViolated ?? 0,
+            slaExpiring: d.slaExpiring ?? 0,
+          })
         })
-      })
-      .catch(() => {})
-    return () => { alive = false }
+        .catch(() => {})
+    }
+    fetchBadges()
+    // SLA는 시간 의존적이라 60초마다 갱신 (라우트 변경 + 폴링 동시)
+    const id = setInterval(fetchBadges, 60_000)
+    return () => { alive = false; clearInterval(id) }
   }, [isAdmin, location.pathname])
 
   // 라우트 이동 시 모바일 드로어 자동 닫힘
@@ -121,7 +131,28 @@ export default function AdminLayout() {
           {badges.pendingAuctions === 0 && (
             <NavItem to="/admin/auctions/review" icon="bolt" label="검수 인박스" sub />
           )}
-          <NavItem to="/admin/orders"   icon="cart"    label="주문 관리" badge={badges.todayOrders} badgeTone="blue" />
+          {/* 주문 관리 — SLA 위반(빨강) > 임박(주황) > 오늘 주문(파랑) 우선순위로 가장 시급한 1개만 노출
+              위반이 있으면 검수보다도 먼저 처리해야 하는 신호 — 사이드바 어디 페이지에서든 빨강 dot이 보이게 */}
+          <NavItem
+            to="/admin/orders"
+            icon="cart"
+            label="주문 관리"
+            badge={badges.slaViolated || badges.slaExpiring || badges.todayOrders}
+            badgeTone={badges.slaViolated > 0 ? 'red' : badges.slaExpiring > 0 ? 'amber' : 'blue'}
+            pulse={badges.slaViolated > 0}
+          />
+          {/* SLA 위반이 있으면 sub-nav로 바로 점프 가능한 deep link 노출 — 가장 시급한 작업의 가시성 ↑ */}
+          {badges.slaViolated > 0 && (
+            <NavItem
+              to="/admin/orders?view=sla-violated"
+              icon="flame"
+              label="SLA 위반 처리"
+              badge={badges.slaViolated}
+              badgeTone="red"
+              pulse
+              sub
+            />
+          )}
 
           <NavGroup label="회원" />
           <NavItem to="/admin/users"    icon="shield"  label="고객 관리" />
@@ -163,7 +194,7 @@ function NavGroup({ label }) {
   )
 }
 
-function NavItem({ to, end, icon, label, badge, badgeTone = 'red', sub }) {
+function NavItem({ to, end, icon, label, badge, badgeTone = 'red', sub, pulse = false }) {
   const tone = {
     red:     'bg-red-100 text-red-700 border-red-200',
     amber:   'bg-amber-100 text-amber-700 border-amber-200',
@@ -186,10 +217,19 @@ function NavItem({ to, end, icon, label, badge, badgeTone = 'red', sub }) {
       <Icon name={icon} size={sub ? 12 : 14} strokeWidth={2} className="flex-shrink-0" />
       <span className="flex-1 truncate">{label}</span>
       {badge ? (
-        <span className={`text-[9px] font-mono tabular-nums px-1.5 py-0.5 rounded-full border ${tone}`}>
+        <span className={`text-[9px] font-mono tabular-nums px-1.5 py-0.5 rounded-full border ${tone} ${pulse ? 'animate-nav-pulse' : ''}`}>
           {badge > 99 ? '99+' : badge}
         </span>
       ) : null}
+      {pulse && (
+        <style>{`
+          @keyframes nav-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.45); }
+            50%      { box-shadow: 0 0 0 4px rgba(244, 63, 94, 0); }
+          }
+          .animate-nav-pulse { animation: nav-pulse 2s ease-in-out infinite; }
+        `}</style>
+      )}
     </NavLink>
   )
 }

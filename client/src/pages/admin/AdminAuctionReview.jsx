@@ -5,6 +5,34 @@ import useAuthStore from '@/store/authStore'
 import useToastStore from '@/store/toastStore'
 import Icon from '@/components/common/Icon'
 import { PageHeader, StatusPill, EmptyState, ErrorState, logAudit } from '@/components/admin/ui'
+import KeyboardShortcutsHelp from '@/components/admin/KeyboardShortcutsHelp'
+
+// AdminAuctionReview에서 사용되는 단축키 — `?` 키로 도움말에 노출
+const SHORTCUTS = [
+  {
+    section: '검수 인박스',
+    items: [
+      { keys: ['J'],     desc: '다음 항목으로 이동' },
+      { keys: ['K'],     desc: '이전 항목으로 이동' },
+      { keys: ['A'],     desc: '현재 항목 승인' },
+      { keys: ['R'],     desc: '반려 사유 입력창 포커스' },
+      { keys: ['S'],     desc: '보류·스킵 (다음으로)' },
+      { keys: ['/'],     desc: '검색 포커스' },
+      { keys: ['Esc'],   desc: '입력창 포커스 해제' },
+    ],
+  },
+  {
+    section: '빠른 반려 사유 (즉시 반려)',
+    items: [
+      { keys: ['1'], desc: '이미지 불선명' },
+      { keys: ['2'], desc: '등급 인증서 확인 불가' },
+      { keys: ['3'], desc: '시작가 시세 부적정' },
+      { keys: ['4'], desc: '동일 카드 진행 중' },
+      { keys: ['5'], desc: '본인 인증 정보 부족' },
+      { keys: ['6'], desc: '위조 의심' },
+    ],
+  },
+]
 
 /**
  * 경매 검수 인박스 (Inbox-mode review)
@@ -212,6 +240,18 @@ export default function AdminAuctionReview() {
     const onKey = (e) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return
       if (isTyping() && e.key !== 'Escape') return
+      // 숫자 1-6 — 빠른 반려 사유 선택 후 즉시 반려
+      // (memo에 사유 자동 채우고 doReject 호출 → 두 키스트로크 절약)
+      if (/^[1-6]$/.test(e.key)) {
+        const idx = Number(e.key) - 1
+        const r = REJECT_REASONS[idx]
+        if (r) {
+          e.preventDefault()
+          setNote(r.label)
+          doReject(r.label)
+          return
+        }
+      }
       switch (e.key) {
         case 'j': case 'ArrowDown': e.preventDefault(); moveActive(1); break
         case 'k': case 'ArrowUp':   e.preventDefault(); moveActive(-1); break
@@ -224,7 +264,7 @@ export default function AdminAuctionReview() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [moveActive, doApprove, doSkip])
+  }, [moveActive, doApprove, doSkip, doReject])
 
   // adjust activeIdx if it overflows after queue mutation
   useEffect(() => {
@@ -241,6 +281,15 @@ export default function AdminAuctionReview() {
         breadcrumb={['Admin', '거래', '경매 관리', '검수 인박스']}
         actions={
           <>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: '?', shiftKey: true, bubbles: true }))}
+              title="키보드 단축키 (?)"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-mute hover:text-ink px-2.5 py-1.5 rounded-md border border-gray-900/15 bg-paper hover:bg-bone-2"
+            >
+              <kbd className="text-[10px] font-mono">?</kbd>
+              <span className="hidden sm:inline">단축키</span>
+            </button>
             <Link to="/admin/auctions" className="inline-flex items-center gap-1.5 text-xs font-bold text-mute hover:text-ink px-3 py-1.5 rounded-md border border-gray-900/15 bg-paper hover:bg-bone-2">
               <Icon name="arrow" size={12} strokeWidth={2.2} /> 전체 목록
             </Link>
@@ -250,6 +299,8 @@ export default function AdminAuctionReview() {
           </>
         }
       />
+
+      <KeyboardShortcutsHelp shortcuts={SHORTCUTS} />
 
       {/* Inbox shell: 2-column */}
       <div className="grid grid-cols-[340px_1fr] gap-4 h-[calc(100vh-220px)] min-h-[640px]">
