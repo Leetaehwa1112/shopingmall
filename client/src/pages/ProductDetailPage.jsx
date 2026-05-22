@@ -158,7 +158,7 @@ export default function ProductDetailPage() {
             LEFT — 전시대 (Pack opening stage)
             ═════════════════════════════════════════════════ */}
         <div className="space-y-3 lg:space-y-4">
-          <div className="surface-pop sparkle-host holo-shine relative overflow-hidden p-4 sm:p-8 lg:p-10 flex justify-center items-center min-h-[360px] sm:min-h-[460px] lg:min-h-[560px] bg-confetti">
+          <div className="surface-pop sparkle-host holo-shine relative overflow-hidden px-2 py-3 sm:p-8 lg:p-10 flex justify-center items-center sm:min-h-[460px] lg:min-h-[560px] bg-confetti">
             <Sparkles always />
             {/* dotted backdrop layer */}
             <div className="absolute inset-0 bg-polka opacity-50 pointer-events-none" aria-hidden="true" />
