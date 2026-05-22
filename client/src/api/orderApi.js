@@ -34,3 +34,7 @@ export const updateOrderStatus = (id, status) =>
 /** 송장 등록 (관리자) */
 export const updateOrderTracking = (id, { trackingNumber, carrier }) =>
   api.patch(`/orders/${id}/tracking`, { trackingNumber, carrier })
+
+/** 환불 처리 (관리자) — amount 미지정 시 전액 환불 */
+export const refundOrder = (id, { reason, amount } = {}) =>
+  api.patch(`/orders/${id}/refund`, { reason, amount })

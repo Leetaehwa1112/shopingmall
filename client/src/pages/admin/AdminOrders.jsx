@@ -9,7 +9,7 @@ import {
   getPaymentLabel, getShippingLabel,
 } from '@/constants/order'
 import {
-  getAllOrders, updateOrderStatus as apiUpdateStatus, updateOrderTracking,
+  getAllOrders, updateOrderStatus as apiUpdateStatus, updateOrderTracking, refundOrder as apiRefundOrder,
 } from '@/api/orderApi'
 import useAuthStore from '@/store/authStore'
 import useToastStore from '@/store/toastStore'
@@ -635,7 +635,7 @@ function OrderDrawer({ order, onClose, onStatusChange, onTrackingUpdate, actor }
 
       <DSection title="상태 변경">
         <div className="flex flex-wrap gap-1.5">
-          {Object.entries(STATUS).filter(([k]) => k !== order.status).map(([k, v]) => (
+          {Object.entries(STATUS).filter(([k]) => k !== order.status && k !== 'unknown').map(([k, v]) => (
             <button key={k}
               onClick={() => onStatusChange(order._id, k)}
               className={`text-[11px] font-bold px-2.5 py-1 rounded-md border ${v.color} hover:opacity-80`}>
@@ -644,6 +644,105 @@ function OrderDrawer({ order, onClose, onStatusChange, onTrackingUpdate, actor }
           ))}
         </div>
       </DSection>
+
+      {/* 환불 처리 — paid 이후 상태에서만 표시. 이미 refunded면 환불 상세 표시 */}
+      {order.status === 'refunded' ? (
+        <DSection title="환불 정보">
+          <KV k="환불 일시" v={order.refundedAt ? formatDateTime(order.refundedAt) : '—'} />
+          <KV k="환불 사유" v={order.refundReason || '—'} />
+          <KV k="환불 금액" v={formatKRWFull(order.refundAmount || order.totalAmount)} mono highlight />
+        </DSection>
+      ) : ['paid', 'preparing', 'ready_to_ship', 'shipped', 'delivered'].includes(order.status) && (
+        <DSection title="환불 처리">
+          <div className="text-[11px] text-mute font-medium mb-2 leading-relaxed">
+            앱 내 상태/재고만 처리합니다. <b className="text-ink">실제 PG 결제 환불은 결제사 대시보드에서 별도 진행</b>해야 합니다.
+          </div>
+          <RefundButton order={order} onDone={onTrackingUpdate} actor={actor} onClose={onClose} />
+        </DSection>
+      )}
     </Drawer>
+  )
+}
+
+/* ─── 환불 처리 버튼 + 인라인 폼 ─────────────────────────── */
+function RefundButton({ order, onDone, actor, onClose }) {
+  const [open, setOpen] = useState(false)
+  const [reason, setReason] = useState('고객 요청')
+  const [amount, setAmount] = useState('')   // '' = 전액
+  const [running, setRunning] = useState(false)
+  const toast = useToastStore((s) => s.push)
+
+  const handleSubmit = async () => {
+    if (!confirm(`정말 환불 처리할까요?\n주문: ${order.orderNumber}\n${amount ? `부분 환불 ${Number(amount).toLocaleString()}원` : '전액 환불'}`)) return
+    setRunning(true)
+    try {
+      const payload = { reason: reason.trim() || '운영자 처리' }
+      if (amount) payload.amount = Number(amount)
+      await apiRefundOrder(order._id, payload)
+      logAudit({
+        actor, action: 'order.refund', entity: 'order', entityId: order._id,
+        summary: `${amount ? `부분 ${Number(amount).toLocaleString()}원` : '전액'} · ${reason}`,
+      })
+      toast({ type: 'success', title: '환불 처리 완료', message: 'PG 대시보드에서 실제 결제 환불도 진행해주세요.' })
+      onDone()
+      onClose()
+    } catch (err) {
+      toast({ type: 'error', title: '환불 실패', message: err.response?.data?.message || '환불 처리에 실패했어요.' })
+    } finally { setRunning(false) }
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-md hover:bg-rose-100"
+      >
+        <Icon name="flame" size={12} strokeWidth={2.4} /> 환불 처리 시작
+      </button>
+    )
+  }
+
+  return (
+    <div className="space-y-2 bg-rose-50/50 border border-rose-200 rounded-md p-3">
+      <div>
+        <label className="text-[10px] font-bold uppercase tracking-wider text-rose-700 block mb-1">환불 사유</label>
+        <input
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="고객 요청 / 상품 불량 / 배송 지연 등"
+          className="w-full bg-paper border border-rose-200 rounded-md px-2 py-1.5 text-xs text-ink focus:border-rose-500 outline-none"
+        />
+      </div>
+      <div>
+        <label className="text-[10px] font-bold uppercase tracking-wider text-rose-700 block mb-1">
+          환불 금액 <span className="text-mute font-normal">(비워두면 전액 {formatKRWFull(order.totalAmount)})</span>
+        </label>
+        <input
+          type="number"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          placeholder={String(order.totalAmount)}
+          max={order.totalAmount}
+          min={0}
+          className="w-full bg-paper border border-rose-200 rounded-md px-2 py-1.5 text-xs text-ink font-mono focus:border-rose-500 outline-none"
+        />
+      </div>
+      <div className="flex gap-2 pt-1">
+        <button
+          onClick={handleSubmit}
+          disabled={running}
+          className="flex-1 text-xs font-bold bg-rose-600 text-white px-3 py-1.5 rounded-md hover:bg-rose-700 disabled:opacity-50"
+        >
+          {running ? '처리중...' : '환불 확정'}
+        </button>
+        <button
+          onClick={() => { setOpen(false); setReason('고객 요청'); setAmount('') }}
+          disabled={running}
+          className="text-xs font-bold text-mute hover:text-ink px-3 py-1.5 rounded-md hover:bg-bone-2"
+        >
+          취소
+        </button>
+      </div>
+    </div>
   )
 }

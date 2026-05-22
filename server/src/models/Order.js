@@ -122,6 +122,8 @@ const orderSchema = new mongoose.Schema(
     cancelledAt:  { type: Date, default: null },
     cancelReason: { type: String, trim: true, default: null },
     refundedAt:   { type: Date, default: null },
+    refundReason: { type: String, trim: true, default: null },
+    refundAmount: { type: Number, default: null },  // null = 전액 환불, 숫자 = 부분 환불 금액
   },
   {
     timestamps: true,

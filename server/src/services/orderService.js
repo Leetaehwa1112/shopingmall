@@ -307,6 +307,41 @@ const adminUpdateFields = async (orderId, patch = {}) => {
   return order
 }
 
+/** 환불 처리 (어드민)
+ *  - 전액 환불: amount 생략 시. status='refunded' + 재고 복구 + refundedAt/refundReason 기록.
+ *  - 부분 환불: amount < totalAmount. 재고는 복구하지 않음(상품은 이미 출고됐다고 가정).
+ *  - 실제 PG 금액 환불은 별도(PG 대시보드 또는 PG refund API 호출 필요).
+ *  - 중복 환불 방지: 이미 'refunded' 상태면 throw.
+ */
+const REFUNDABLE_STATUSES = ['paid', 'preparing', 'ready_to_ship', 'shipped', 'delivered']
+const refundOrder = async (orderId, { reason, amount } = {}) => {
+  const order = await Order.findById(orderId)
+  if (!order) throw new AppError('주문을 찾을 수 없습니다.', 404)
+  if (order.status === 'refunded') throw new AppError('이미 환불 처리된 주문입니다.')
+  if (!REFUNDABLE_STATUSES.includes(order.status)) {
+    throw new AppError(`현재 상태(${order.status})에서는 환불할 수 없습니다.`)
+  }
+
+  const totalAmount = order.totalAmount
+  const amt = Number(amount)
+  const refundAmount = (Number.isFinite(amt) && amt > 0 && amt <= totalAmount) ? amt : totalAmount
+  const isFullRefund = refundAmount === totalAmount
+
+  // 전액 환불 + 이전에 재고 복구 안 한 경우만 +1
+  if (isFullRefund && !order.cancelledAt) {
+    await adjustStock(order.items, +1)
+  }
+
+  order.status = 'refunded'
+  order.refundedAt = new Date()
+  order.refundReason = (reason || '').trim() || '운영자 처리'
+  order.refundAmount = refundAmount
+  order.payment.status = 'refunded'
+
+  await order.save()
+  return order
+}
+
 /** 송장 등록 (어드민)
  *  송장 등록 = "배송 대기"(ready_to_ship)로 전이. 아직 carrier에 인계 안 함.
  *  실제 발송은 admin이 별도로 status='shipped'로 변경할 때 일어남(shippedAt 기록). */
@@ -331,4 +366,5 @@ module.exports = {
   getAllOrders,
   updateOrderStatus,
   updateTracking,
+  refundOrder,
 }

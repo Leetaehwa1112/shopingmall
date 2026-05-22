@@ -101,6 +101,14 @@ const updateTracking = async (req, res) => {
   } catch (err) { handleError(res, err) }
 }
 
+// [PATCH] /api/orders/:id/refund — 환불 처리 (어드민)
+const refundOrder = async (req, res) => {
+  try {
+    const order = await orderService.refundOrder(req.params.id, req.body)
+    res.status(200).json({ success: true, data: order })
+  } catch (err) { handleError(res, err) }
+}
+
 // [PATCH] /api/orders/:id — 화이트리스트 필드 부분 수정 (어드민)
 const adminUpdateFields = async (req, res) => {
   try {
@@ -118,4 +126,5 @@ module.exports = {
   updateOrderStatus,
   updateTracking,
   adminUpdateFields,
+  refundOrder,
 }
