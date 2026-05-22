@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import api from '@/api/axios'
 import useAuthStore from '@/store/authStore'
 import useToastStore from '@/store/toastStore'
@@ -9,6 +9,8 @@ import {
   FilterChips, DataTable, Pagination, BulkBar, BulkButton, StatusPill,
   Cell, RowActions, IconBtn, Drawer, DSection, KV, EmptyState, logAudit,
 } from '@/components/admin/ui'
+import SavedViewBar from '@/components/admin/SavedViewBar'
+import { useCanDo } from '@/components/admin/Can'
 
 const COUNTRY_FLAG = { USA: '🇺🇸', JPN: '🇯🇵', KOR: '🇰🇷' }
 
@@ -25,8 +27,10 @@ const PAGE_SIZE_OPTIONS = [10, 25, 50]
 
 export default function AdminAuctions() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useAuthStore()
   const toast = useToastStore((s) => s.push)
+  const canLiveControl = useCanDo('auction.live_control')
 
   const [list, setList] = useState([])
   const [loading, setLoading] = useState(true)
@@ -93,9 +97,43 @@ export default function AdminAuctions() {
     pending: list.filter((i) => i.status === 'pending').length,
     live: list.filter((i) => i.status === 'live').length,
     upcoming: list.filter((i) => i.status === 'upcoming').length,
+    ended: list.filter((i) => i.status === 'ended').length,
+    rejected: list.filter((i) => i.status === 'rejected').length,
     bidValue: list.reduce((s, i) => s + (i.currentBid || 0), 0),
     today: list.filter((i) => new Date(i.createdAt).toDateString() === new Date().toDateString()).length,
   }), [list])
+
+  // ?view= URL 동기화 — 대시보드/⌘K에서 정확한 옥션 view로 점프
+  useEffect(() => {
+    const view = searchParams.get('view')
+    if (!view) return
+    const map = {
+      live: 'live', upcoming: 'upcoming', pending: 'pending',
+      ended: 'ended', rejected: 'rejected', approved: 'approved',
+    }
+    if (map[view]) setFilter(map[view])
+    const next = new URLSearchParams(searchParams)
+    next.delete('view')
+    setSearchParams(next, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // 시스템 saved views — Auctioneer 페르소나의 운영 큐
+  const systemViews = useMemo(() => [
+    { id: 'live',     label: '진행 중 LIVE', tone: 'emerald', count: kpis.live,
+      apply: () => setFilter('live') },
+    { id: 'upcoming', label: '예정',         tone: 'amber',   count: kpis.upcoming,
+      apply: () => setFilter('upcoming') },
+    { id: 'pending',  label: '검수 대기',    tone: 'red',     count: kpis.pending,
+      apply: () => setFilter('pending') },
+    { id: 'ended',    label: '종료 (정산)',  tone: 'blue',    count: kpis.ended,
+      apply: () => setFilter('ended') },
+    { id: 'rejected', label: '거절됨',       tone: 'red',     count: kpis.rejected,
+      apply: () => setFilter('rejected') },
+  ], [kpis])
+
+  const activeViewId = useMemo(() => filter || null, [filter])
+  const clearView = () => { setFilter(''); setSearch(''); setSaleType('all') }
 
   const handleSort = (key) =>
     setSort((s) => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'desc' })
@@ -232,6 +270,9 @@ export default function AdminAuctions() {
       </FilterBar>
 
       <FilterChips value={filter} onChange={setFilter} options={filterOptions} />
+
+      {/* 시스템 saved views — Auctioneer 워크플로우 (LIVE → 예정 → 검수 → 종료/정산) */}
+      <SavedViewBar views={systemViews} activeId={activeViewId} onClearView={clearView} />
 
       <BulkBar count={selected.length} onClear={() => setSelected([])}
         actions={
