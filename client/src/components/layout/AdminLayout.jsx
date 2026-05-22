@@ -158,7 +158,8 @@ export default function AdminLayout() {
           <NavItem to="/admin/users"    icon="shield"  label="고객 관리" />
 
           <NavGroup label="운영" />
-          <NavItem to="/admin/audit"    icon="lock"    label="감사 로그" />
+          <NavItem to="/admin/settlements" icon="package" label="위탁자 정산" />
+          <NavItem to="/admin/audit"       icon="lock"    label="감사 로그" />
         </nav>
 
         <div className="px-3 py-3 border-t border-ink/10 bg-bone-2/40">

@@ -44,6 +44,7 @@ const AdminUsers = lazy(() => import('@/pages/admin/AdminUsers'))
 const AdminAuctions = lazy(() => import('@/pages/admin/AdminAuctions'))
 const AdminAuditLog = lazy(() => import('@/pages/admin/AdminAuditLog'))
 const AdminAuctionReview = lazy(() => import('@/pages/admin/AdminAuctionReview'))
+const AdminSettlements = lazy(() => import('@/pages/admin/AdminSettlements'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -113,6 +114,7 @@ export default function App() {
               <Route path="auctions/review" element={<AdminAuctionReview />} />
               <Route path="orders" element={<AdminOrders />} />
               <Route path="users" element={<AdminUsers />} />
+              <Route path="settlements" element={<AdminSettlements />} />
               <Route path="audit" element={<AdminAuditLog />} />
             </Route>
 
