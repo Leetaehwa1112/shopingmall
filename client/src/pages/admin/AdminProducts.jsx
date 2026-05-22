@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { formatKRWFull } from '@/api/cards'
 import api from '@/api/axios'
 import useAuthStore from '@/store/authStore'
@@ -20,6 +20,7 @@ const LOW_STOCK = 3
 
 export default function AdminProducts() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useAuthStore()
   const toast = useToastStore((s) => s.push)
 
@@ -53,6 +54,21 @@ export default function AdminProducts() {
 
   useEffect(() => { fetchList() }, [fetchList])
   useEffect(() => { setPage(1); setSelected([]) }, [filter, search, stockFilter, category])
+
+  // ?view= URL 파라미터로 진입 시 (대시보드/⌘K에서 점프) 해당 saved view 자동 적용
+  useEffect(() => {
+    const view = searchParams.get('view')
+    if (!view) return
+    if (view === 'oos')     { setStockFilter('out'); setFilter('all') }
+    if (view === 'low')     { setStockFilter('low'); setFilter('all') }
+    if (view === 'auction') { setStockFilter('all'); setFilter('auction') }
+    if (view === 'buynow')  { setStockFilter('all'); setFilter('buynow') }
+    // 적용 후 URL은 정리 — 사용자가 칩 클릭으로 떠나도 깨끗하게
+    const next = new URLSearchParams(searchParams)
+    next.delete('view')
+    setSearchParams(next, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const filtered = useMemo(() => {
     let rows = list.slice()

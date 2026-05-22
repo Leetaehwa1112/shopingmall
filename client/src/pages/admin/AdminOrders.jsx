@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   formatKRWFull, formatDateShort, formatTime,
   formatAddress, formatDateTime,
@@ -36,6 +37,7 @@ const statusTone = (s) => ({
 export default function AdminOrders() {
   const { user } = useAuthStore()
   const toast = useToastStore((s) => s.push)
+  const [searchParams, setSearchParams] = useSearchParams()
 
   // server-side state
   const [orders, setOrders] = useState([])
@@ -81,6 +83,22 @@ export default function AdminOrders() {
 
   useEffect(() => { fetchOrders() }, [fetchOrders])
   useEffect(() => { setPage(1); setSelected([]) }, [filter, search, range, payment])
+
+  // ?view= URL 파라미터로 진입 시 (대시보드/⌘K에서 점프) 해당 saved view 자동 적용
+  useEffect(() => {
+    const view = searchParams.get('view')
+    if (!view) return
+    if (view === 'sla-violated')  { setSlaView('violated'); setFilter('all') }
+    if (view === 'sla-expiring')  { setSlaView('expiring'); setFilter('all') }
+    if (view === 'shipping-due')  { setSlaView(null); setFilter('paid') }
+    if (view === 'pending')       { setSlaView(null); setFilter('pending_payment') }
+    if (view === 'cancelled')     { setSlaView(null); setFilter('cancelled') }
+    // URL 정리
+    const next = new URLSearchParams(searchParams)
+    next.delete('view')
+    setSearchParams(next, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // apply local date-range + payment + SLA + sort on top of server result
   const filtered = useMemo(() => {

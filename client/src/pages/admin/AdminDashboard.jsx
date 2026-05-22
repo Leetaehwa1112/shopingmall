@@ -44,35 +44,53 @@ export default function AdminDashboard() {
   const activeAuctions = s.activeAuctions ?? 0
   const totalProducts = s.totalProducts ?? 0
   const totalPacks = s.totalPacks ?? 0
+  // SLA 카운트 — 백엔드가 stats에서 제공하지 않으면 0 (KPI 카드는 클릭해서 정확한 수 확인)
+  const slaViolated = s.slaViolated ?? 0
+  const slaExpiring = s.slaExpiring ?? 0
+  const shippingDue = s.shippingDue ?? 0
 
   const urgentQueue = useMemo(() => {
     const q = []
+    // SLA 위반은 최우선 — 빨강 + pulse
+    if (slaViolated > 0) q.push({
+      icon: 'flame', tone: 'red',
+      title: `${slaViolated}건의 출고 SLA 위반`,
+      sub: '결제 후 24시간 초과 — 즉시 처리 필요',
+      href: '/admin/orders?view=sla-violated',
+      urgent: true,
+    })
     if (pendingAuctions > 0) q.push({
       icon: 'flame', tone: 'red',
       title: `${pendingAuctions}건의 경매 검수 대기`,
       sub: '검수 인박스에서 키보드로 빠르게 처리',
       href: '/admin/auctions/review',
     })
+    if (slaExpiring > 0) q.push({
+      icon: 'arrow', tone: 'amber',
+      title: `${slaExpiring}건의 출고 SLA 임박 (18h+)`,
+      sub: '오늘 안에 출고하지 않으면 위반',
+      href: '/admin/orders?view=sla-expiring',
+    })
     if (lowStock > 0) q.push({
       icon: 'package', tone: 'amber',
       title: `${lowStock}개 카드 재고 부족`,
       sub: '재고 3개 이하 — 보충 필요',
-      href: '/admin/products',
+      href: '/admin/products?view=low',
     })
     if (s.unpaidOrders > 0) q.push({
       icon: 'cart', tone: 'amber',
       title: `${s.unpaidOrders}건의 미결제 주문`,
       sub: '24시간 이상 결제 대기',
-      href: '/admin/orders',
+      href: '/admin/orders?view=pending',
     })
-    if (s.shippingDue > 0) q.push({
+    if (shippingDue > 0) q.push({
       icon: 'arrow', tone: 'blue',
-      title: `${s.shippingDue}건의 배송 준비 필요`,
-      sub: '결제 완료, 송장 미등록',
-      href: '/admin/orders',
+      title: `${shippingDue}건의 송장 미등록`,
+      sub: '결제 완료, 운송장 입력 필요',
+      href: '/admin/orders?view=shipping-due',
     })
     return q
-  }, [pendingAuctions, lowStock, s.unpaidOrders, s.shippingDue])
+  }, [slaViolated, pendingAuctions, slaExpiring, lowStock, s.unpaidOrders, shippingDue])
 
   return (
     <div className="space-y-5 max-w-[1400px]">
@@ -89,16 +107,27 @@ export default function AdminDashboard() {
         }
       />
 
-      {/* ─ KPI strip ─────────────────────────────────────────── */}
-      <StatGrid cols={5}>
-        <StatCard label="오늘 주문" value={loading ? '—' : todayOrders} sub={loading ? '' : formatKRW(todayRevenue)} icon="cart" tone="blue"
+      {/* ─ KPI strip — 6 cards ─────────────────────────────────
+          상단: 매출 + 오늘 주문 + SLA 위반(긴급)
+          하단: 검수/경매/재고/회원 진입점 */}
+      <StatGrid cols={3}>
+        <StatCard label="오늘 매출" value={loading ? '—' : formatKRW(todayRevenue)} sub={loading ? '' : `${todayOrders}건 · 객단가 ${todayOrders ? formatKRW(Math.round(todayRevenue / todayOrders)) : '—'}`} icon="trophy" tone="blue"
           onClick={() => navigate('/admin/orders')} />
+        <StatCard label="SLA 위반" value={loading ? '—' : slaViolated} sub="24시간 초과 미출고 — 즉시 처리" icon="flame" tone="red" urgent={slaViolated > 0}
+          onClick={() => navigate('/admin/orders?view=sla-violated')} />
+        <StatCard label="SLA 임박" value={loading ? '—' : slaExpiring} sub="18~24h 경과" icon="arrow" tone="amber" urgent={slaExpiring > 0}
+          onClick={() => navigate('/admin/orders?view=sla-expiring')} />
+      </StatGrid>
+
+      <StatGrid cols={5}>
+        <StatCard label="송장 미등록" value={loading ? '—' : shippingDue} sub="결제 완료 · 운송장 필요" icon="cart" tone="amber" urgent={shippingDue > 5}
+          onClick={() => navigate('/admin/orders?view=shipping-due')} />
         <StatCard label="검수 대기" value={loading ? '—' : pendingAuctions} sub="클릭 → 인박스" icon="flame" tone="red" urgent={pendingAuctions > 0}
           onClick={() => navigate('/admin/auctions/review')} />
         <StatCard label="진행중 경매" value={loading ? '—' : activeAuctions} sub={loading ? '' : `총 ${formatKRW(totalBidValue)}`} icon="trophy" tone="amber"
           onClick={() => navigate('/admin/auctions')} />
         <StatCard label="재고 부족" value={loading ? '—' : lowStock} sub="3개 이하" icon="package" tone="amber" urgent={lowStock > 0}
-          onClick={() => navigate('/admin/products')} />
+          onClick={() => navigate('/admin/products?view=low')} />
         <StatCard label="신규 회원" value={loading ? '—' : newUsers} sub="오늘 가입" icon="shield" tone="emerald"
           onClick={() => navigate('/admin/users')} />
       </StatGrid>
@@ -124,12 +153,21 @@ export default function AdminDashboard() {
             ) : (
               <div className="divide-y divide-ink/10">
                 {urgentQueue.map((q, i) => (
-                  <Link key={i} to={q.href} className="flex items-center gap-3 py-2.5 hover:bg-bone-2/40 -mx-2 px-2 rounded transition-colors">
-                    <span className={`w-8 h-8 rounded-md flex items-center justify-center border ${queueTone(q.tone)}`}>
+                  <Link
+                    key={i}
+                    to={q.href}
+                    className={`flex items-center gap-3 py-2.5 hover:bg-bone-2/40 -mx-2 px-2 rounded transition-colors ${q.urgent ? 'bg-rose-50/40' : ''}`}
+                  >
+                    <span className={`w-8 h-8 rounded-md flex items-center justify-center border ${queueTone(q.tone)} ${q.urgent ? 'animate-pulse-subtle' : ''}`}>
                       <Icon name={q.icon} size={14} strokeWidth={2} />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <div className="text-xs font-bold text-ink">{q.title}</div>
+                      <div className="text-xs font-bold text-ink flex items-center gap-1.5">
+                        {q.title}
+                        {q.urgent && (
+                          <span className="led led-red led-pulse" style={{ width: 5, height: 5 }} />
+                        )}
+                      </div>
                       <div className="text-[11px] text-mute font-medium">{q.sub}</div>
                     </div>
                     <Icon name="arrow" size={12} strokeWidth={2.2} className="text-mute" />
