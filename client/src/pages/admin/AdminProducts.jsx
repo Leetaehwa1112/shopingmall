@@ -10,6 +10,10 @@ import {
   FilterChips, DataTable, Pagination, BulkBar, BulkButton, StatusPill,
   Cell, ImgThumb, RowActions, IconBtn, EmptyState, InlineNumberCell, logAudit,
 } from '@/components/admin/ui'
+import SavedViewBar from '@/components/admin/SavedViewBar'
+import BulkPriceModal from '@/components/admin/BulkPriceModal'
+import Can, { useCanDo, missingRolesTooltip } from '@/components/admin/Can'
+import { useAuditLog } from '@/hooks/useAuditLog'
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
 const LOW_STOCK = 3
@@ -31,6 +35,11 @@ export default function AdminProducts() {
   const [pageSize, setPageSize] = useState(25)
   const [selected, setSelected] = useState([])
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [bulkPriceOpen, setBulkPriceOpen] = useState(false)
+  const canEditPrice = useCanDo('product.price_change')
+  const canBulkEdit = useCanDo('product.bulk_edit')
+  const canDelete = useCanDo('product.delete')
+  const audit = useAuditLog()
 
   const fetchList = useCallback(() => {
     setLoading(true)
@@ -131,6 +140,65 @@ export default function AdminProducts() {
     fetchList()
   }
 
+  // 일괄 가격 변경 — BulkPriceModal에서 호출. changes: [{ id, from, to }]
+  const handleBulkPrice = async ({ changes, mode, value, reason }) => {
+    let ok = 0, fail = 0
+    const auditEntries = []
+    for (const ch of changes) {
+      try {
+        await api.put(`/products/${ch.id}`, { price: ch.to })
+        ok++
+        auditEntries.push({
+          entity: 'product', entityId: ch.id, action: 'price_change',
+          before: { price: ch.from }, after: { price: ch.to }, reason,
+        })
+      } catch {
+        fail++
+      }
+    }
+    if (auditEntries.length) {
+      audit.recordBatch(auditEntries)
+      logAudit({ actor: user?.name, action: 'product.bulk.price_change', entity: 'product',
+        entityId: `${ok}개`, summary: `${mode} ${value} (${reason})`, meta: { ok, fail } })
+    }
+    if (fail === 0)    toast({ type: 'success', title: `${ok}개 가격 변경 완료` })
+    else if (ok === 0) toast({ type: 'error',   title: '가격 변경 실패', message: `${fail}건 모두 실패` })
+    else               toast({ type: 'warning', title: '부분 변경', message: `성공 ${ok}건 · 실패 ${fail}건` })
+    setSelected([])
+    fetchList()
+  }
+
+  // 시스템 saved views — 포케볼트 도메인에 맞춰 의도된 기본 제공
+  // 현재 stockFilter/filter 기반으로 활성 view 추론
+  const activeViewId = useMemo(() => {
+    if (filter === 'all' && stockFilter === 'out') return 'oos'
+    if (filter === 'all' && stockFilter === 'low') return 'low'
+    if (filter === 'auction' && stockFilter === 'all') return 'auction'
+    if (filter === 'buynow'  && stockFilter === 'all') return 'buynow'
+    return null
+  }, [filter, stockFilter])
+
+  const systemViews = useMemo(() => [
+    {
+      id: 'oos', label: '재고 0', tone: 'red',
+      count: kpis.out, apply: () => { setStockFilter('out'); setFilter('all'); },
+    },
+    {
+      id: 'low', label: '재고 부족', tone: 'amber',
+      count: kpis.low, apply: () => { setStockFilter('low'); setFilter('all'); },
+    },
+    {
+      id: 'auction', label: '경매 출품', tone: 'red',
+      count: kpis.auction, apply: () => { setFilter('auction'); setStockFilter('all'); },
+    },
+    {
+      id: 'buynow', label: '즉시구매', tone: 'blue',
+      apply: () => { setFilter('buynow'); setStockFilter('all'); },
+    },
+  ], [kpis])
+
+  const clearView = () => { setStockFilter('all'); setFilter('all'); setSearch(''); setCategory('all') }
+
   return (
     <div className="space-y-4 max-w-[1400px]">
       <PageHeader
@@ -181,6 +249,9 @@ export default function AdminProducts() {
         { value: 'buynow', label: '즉시구매', led: 'blue' },
       ]} />
 
+      {/* 시스템 + 저장된 뷰 (1클릭 점프) */}
+      <SavedViewBar views={systemViews} activeId={activeViewId} onClearView={clearView} />
+
       <button
         onClick={() => navigate('/admin/products/new')}
         style={{ backgroundColor: '#dc2626', color: '#ffffff', borderColor: '#7f1d1d' }}
@@ -201,7 +272,34 @@ export default function AdminProducts() {
       </button>
 
       <BulkBar count={selected.length} onClear={() => setSelected([])}
-        actions={<BulkButton tone="danger" onClick={handleBulkDelete}>일괄 삭제</BulkButton>} />
+        actions={
+          <>
+            <Can action="product.bulk_edit" disable>
+              {(allowed) => (
+                <BulkButton
+                  onClick={() => setBulkPriceOpen(true)}
+                  disabled={!allowed}
+                  title={allowed ? '⇧+P · 선택 항목 가격 일괄 변경' : missingRolesTooltip('product.bulk_edit')}
+                >
+                  가격 일괄 변경
+                </BulkButton>
+              )}
+            </Can>
+            <Can action="product.delete" disable>
+              {(allowed) => (
+                <BulkButton
+                  tone="danger"
+                  onClick={handleBulkDelete}
+                  disabled={!allowed}
+                  title={allowed ? '선택 항목 영구 삭제' : missingRolesTooltip('product.delete')}
+                >
+                  일괄 삭제
+                </BulkButton>
+              )}
+            </Can>
+          </>
+        }
+      />
 
       <DataTable
         density="compact"
@@ -261,6 +359,14 @@ export default function AdminProducts() {
           name={deleteTarget.name}
           onConfirm={() => handleDelete(deleteTarget._id, deleteTarget.name)}
           onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+
+      {bulkPriceOpen && (
+        <BulkPriceModal
+          rows={list.filter((r) => selected.includes(r._id))}
+          onClose={() => setBulkPriceOpen(false)}
+          onConfirm={handleBulkPrice}
         />
       )}
     </div>
