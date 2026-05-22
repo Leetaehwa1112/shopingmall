@@ -92,6 +92,8 @@ const orderSchema = new mongoose.Schema(
       paidAt:   { type: Date, default: null },
       // PG사 트랜잭션 ID (카드사 승인번호 등) — 카드 원본 정보는 저장 안 함
       pgTxId:   { type: String, default: null },
+      // 환불 시 PG에서 받은 취소 ID (KakaoPay aid 등) — 환불 감사 추적용
+      cancelTxId: { type: String, default: null },
     },
 
     // ─── 에스크로 (1,000,000원 이상 자동) ──────────────────

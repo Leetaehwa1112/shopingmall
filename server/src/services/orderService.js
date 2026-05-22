@@ -314,7 +314,7 @@ const adminUpdateFields = async (orderId, patch = {}) => {
  *  - 중복 환불 방지: 이미 'refunded' 상태면 throw.
  */
 const REFUNDABLE_STATUSES = ['paid', 'preparing', 'ready_to_ship', 'shipped', 'delivered']
-const refundOrder = async (orderId, { reason, amount } = {}) => {
+const refundOrder = async (orderId, { reason, amount, skipPg = false } = {}) => {
   const order = await Order.findById(orderId)
   if (!order) throw new AppError('주문을 찾을 수 없습니다.', 404)
   if (order.status === 'refunded') throw new AppError('이미 환불 처리된 주문입니다.')
@@ -327,16 +327,37 @@ const refundOrder = async (orderId, { reason, amount } = {}) => {
   const refundAmount = (Number.isFinite(amt) && amt > 0 && amt <= totalAmount) ? amt : totalAmount
   const isFullRefund = refundAmount === totalAmount
 
-  // 전액 환불 + 이전에 재고 복구 안 한 경우만 +1
+  // ─── PG 환불 ───────────────────────────────────────────────
+  // 먼저 PG에 호출 — 실패하면 throw해서 DB 변경 안 함 (재고/상태 무결성).
+  // skipPg=true 면 DB만 처리 (PG는 사장님이 별도 대시보드에서 이미 취소한 경우).
+  let pgResult = null
+  if (!skipPg && order.payment?.pgTxId) {
+    const method = order.payment.method
+    if (method === 'kakao') {
+      const { cancelPayment } = require('../lib/kakaopay')
+      try {
+        pgResult = await cancelPayment(order.payment.pgTxId, refundAmount, 0)
+      } catch (err) {
+        // PG 호출 자체가 실패 — 502로 던져서 DB 그대로 두기
+        throw new AppError(err.message || 'KakaoPay 환불 호출 실패', 502)
+      }
+    } else if (['toss', 'card'].includes(method)) {
+      // 아직 통합 안 됨 — DB만 처리하고 경고
+      console.warn(`[refund] ${method} PG 환불 API 미구현. order=${order.orderNumber}. DB만 처리됨.`)
+    }
+    // bank/escrow는 PG 호출 대상 아님
+  }
+
+  // ─── DB 환불 ───────────────────────────────────────────────
   if (isFullRefund && !order.cancelledAt) {
     await adjustStock(order.items, +1)
   }
-
   order.status = 'refunded'
   order.refundedAt = new Date()
   order.refundReason = (reason || '').trim() || '운영자 처리'
   order.refundAmount = refundAmount
   order.payment.status = 'refunded'
+  if (pgResult?.aid) order.payment.cancelTxId = pgResult.aid  // 카카오는 aid가 cancel ID
 
   await order.save()
   return order
