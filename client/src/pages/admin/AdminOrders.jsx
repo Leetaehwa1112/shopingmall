@@ -18,6 +18,11 @@ import {
   FilterChips, Spacer, DataTable, StatusPill, Pagination, BulkBar, BulkButton,
   Cell, RowActions, IconBtn, InlineSelect, Drawer, DSection, KV, EmptyState, logAudit,
 } from '@/components/admin/ui'
+import SavedViewBar from '@/components/admin/SavedViewBar'
+import SLABadge, { isOrderSLAExpiring, isOrderSLAViolated } from '@/components/admin/SLABadge'
+import QuickRefundModal from '@/components/admin/QuickRefundModal'
+import Can, { useCanDo, missingRolesTooltip } from '@/components/admin/Can'
+import { useAuditLog } from '@/hooks/useAuditLog'
 
 const STATUS = ORDER_STATUS
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
@@ -52,6 +57,15 @@ export default function AdminOrders() {
   const [selected, setSelected] = useState([])
   const [drawerOrder, setDrawerOrder] = useState(null)
   const [bulkTrackOpen, setBulkTrackOpen] = useState(false)
+  const [refundTarget, setRefundTarget] = useState(null)
+
+  // SLA 뷰 토글 — server filter와 별개로 클라이언트 필터링
+  const [slaView, setSlaView] = useState(null)  // null | 'expiring' | 'violated'
+
+  // 권한
+  const canRefund = useCanDo('order.refund')
+  const canCancel = useCanDo('order.cancel')
+  const audit = useAuditLog()
 
   const fetchOrders = useCallback(() => {
     setLoading(true)
@@ -68,12 +82,14 @@ export default function AdminOrders() {
   useEffect(() => { fetchOrders() }, [fetchOrders])
   useEffect(() => { setPage(1); setSelected([]) }, [filter, search, range, payment])
 
-  // apply local date-range + payment + sort on top of server result
+  // apply local date-range + payment + SLA + sort on top of server result
   const filtered = useMemo(() => {
     let rows = orders.slice()
     if (payment !== 'all') rows = rows.filter((o) => o.payment?.method === payment)
     if (range.from) rows = rows.filter((o) => new Date(o.createdAt) >= new Date(range.from))
     if (range.to)   rows = rows.filter((o) => new Date(o.createdAt) <= new Date(`${range.to}T23:59:59`))
+    if (slaView === 'expiring') rows = rows.filter(isOrderSLAExpiring)
+    if (slaView === 'violated') rows = rows.filter(isOrderSLAViolated)
     rows.sort((a, b) => {
       const dir = sort.dir === 'asc' ? 1 : -1
       const get = (o) => ({
@@ -88,7 +104,7 @@ export default function AdminOrders() {
       return 0
     })
     return rows
-  }, [orders, range, payment, sort])
+  }, [orders, range, payment, slaView, sort])
 
   // KPIs based on currently loaded page (cheap, indicative)
   const kpis = useMemo(() => {
@@ -100,8 +116,48 @@ export default function AdminOrders() {
       todayRevenue: todays.reduce((s, o) => s + (o.totalAmount || 0), 0),
       shippingDue: orders.filter((o) => o.status === 'paid' && !o.shipping?.trackingNumber).length,
       cancelled: orders.filter((o) => o.status === 'cancelled' || o.status === 'refunded').length,
+      slaExpiring: orders.filter(isOrderSLAExpiring).length,
+      slaViolated: orders.filter(isOrderSLAViolated).length,
     }
   }, [orders, total])
+
+  // 시스템 saved views — 포케볼트 도메인 + SLA 기반 (가장 ROI 높은 운영 큐)
+  const systemViews = useMemo(() => [
+    {
+      id: 'sla-violated', label: 'SLA 위반', tone: 'red',
+      count: kpis.slaViolated,
+      apply: () => { setSlaView('violated'); setFilter('all') },
+    },
+    {
+      id: 'sla-expiring', label: 'SLA 임박 (18h+)', tone: 'amber',
+      count: kpis.slaExpiring,
+      apply: () => { setSlaView('expiring'); setFilter('all') },
+    },
+    {
+      id: 'shipping-due', label: '송장 미등록', tone: 'amber',
+      count: kpis.shippingDue,
+      apply: () => { setSlaView(null); setFilter('paid') },
+    },
+    {
+      id: 'pending', label: '결제 대기', tone: 'blue',
+      apply: () => { setSlaView(null); setFilter('pending_payment') },
+    },
+    {
+      id: 'cancelled', label: '취소·환불', tone: 'red',
+      apply: () => { setSlaView(null); setFilter('cancelled') },
+    },
+  ], [kpis])
+
+  const activeViewId = useMemo(() => {
+    if (slaView === 'violated') return 'sla-violated'
+    if (slaView === 'expiring') return 'sla-expiring'
+    if (filter === 'paid') return 'shipping-due'
+    if (filter === 'pending_payment') return 'pending'
+    if (filter === 'cancelled') return 'cancelled'
+    return null
+  }, [slaView, filter])
+
+  const clearView = () => { setSlaView(null); setFilter('all'); setSearch(''); setPayment('all'); setRange({ from: '', to: '' }) }
 
   const handleSort = (key) => {
     setSort((s) => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'desc' })
@@ -137,6 +193,33 @@ export default function AdminOrders() {
     toast({ type: 'success', title: '일괄 변경 완료', message: `${selected.length}건 → ${STATUS[newStatus]?.label}` })
     setSelected([])
     fetchOrders()
+  }
+
+  // 빠른 환불 — QuickRefundModal에서 호출
+  const handleRefund = async ({ amount, reasonCode, reasonText, reasonLabel, mode, items }) => {
+    const orderId = refundTarget._id
+    const before = { status: refundTarget.status, totalAmount: refundTarget.totalAmount }
+    try {
+      // 백엔드 환불 엔드포인트가 별도면 변경 — 현재는 status 전이로 대체 가능
+      await apiUpdateStatus(orderId, 'refunded')
+      // audit (앞서 만든 useAuditLog hook으로 영속 + 기존 logAudit으로 UI용 로그)
+      audit.record({
+        entity: 'order', entityId: orderId, action: 'refund',
+        before, after: { status: 'refunded', refundAmount: amount },
+        reason: `[${reasonCode}] ${reasonLabel}`,
+        metadata: { mode, items },
+      })
+      logAudit({
+        actor: user?.name, action: 'order.refund', entity: 'order', entityId: orderId,
+        summary: `${formatKRWFull(amount)} 환불 · ${reasonLabel}`,
+      })
+      toast({ type: 'success', title: '환불 처리 완료', message: `${formatKRWFull(amount)} · ${reasonLabel}` })
+      setRefundTarget(null)
+      fetchOrders()
+      if (drawerOrder?._id === orderId) setDrawerOrder(null)
+    } catch (err) {
+      toast({ type: 'error', title: '환불 실패', message: err.response?.data?.message || '환불 처리 실패' })
+    }
   }
 
   const filterOptions = ORDER_FILTERS.map((f) => ({
@@ -212,6 +295,9 @@ export default function AdminOrders() {
         <FilterChips value={filter} onChange={setFilter} options={filterOptions} />
       </div>
 
+      {/* 시스템 saved views — SLA·예외 큐 1클릭 점프 */}
+      <SavedViewBar views={systemViews} activeId={activeViewId} onClearView={clearView} />
+
       {/* Bulk action bar */}
       <BulkBar
         count={selected.length}
@@ -221,7 +307,18 @@ export default function AdminOrders() {
             <BulkButton tone="success" onClick={() => handleBulkStatus('preparing')}>배송 준비로</BulkButton>
             <BulkButton tone="success" onClick={() => handleBulkStatus('shipped')}>운송중으로</BulkButton>
             <BulkButton tone="default" onClick={() => handleBulkStatus('delivered')}>도착 처리</BulkButton>
-            <BulkButton tone="danger"  onClick={() => handleBulkStatus('cancelled')}>취소</BulkButton>
+            <Can action="order.cancel" disable>
+              {(allowed) => (
+                <BulkButton
+                  tone="danger"
+                  onClick={() => handleBulkStatus('cancelled')}
+                  disabled={!allowed}
+                  title={allowed ? '선택 주문 취소' : missingRolesTooltip('order.cancel')}
+                >
+                  취소
+                </BulkButton>
+              )}
+            </Can>
           </>
         }
       />
@@ -247,6 +344,9 @@ export default function AdminOrders() {
               <div className="text-ink font-bold">{formatDateShort(o.createdAt)}</div>
               <div className="text-mute">{formatTime(o.createdAt)}</div>
             </div>
+          },
+          { key: 'sla', label: 'SLA', align: 'center', render: (o) =>
+            <SLABadge order={o} />
           },
           { key: 'buyer', label: '구매자', render: (o) =>
             <Cell primary={o.shipping?.recipient || '—'} secondary={o.user?.email} />
@@ -285,11 +385,22 @@ export default function AdminOrders() {
               />
             )
           }},
-          { key: 'actions', label: '', align: 'right', render: (o) =>
-            <RowActions>
-              <IconBtn icon="arrow" label="상세" onClick={() => setDrawerOrder(o)} />
-            </RowActions>
-          },
+          { key: 'actions', label: '', align: 'right', render: (o) => {
+            const canRefundRow = canRefund && !['cancelled', 'refunded'].includes(o.status)
+            return (
+              <RowActions>
+                {canRefundRow && (
+                  <IconBtn
+                    icon="close"
+                    label="빠른 환불"
+                    tone="danger"
+                    onClick={(e) => { e.stopPropagation?.(); setRefundTarget(o) }}
+                  />
+                )}
+                <IconBtn icon="arrow" label="상세" onClick={() => setDrawerOrder(o)} />
+              </RowActions>
+            )
+          }},
         ]}
       />
 
@@ -314,6 +425,14 @@ export default function AdminOrders() {
           onDone={() => { setBulkTrackOpen(false); fetchOrders() }}
           orders={orders}
           actor={user?.name}
+        />
+      )}
+
+      {refundTarget && (
+        <QuickRefundModal
+          order={refundTarget}
+          onClose={() => setRefundTarget(null)}
+          onConfirm={handleRefund}
         />
       )}
     </div>
