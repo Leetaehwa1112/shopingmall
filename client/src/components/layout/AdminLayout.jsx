@@ -16,7 +16,10 @@ import api from '@/api/axios'
 export default function AdminLayout() {
   const { isAdmin, user } = useAuthStore()
   const location = useLocation()
-  const [badges, setBadges] = useState({ pendingAuctions: 0, todayOrders: 0, lowStock: 0 })
+  const [badges, setBadges] = useState({
+    pendingAuctions: 0, todayOrders: 0, lowStock: 0,
+    pendingPayment: 0, preparingShip: 0, readyToShip: 0, shippedCount: 0,
+  })
   const [drawerOpen, setDrawerOpen] = useState(false)
 
   useEffect(() => {
@@ -26,15 +29,21 @@ export default function AdminLayout() {
       .then(({ data }) => {
         if (!alive) return
         const d = data?.data || {}
+        const bs = d.byStatus || {}
         setBadges({
           pendingAuctions: d.pendingAuctions ?? d.auctionsPending ?? 0,
           todayOrders: d.todayOrders ?? 0,
           lowStock: d.lowStockCount ?? 0,
+          pendingPayment: bs.pending_payment ?? 0,
+          // 송장 등록이 필요한 상태 = paid + preparing 합산
+          preparingShip: (bs.paid ?? 0) + (bs.preparing ?? 0),
+          readyToShip: bs.ready_to_ship ?? 0,
+          shippedCount: bs.shipped ?? 0,
         })
       })
       .catch(() => {})
     return () => { alive = false }
-  }, [isAdmin, location.pathname])
+  }, [isAdmin, location.pathname, location.search])
 
   // 라우트 이동 시 모바일 드로어 자동 닫힘
   useEffect(() => { setDrawerOpen(false) }, [location.pathname])
@@ -112,13 +121,66 @@ export default function AdminLayout() {
 
           <NavGroup label="거래" />
           <NavItem to="/admin/auctions" icon="flame"   label="경매 관리" badge={badges.pendingAuctions} badgeTone="red" />
-          {badges.pendingAuctions > 0 && (
+          {badges.pendingAuctions > 0 ? (
             <NavItem to="/admin/auctions/review" icon="bolt" label="검수 인박스" badge={badges.pendingAuctions} badgeTone="red" sub />
-          )}
-          {badges.pendingAuctions === 0 && (
+          ) : (
             <NavItem to="/admin/auctions/review" icon="bolt" label="검수 인박스" sub />
           )}
-          <NavItem to="/admin/orders"   icon="cart"    label="주문 관리" badge={badges.todayOrders} badgeTone="blue" />
+
+          {/* ── 주문 관리 — cafe24 스타일 sub-nav (status별 점프) ─── */}
+          <NavGroup label="주문 관리" />
+          <OrderNavItem
+            to="/admin/orders"
+            status=""
+            icon="cart"
+            label="전체 주문 조회"
+            badge={badges.todayOrders}
+            badgeTone="blue"
+          />
+          <OrderNavItem
+            to="/admin/orders?status=pending_payment"
+            status="pending_payment"
+            icon="cart"
+            label="입금 전 관리"
+            badge={badges.pendingPayment}
+            badgeTone="amber"
+          />
+          <OrderNavItem
+            to="/admin/orders?status=preparing"
+            status="preparing"
+            icon="package"
+            label="배송 준비중 관리"
+            badge={badges.preparingShip}
+            badgeTone="amber"
+          />
+          <OrderNavItem
+            to="/admin/orders?status=ready_to_ship"
+            status="ready_to_ship"
+            icon="package"
+            label="배송 대기 관리"
+            badge={badges.readyToShip}
+            badgeTone="blue"
+          />
+          <OrderNavItem
+            to="/admin/orders?status=shipped"
+            status="shipped"
+            icon="arrow"
+            label="배송 중 관리"
+            badge={badges.shippedCount}
+            badgeTone="blue"
+          />
+          <OrderNavItem
+            to="/admin/orders?status=delivered"
+            status="delivered"
+            icon="trophy"
+            label="배송 완료 조회"
+          />
+          <OrderNavItem
+            to="/admin/orders?status=cancelled"
+            statuses={['cancelled', 'refunded']}
+            icon="flame"
+            label="취소 · 환불 조회"
+          />
 
           <NavGroup label="회원" />
           <NavItem to="/admin/users"    icon="shield"  label="고객 관리" />
@@ -188,6 +250,50 @@ function NavItem({ to, end, icon, label, badge, badgeTone = 'red', sub }) {
         </span>
       ) : null}
     </NavLink>
+  )
+}
+
+/**
+ * 주문 관리 sub-nav 전용 — /admin/orders?status=X 와 양방향 일치.
+ *  NavLink는 pathname만 비교해서 query string 분기에 부적합 → useLocation으로
+ *  직접 active 판정.
+ *
+ *  props:
+ *   - to: 클릭 시 이동할 URL (status 쿼리 포함)
+ *   - status: 빈 문자열이면 "전체" (status 쿼리 없음일 때 active)
+ *   - statuses: 배열 — 여러 status에 대해 active (예: 취소·환불 묶음)
+ */
+function OrderNavItem({ to, status, statuses, icon, label, badge, badgeTone = 'red' }) {
+  const location = useLocation()
+  const currentStatus = new URLSearchParams(location.search).get('status') || ''
+  const onOrdersPath = location.pathname === '/admin/orders'
+  const matchSet = statuses || [status || '']
+  const isActive = onOrdersPath && matchSet.includes(currentStatus)
+
+  const tone = {
+    red:     'bg-red-100 text-red-700 border-red-200',
+    amber:   'bg-amber-100 text-amber-700 border-amber-200',
+    blue:    'bg-blue-100 text-blue-700 border-blue-200',
+    emerald: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  }[badgeTone] || 'bg-bone-2 text-ink border-ink/15'
+
+  return (
+    <Link
+      to={to}
+      className={`flex items-center gap-2.5 px-3 py-2 rounded-md font-bold transition-colors mb-0.5 ${
+        isActive
+          ? 'bg-gray-900 text-white'
+          : 'text-ink/70 hover:bg-bone-2 hover:text-ink'
+      }`}
+    >
+      <Icon name={icon} size={14} strokeWidth={2} className="flex-shrink-0" />
+      <span className="flex-1 truncate">{label}</span>
+      {badge ? (
+        <span className={`text-[9px] font-mono tabular-nums px-1.5 py-0.5 rounded-full border ${tone}`}>
+          {badge > 99 ? '99+' : badge}
+        </span>
+      ) : null}
+    </Link>
   )
 }
 
