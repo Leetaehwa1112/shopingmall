@@ -25,7 +25,10 @@ import QuickRefundModal from '@/components/admin/QuickRefundModal'
 import Can, { useCanDo, missingRolesTooltip } from '@/components/admin/Can'
 import OrderFulfillmentTimeline from '@/components/admin/OrderFulfillmentTimeline'
 import FulfillmentGuide from '@/components/admin/FulfillmentGuide'
-import { STAGES, inferStage, loadChecklist, saveChecklist } from '@/lib/fulfillment'
+import CarrierTrackingCard from '@/components/admin/CarrierTrackingCard'
+import NotificationHistory, { recordNotification } from '@/components/admin/NotificationHistory'
+import { STAGES, inferStage, loadChecklist, saveChecklist, renderCustomerMessage } from '@/lib/fulfillment'
+import { CARRIER_NAMES } from '@/lib/carriers'
 import { useAuditLog } from '@/hooks/useAuditLog'
 
 const STATUS = ORDER_STATUS
@@ -688,6 +691,25 @@ function OrderDrawer({ order, onClose, onStatusChange, onTrackingUpdate, actor }
     } finally { setSaving(false) }
   }
 
+  // 알림 자동 발송 헬퍼 — 단계 진입 시 고객 알림 + 이력 기록
+  const sendCustomerNotice = (stage) => {
+    if (!stage?.customerNotify) return
+    const msg = renderCustomerMessage(stage, order)
+    if (!msg) return
+    recordNotification(order._id, {
+      stage: stage.id,
+      channel: 'kakao',
+      status: 'sent',
+      message: msg,
+      recipient: order.shipping?.phone || order.user?.email,
+    })
+    logAudit({
+      actor, action: 'order.notify',
+      entity: 'order', entityId: order._id,
+      summary: `[${stage.label}] 알림 발송 → ${order.shipping?.recipient || '고객'}`,
+    })
+  }
+
   // 풀필먼트 가이드의 CTA가 눌렸을 때 — 단계별 다음 액션 수행
   const handleAdvance = async ({ stage }) => {
     const orderId = order._id
@@ -705,10 +727,13 @@ function OrderDrawer({ order, onClose, onStatusChange, onTrackingUpdate, actor }
           alert('아래 "송장 등록" 영역에서 운송장 번호를 먼저 저장해주세요.')
           return
         }
+        // 알림 발송 (운송장 번호 포함)
+        sendCustomerNotice(stage)
         // 자동으로 preparing 상태로 (다음 단계 진입)
         await onStatusChange(orderId, 'preparing')
         break
       case 'shipped':
+        sendCustomerNotice(stage)
         await onStatusChange(orderId, 'shipped')
         break
       case 'delivered': {
@@ -751,7 +776,7 @@ function OrderDrawer({ order, onClose, onStatusChange, onTrackingUpdate, actor }
 
       {/* 현재 단계 친절 가이드 — 체크리스트/Alert/CTA/고객알림 미리보기 */}
       {currentStage && (
-        <div className="mb-5">
+        <div className="mb-4">
           <FulfillmentGuide
             order={order}
             stage={currentStage}
@@ -759,6 +784,16 @@ function OrderDrawer({ order, onClose, onStatusChange, onTrackingUpdate, actor }
           />
         </div>
       )}
+
+      {/* 캐리어 추적 카드 — 운송장 있으면 추적 링크 + URL 복사, 없으면 권장 캐리어 안내 */}
+      <div className="mb-4">
+        <CarrierTrackingCard order={order} showRecommendation />
+      </div>
+
+      {/* 알림 발송 이력 — 고객에게 어떤 알림이 언제 갔는지 한눈에 */}
+      <div className="mb-5">
+        <NotificationHistory order={order} refreshKey={currentStage?.id} />
+      </div>
 
       {/* 헤더 status pill — 기존 호환 */}
       <div className="flex items-center gap-2 mb-4">
@@ -804,7 +839,7 @@ function OrderDrawer({ order, onClose, onStatusChange, onTrackingUpdate, actor }
         <div className="flex gap-2 mb-2">
           <select value={carrier} onChange={(e) => setCarrier(e.target.value)}
             className="bg-paper border border-gray-900/15 rounded-md px-2 py-1.5 text-xs text-ink font-bold focus:border-gray-900 outline-none">
-            <option>FedEx</option><option>Brink's</option><option>CJ대한통운</option><option>우체국</option>
+            {CARRIER_NAMES.map((c) => <option key={c}>{c}</option>)}
           </select>
           <input value={trackingNo} onChange={(e) => setTrackingNo(e.target.value)}
             placeholder="송장번호"
