@@ -23,6 +23,9 @@ import SavedViewBar from '@/components/admin/SavedViewBar'
 import SLABadge, { isOrderSLAExpiring, isOrderSLAViolated } from '@/components/admin/SLABadge'
 import QuickRefundModal from '@/components/admin/QuickRefundModal'
 import Can, { useCanDo, missingRolesTooltip } from '@/components/admin/Can'
+import OrderFulfillmentTimeline from '@/components/admin/OrderFulfillmentTimeline'
+import FulfillmentGuide from '@/components/admin/FulfillmentGuide'
+import { STAGES, inferStage, loadChecklist, saveChecklist } from '@/lib/fulfillment'
 import { useAuditLog } from '@/hooks/useAuditLog'
 
 const STATUS = ORDER_STATUS
@@ -670,6 +673,9 @@ function OrderDrawer({ order, onClose, onStatusChange, onTrackingUpdate, actor }
   const [saving, setSaving] = useState(false)
   const st = STATUS[order.status] || STATUS.unknown
 
+  // 풀필먼트 단계 추론 — 9 micro-step
+  const currentStage = inferStage(order)
+
   const handleTrackingSave = async () => {
     setSaving(true)
     try {
@@ -682,20 +688,79 @@ function OrderDrawer({ order, onClose, onStatusChange, onTrackingUpdate, actor }
     } finally { setSaving(false) }
   }
 
+  // 풀필먼트 가이드의 CTA가 눌렸을 때 — 단계별 다음 액션 수행
+  const handleAdvance = async ({ stage }) => {
+    const orderId = order._id
+    switch (stage.id) {
+      case 'inspection':
+      case 'packing':
+        // 클라이언트 체크리스트만 — localStorage 진행 (이미 FulfillmentGuide 내부에서 저장됨)
+        // 다음 렌더 시 inferStage가 다음 단계로 자동 진행
+        logAudit({ actor, action: `order.${stage.id}.done`, entity: 'order', entityId: orderId, summary: stage.label })
+        onTrackingUpdate() // 리스트 새로고침 → 드로어 재계산
+        break
+      case 'tracking_input':
+        // 운송장이 저장된 상태인지 확인 — 별도 운송장 영역에서 저장하고 다시 CTA 클릭
+        if (!order.shipping?.trackingNumber) {
+          alert('아래 "송장 등록" 영역에서 운송장 번호를 먼저 저장해주세요.')
+          return
+        }
+        // 자동으로 preparing 상태로 (다음 단계 진입)
+        await onStatusChange(orderId, 'preparing')
+        break
+      case 'shipped':
+        await onStatusChange(orderId, 'shipped')
+        break
+      case 'delivered': {
+        // 고객 수령 확인 — checklist에 customer_confirmed 마크
+        const cl = loadChecklist(orderId)
+        saveChecklist(orderId, { ...cl, customer_confirmed: true })
+        logAudit({ actor, action: 'order.received', entity: 'order', entityId: orderId, summary: '고객 수령 확인' })
+        onTrackingUpdate()
+        break
+      }
+      default:
+        break
+    }
+  }
+
   return (
     <Drawer
       open
       onClose={onClose}
       title={order.orderNumber}
       subtitle={formatDateTime(order.createdAt)}
-      width={580}
+      width={620}
       footer={
         <>
-          <span className="text-[11px] text-mute mr-auto">ESC로 닫기</span>
+          <span className="text-[11px] text-mute mr-auto">ESC로 닫기 · J/K로 형제 이동</span>
           <button onClick={onClose} className="text-xs font-bold text-mute hover:text-ink px-3 py-1.5 rounded-md hover:bg-bone-2">닫기</button>
         </>
       }
     >
+      {/* 9-step Fulfillment Timeline — 상태를 한눈에 */}
+      {currentStage && (
+        <div className="mb-4 px-1">
+          <OrderFulfillmentTimeline
+            stages={STAGES}
+            currentStageId={currentStage.id}
+            compact
+          />
+        </div>
+      )}
+
+      {/* 현재 단계 친절 가이드 — 체크리스트/Alert/CTA/고객알림 미리보기 */}
+      {currentStage && (
+        <div className="mb-5">
+          <FulfillmentGuide
+            order={order}
+            stage={currentStage}
+            onAdvance={handleAdvance}
+          />
+        </div>
+      )}
+
+      {/* 헤더 status pill — 기존 호환 */}
       <div className="flex items-center gap-2 mb-4">
         <StatusPill tone={statusTone(order.status)} led={st.led}>{st.label}</StatusPill>
         {order.escrow?.status === 'held' && <StatusPill tone="emerald" dot>에스크로 보호중</StatusPill>}
