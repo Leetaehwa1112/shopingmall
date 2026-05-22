@@ -108,10 +108,11 @@ const orderSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: [
-        'pending_payment', // 결제 대기
+        'pending_payment', // 입금 전
         'paid',            // 결제 완료
-        'preparing',       // 상품 준비중
-        'shipped',         // 발송 완료
+        'preparing',       // 배송 준비중 (송장 등록 대기)
+        'ready_to_ship',   // 배송 대기 (송장 등록 완료, 발송 전)
+        'shipped',         // 배송중 (carrier에 인계됨)
         'delivered',       // 배송 완료
         'cancelled',       // 취소
         'refunded',        // 환불 완료
@@ -143,7 +144,7 @@ orderSchema.pre('save', async function () {
 
 // ─── 가상 필드 ──────────────────────────────────────────────
 orderSchema.virtual('isCancellable').get(function () {
-  return ['pending_payment', 'paid', 'preparing'].includes(this.status)
+  return ['pending_payment', 'paid', 'preparing', 'ready_to_ship'].includes(this.status)
 })
 
 orderSchema.virtual('isRefundable').get(function () {

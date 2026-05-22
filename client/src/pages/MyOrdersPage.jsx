@@ -182,7 +182,7 @@ function OrderCard({ order, expanded, onToggle, onCancel }) {
           <div className="font-mono text-xs font-bold text-ink">#{order.orderNumber}</div>
         </div>
         <div className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full border-2 ${st.color}`}>
-          <span className={`led led-${st.led} ${st.step < 4 && st.step >= 0 ? 'led-pulse' : ''}`} style={{ width: 6, height: 6 }} />
+          <span className={`led led-${st.led} ${st.step >= 0 && st.step < STEPS.length - 1 ? 'led-pulse' : ''}`} style={{ width: 6, height: 6 }} />
           {st.label}
         </div>
       </div>

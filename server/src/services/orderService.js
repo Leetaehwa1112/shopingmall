@@ -5,7 +5,7 @@ const Pack = require('../models/Pack')
 
 // ─── 도메인 상수 ────────────────────────────────────────────
 const SHIPPING_FEES = { standard: 0, fedex: 30000, quick: 50000, brinks: 1500000, pickup: 0 }
-const VALID_ADMIN_STATUSES = ['paid', 'preparing', 'shipped', 'delivered', 'cancelled', 'refunded']
+const VALID_ADMIN_STATUSES = ['pending_payment', 'paid', 'preparing', 'ready_to_ship', 'shipped', 'delivered', 'cancelled', 'refunded']
 
 // ─── 커스텀 에러 ────────────────────────────────────────────
 class AppError extends Error {
@@ -218,7 +218,7 @@ const getOrderById = async (orderId, requester) => {
 const cancelOrder = async (orderId, userId, reason) => {
   const order = await Order.findOne({ _id: orderId, user: userId })
   if (!order) throw new AppError('주문을 찾을 수 없습니다.', 404)
-  if (!['pending_payment', 'paid', 'preparing'].includes(order.status)) {
+  if (!['pending_payment', 'paid', 'preparing', 'ready_to_ship'].includes(order.status)) {
     throw new AppError('현재 상태에서는 취소할 수 없습니다.')
   }
   // 재고 복구
@@ -242,20 +242,42 @@ const getAllOrders = async (query) => {
   return paginate(filter, { page, limit, populates: ORDER_POPULATES })
 }
 
-/** 상태 변경 (어드민) */
+/** 상태 변경 (어드민)
+ *  - shipped로 바꾸는 시점에 shippedAt 기록 (carrier에 실제 인계 시각)
+ *  - delivered로 바꾸면 deliveredAt 기록
+ *  - cancelled/refunded는 재고 복구 + cancelledAt 1회만
+ *  - 취소된 주문을 다시 paid/preparing/ready_to_ship 등으로 되돌리는 경우 재고 재차감 */
 const updateOrderStatus = async (orderId, status) => {
   if (!VALID_ADMIN_STATUSES.includes(status)) {
     throw new AppError('유효하지 않은 상태값입니다.')
   }
   const order = await Order.findById(orderId)
   if (!order) throw new AppError('주문을 찾을 수 없습니다.', 404)
-  order.status = status
-  if (status === 'cancelled' || status === 'refunded') {
-    if (!order.cancelledAt) {
-      order.cancelledAt = new Date()
-      await adjustStock(order.items, +1)
-    }
+
+  const prev = order.status
+  const wasCancelled = prev === 'cancelled' || prev === 'refunded'
+  const becomesCancelled = status === 'cancelled' || status === 'refunded'
+
+  // 취소 → 활성 상태로 복구 시 재고 재차감 (다른 주문이 가져갔으면 throw)
+  if (wasCancelled && !becomesCancelled) {
+    await adjustStock(order.items, -1)
+    order.cancelledAt = null
+    order.cancelReason = null
   }
+
+  order.status = status
+
+  if (status === 'shipped' && !order.shipping.shippedAt) {
+    order.shipping.shippedAt = new Date()
+  }
+  if (status === 'delivered' && !order.shipping.deliveredAt) {
+    order.shipping.deliveredAt = new Date()
+  }
+  if (becomesCancelled && !wasCancelled) {
+    order.cancelledAt = new Date()
+    await adjustStock(order.items, +1)
+  }
+
   await order.save()
   return order
 }
@@ -285,15 +307,16 @@ const adminUpdateFields = async (orderId, patch = {}) => {
   return order
 }
 
-/** 송장 등록 (어드민) */
+/** 송장 등록 (어드민)
+ *  송장 등록 = "배송 대기"(ready_to_ship)로 전이. 아직 carrier에 인계 안 함.
+ *  실제 발송은 admin이 별도로 status='shipped'로 변경할 때 일어남(shippedAt 기록). */
 const updateTracking = async (orderId, { trackingNumber, carrier }) => {
   const order = await Order.findById(orderId)
   if (!order) throw new AppError('주문을 찾을 수 없습니다.', 404)
   if (trackingNumber !== undefined) order.shipping.trackingNumber = trackingNumber
   if (carrier !== undefined) order.shipping.carrier = carrier
-  if (trackingNumber && !order.shipping.shippedAt) {
-    order.shipping.shippedAt = new Date()
-    if (order.status === 'paid' || order.status === 'preparing') order.status = 'shipped'
+  if (trackingNumber && ['paid', 'preparing'].includes(order.status)) {
+    order.status = 'ready_to_ship'
   }
   await order.save()
   return order

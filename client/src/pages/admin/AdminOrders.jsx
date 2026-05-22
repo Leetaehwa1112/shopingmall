@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   formatKRWFull, formatDateShort, formatTime,
   formatAddress, formatDateTime,
@@ -38,8 +39,17 @@ export default function AdminOrders() {
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
 
-  // filters
-  const [filter, setFilter] = useState('all')
+  // filters — status는 URL과 양방향 동기화 (대시보드에서 ?status=... 점프 지원)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const filter = searchParams.get('status') || 'all'
+  const setFilter = useCallback((v) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      if (!v || v === 'all') next.delete('status')
+      else next.set('status', v)
+      return next
+    }, { replace: false })
+  }, [setSearchParams])
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(25)
@@ -98,7 +108,9 @@ export default function AdminOrders() {
       total,
       todayCount: todays.length,
       todayRevenue: todays.reduce((s, o) => s + (o.totalAmount || 0), 0),
-      shippingDue: orders.filter((o) => o.status === 'paid' && !o.shipping?.trackingNumber).length,
+      // 송장 등록 대기 = preparing 또는 paid (둘 다 송장 등록 가능 상태)
+      shippingDue: orders.filter((o) => (o.status === 'preparing' || o.status === 'paid') && !o.shipping?.trackingNumber).length,
+      readyToShip: orders.filter((o) => o.status === 'ready_to_ship').length,
       cancelled: orders.filter((o) => o.status === 'cancelled' || o.status === 'refunded').length,
     }
   }, [orders, total])
@@ -180,15 +192,22 @@ export default function AdminOrders() {
       <StatGrid cols={4}>
         <StatCard label="오늘 주문" value={kpis.todayCount} sub={formatKRWFull(kpis.todayRevenue)} icon="cart" tone="blue" />
         <StatCard
-          label="배송 준비 대기"
+          label="송장 등록 대기"
           value={kpis.shippingDue}
-          sub="결제완료, 송장미등록"
+          sub="배송 준비중, 송장 미등록"
           icon="package"
           tone="amber"
           urgent={kpis.shippingDue > 5}
-          onClick={() => { setFilter('paid'); setSearch('') }}
+          onClick={() => { setFilter('preparing'); setSearch('') }}
         />
-        <StatCard label="취소/환불" value={kpis.cancelled} sub="현 페이지 기준" icon="flame" tone="red" />
+        <StatCard
+          label="배송 대기"
+          value={kpis.readyToShip}
+          sub="송장 등록 완료, 발송 전"
+          icon="package"
+          tone="blue"
+          onClick={() => { setFilter('ready_to_ship'); setSearch('') }}
+        />
         <StatCard label="전체 주문" value={total.toLocaleString()} sub="누적" icon="trophy" />
       </StatGrid>
 

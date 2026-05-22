@@ -103,6 +103,66 @@ export default function AdminDashboard() {
           onClick={() => navigate('/admin/users')} />
       </StatGrid>
 
+      {/* ─ 주문 관리 큐 — 상태별 처리 카드 ──────────────────────
+           각 카드 클릭 시 AdminOrders가 ?status=... 로 필터링된 채 열림 */}
+      <div>
+        <div className="inline-flex items-center gap-1.5 mb-2">
+          <span className="led led-blue led-pulse" style={{ width: 5, height: 5 }} />
+          <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-mute">ORDER QUEUE · 주문 처리</span>
+        </div>
+        <StatGrid cols={6}>
+          <StatCard
+            label="입금 전"
+            value={loading ? '—' : (s.byStatus?.pending_payment || 0)}
+            sub="결제 대기"
+            icon="cart"
+            tone="amber"
+            urgent={(s.byStatus?.pending_payment || 0) > 0}
+            onClick={() => navigate('/admin/orders?status=pending_payment')}
+          />
+          <StatCard
+            label="배송 준비중"
+            value={loading ? '—' : ((s.byStatus?.paid || 0) + (s.byStatus?.preparing || 0))}
+            sub="송장 등록"
+            icon="package"
+            tone="blue"
+            urgent={((s.byStatus?.paid || 0) + (s.byStatus?.preparing || 0)) > 0}
+            onClick={() => navigate('/admin/orders?status=preparing')}
+          />
+          <StatCard
+            label="배송 대기"
+            value={loading ? '—' : (s.byStatus?.ready_to_ship || 0)}
+            sub="송장 등록 완료"
+            icon="package"
+            tone="amber"
+            onClick={() => navigate('/admin/orders?status=ready_to_ship')}
+          />
+          <StatCard
+            label="배송중"
+            value={loading ? '—' : (s.byStatus?.shipped || 0)}
+            sub="운송 중"
+            icon="arrow"
+            tone="blue"
+            onClick={() => navigate('/admin/orders?status=shipped')}
+          />
+          <StatCard
+            label="배송 완료"
+            value={loading ? '—' : (s.byStatus?.delivered || 0)}
+            sub="도착"
+            icon="trophy"
+            tone="emerald"
+            onClick={() => navigate('/admin/orders?status=delivered')}
+          />
+          <StatCard
+            label="전체 주문"
+            value={loading ? '—' : (s.totalOrders || 0)}
+            sub="누적"
+            icon="shield"
+            onClick={() => navigate('/admin/orders')}
+          />
+        </StatGrid>
+      </div>
+
       {/* Catalog totals — secondary row */}
       <StatGrid cols={4}>
         <StatCard label="총 카드" value={loading ? '—' : totalProducts} sub="등록 SKU" />
