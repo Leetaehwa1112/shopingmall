@@ -5,6 +5,7 @@ import ToastContainer from '@/components/common/Toast'
 import Pokeball from '@/components/common/Pokeball'
 import Icon from '@/components/common/Icon'
 import api from '@/api/axios'
+import CommandPalette from '@/components/admin/CommandPalette'
 
 /**
  * Admin shell — desktop-first operations console.
@@ -67,6 +68,8 @@ export default function AdminLayout() {
   return (
     <div className="min-h-screen min-h-dvh flex bg-bone">
       <ToastContainer />
+      {/* ⌘K 글로벌 명령 팔레트 — 어느 admin 화면에서든 활성 */}
+      <CommandPalette />
 
       {/* ── Mobile backdrop (드로어 열렸을 때) ──────────────── */}
       {drawerOpen && (
@@ -192,8 +195,13 @@ function NavItem({ to, end, icon, label, badge, badgeTone = 'red', sub }) {
 }
 
 function TopBar({ user, onMenuClick }) {
-  const [q, setQ] = useState('')
   const time = useMemo(() => new Date().toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }), [])
+  // ⌘K 명령 팔레트 트리거 — focus가 아니라 키이벤트 dispatch로 일관된 진입점 유지
+  const openPalette = () => {
+    const evt = new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true, bubbles: true })
+    window.dispatchEvent(evt)
+  }
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
 
   return (
     <div className="bg-paper border-b border-ink/10 px-3 sm:px-6 py-2.5 flex items-center gap-2 sm:gap-4 sticky top-0 z-30">
@@ -206,16 +214,19 @@ function TopBar({ user, onMenuClick }) {
       >
         <Icon name="menu" size={18} strokeWidth={2.2} />
       </button>
-      <div className="relative flex-1 max-w-md">
-        <Icon name="search" size={13} strokeWidth={2} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-mute pointer-events-none" />
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="검색..."
-          aria-label="관리자 검색"
-          className="w-full bg-bone-2/50 border border-ink/15 rounded-lg pl-8 pr-3 py-1.5 text-xs text-ink placeholder:text-mute focus:border-ink focus:bg-paper outline-none transition-colors"
-        />
-      </div>
+      {/* 통합 검색 — 진짜 input이 아니라 ⌘K 트리거 (글로벌 팔레트가 단일 진입점) */}
+      <button
+        type="button"
+        onClick={openPalette}
+        aria-label="검색 (⌘K)"
+        className="relative flex-1 max-w-md bg-bone-2/50 border border-ink/15 rounded-lg pl-8 pr-2 py-1.5 text-xs text-mute hover:bg-paper hover:border-ink/30 hover:text-ink transition-colors flex items-center group"
+      >
+        <Icon name="search" size={13} strokeWidth={2} className="absolute left-2.5 top-1/2 -translate-y-1/2" />
+        <span className="flex-1 text-left">주문 · 카드 · 고객 검색</span>
+        <kbd className="ml-2 hidden sm:inline-flex items-center text-[10px] font-mono text-mute bg-paper border border-ink/15 px-1.5 py-0.5 rounded">
+          {isMac ? '⌘' : 'Ctrl'} K
+        </kbd>
+      </button>
       <div className="flex items-center gap-2 sm:gap-3 text-[11px]">
         <span className="text-mute font-mono hidden lg:inline">{time}</span>
         <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md font-bold whitespace-nowrap">
