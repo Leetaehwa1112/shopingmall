@@ -328,24 +328,36 @@ const refundOrder = async (orderId, { reason, amount, skipPg = false } = {}) => 
   const isFullRefund = refundAmount === totalAmount
 
   // ─── PG 환불 ───────────────────────────────────────────────
-  // 먼저 PG에 호출 — 실패하면 throw해서 DB 변경 안 함 (재고/상태 무결성).
-  // skipPg=true 면 DB만 처리 (PG는 사장님이 별도 대시보드에서 이미 취소한 경우).
+  // 우선순위:
+  //   1) PORTONE_API_SECRET 설정됨 → PortOne(aggregator)로 일괄 처리 (권장)
+  //   2) KAKAOPAY_SECRET_KEY + method='kakao' → KakaoPay 직연동
+  //   3) 어느 것도 없으면 → DB만 처리 + warn
+  // skipPg=true 면 PG 건너뛰고 DB만 (이미 사장님이 PG 대시보드에서 직접 취소한 경우).
   let pgResult = null
+  let pgUsed = null
   if (!skipPg && order.payment?.pgTxId) {
-    const method = order.payment.method
-    if (method === 'kakao') {
-      const { cancelPayment } = require('../lib/kakaopay')
+    if (process.env.PORTONE_API_SECRET) {
+      const portone = require('../lib/portone')
       try {
-        pgResult = await cancelPayment(order.payment.pgTxId, refundAmount, 0)
+        pgResult = await portone.cancelPayment(order.payment.pgTxId, {
+          amount: refundAmount,
+          reason: reason || '운영자 처리',
+        })
+        pgUsed = 'portone'
       } catch (err) {
-        // PG 호출 자체가 실패 — 502로 던져서 DB 그대로 두기
+        throw new AppError(err.message || 'PortOne 환불 호출 실패', 502)
+      }
+    } else if (order.payment.method === 'kakao' && process.env.KAKAOPAY_SECRET_KEY) {
+      const { cancelPayment: kakaoCancel } = require('../lib/kakaopay')
+      try {
+        pgResult = await kakaoCancel(order.payment.pgTxId, refundAmount, 0)
+        pgUsed = 'kakaopay'
+      } catch (err) {
         throw new AppError(err.message || 'KakaoPay 환불 호출 실패', 502)
       }
-    } else if (['toss', 'card'].includes(method)) {
-      // 아직 통합 안 됨 — DB만 처리하고 경고
-      console.warn(`[refund] ${method} PG 환불 API 미구현. order=${order.orderNumber}. DB만 처리됨.`)
+    } else {
+      console.warn(`[refund] PG 미설정 — DB만 처리됨. order=${order.orderNumber}, method=${order.payment.method}`)
     }
-    // bank/escrow는 PG 호출 대상 아님
   }
 
   // ─── DB 환불 ───────────────────────────────────────────────
